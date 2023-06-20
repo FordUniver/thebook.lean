@@ -1,6 +1,6 @@
 # The Book in Lean
 
-This project aims to state and verify the proofs from [Proofs from THE BOOK](https://link.springer.com/book/10.1007/978-3-662-57265-8) by Martin Aigner and Günter M. Ziegler. The book presents different short proofs of a variety of results from six different areas.
+This project aims to state and verify the proofs from [Proofs from THE BOOK](https://link.springer.com/book/10.1007/978-3-662-57265-8) by Martin Aigner and Günter M. Ziegler. The book presents different short proofs of a variety of results from six different areas. The results and proofs are stated in [Lean](https://leanprover.github.io), in particular in version 3.51.1.
 
 ## Number theory
 
@@ -47,5 +47,25 @@ Open. Requires square roots, floor function, and finite sums.
 ## Geometry
 
 ## Combinatorics
+
+### Pigeon-hole and double counting
+
+A variets of pigeonhole principles are implemented in mathlib, see the [documentation](https://leanprover-community.github.io/mathlib_docs/combinatorics/pigeonhole.html).
+
+### Three famous theorems on finite sets
+
+### Shuffling cards
+
+### Lattice paths and determinants
+
+### Cayley's formula for the number of trees
+
+### Completing Latin squares
+
+### The Dinitz problem
+
+### Identities versus bijections
+
+
 
 ## Graph Theory
