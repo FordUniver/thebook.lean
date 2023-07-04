@@ -18,7 +18,7 @@ lemma my_pigeonhole {α β : Type*} [decidable_eq α] [decidable_eq β]
         ∀(S : finset α), ∀(T : finset β),
         ∀(f : α → β), ((∀(s : α), s∈S → f s ∈ T) ∧  
         (T.card = n) ∧ (n < S.card)) →  
-        ∃a,∃b, a∈S ∧ b∈S ∧ (a≠b) ∧ (f a = f b) :=
+        ∃a, ∃b, a∈S ∧ b∈S ∧ (a≠b) ∧ (f a = f b) :=
   by {induction n with n ih,
       intros S T f,
       rintros ⟨map, tec, size⟩,    
@@ -40,7 +40,7 @@ lemma my_pigeonhole {α β : Type*} [decidable_eq α] [decidable_eq β]
       rcases h with ⟨a, aS, fat⟩,
       by_cases (∃b, b∈S ∧ f b = t ∧ a ≠ b), --is there another ?
       rcases h with ⟨b, bS, fbt, bna⟩, 
-      use a, use b,rw ← fat at fbt, rw eq_comm at fbt,
+      use a, use b, rw ← fat at fbt, rw eq_comm at fbt,
       exact ⟨aS, bS, bna, fbt⟩,  
       --exactly one antecedant
       push_neg at h,
@@ -108,6 +108,20 @@ lemma my_pigeonhole {α β : Type*} [decidable_eq α] [decidable_eq β]
       exact ih,
       }
 
+lemma my_pigeonhole' {α β : Type*} [decidable_eq α] [decidable_eq β]
+        (n : nat) :
+        ∀(S : finset α), ∀(T : finset β),
+        ∀(f : α → β), ((∀(s : α), s∈S → f s ∈ T) ∧  
+        (T.card = n) ∧ (n < S.card)) →  
+        ∃a∈S, ∃b∈S, (a≠b) ∧ (f a = f b) :=
+  by {
+    intros _ _ _ H,
+    have L : ∃a, ∃b, a∈S ∧ b∈S ∧ (a≠b) ∧ (f a = f b) := by {
+      apply my_pigeonhole, exact H,
+    },
+    rcases L with ⟨a, b, a_S, b_S, anb, fafb⟩,
+    exact ⟨a, a_S, b, b_S, anb, fafb⟩, 
+  }
 
 -- Partitions and cardinals, as prelude to generalized pigeonhole
 
@@ -250,77 +264,123 @@ lemma my_generalized_pigeonhole {α β : Type*} [decidable_eq α] [decidable_eq 
 
 -- 1. Numbers
 
--- Claim 1
 
-lemma succ_coprime (n m : nat) (h : n = m+1) : nat.coprime n m :=
+def range_from_one (n : nat) := image (λ x, x+1) (range (n))
+
+lemma neq_succ ( n m : ℕ ) ( h1 : n ≠ m ) ( h2 : (n+1) / 2 = (m+1) / 2 ) : 
+  n = m+1 ∨ m = n+1 := by {
+    sorry
+    -- -- Lemma: (a+1) % 2 ≠ (b+1) % 2
+    -- have Lem2 : (a+1)%2 ≠ (b+1)%2 := by {
+    --   by_contra C,
+    --   have tec : a+1 = b+1 := by {
+    --     rw ← nat.div_add_mod (a+1) 2,
+    --     rw ← nat.div_add_mod (b+1) 2,
+    --     linarith,
+    --   },
+    --   apply anb,
+    --   linarith,
+    -- },
+    -- apply lt_by_cases ((a + 1) % 2) 1,
+    -- intro caselt,
+    -- have tec1 : (a + 1) % 2 = 0 := by {exact nat.lt_one_iff.mp caselt,},
+    -- have l1 : (b + 1) % 2 = 1 := by {apply lt_by_cases ((b + 1) % 2) 1, intro caltb,
+    --                                   have tec2 : (b + 1) % 2 = 0 :=
+    --                                   by {exact nat.lt_one_iff.mp caltb,},
+    --                                   by_contra, apply Lem2, apply eq.trans tec1,
+    --                                   exact tec2.symm,
+    --                                   simp,
+    --                                   intro C, by_contra,
+    --                                   have pain : 0<2 := by {norm_num,},
+    --                                   have tec3 : (b + 1) % 2 < 2 :=
+    --                                   by {exact nat.mod_lt (b + 1) pain,},
+    --                                   linarith,},
+    -- have case_pre : a+1+1 = b+1 := by {rw ← nat.div_add_mod (a+1) 2,
+    --                                     rw ← nat.div_add_mod (b+1) 2,
+    --                                     linarith,},
+    -- have case : a+1 = b := by {linarith,},
+    -- rw nat.coprime_comm, rw eq_comm at case, exact succ_coprime b a case,
+    -- intro caseq,
+    -- have l1 : (b + 1) % 2 = 0 := by {apply lt_by_cases ((b + 1) % 2) 1, intro caltb,
+    --                                   have tec2 : (b + 1) % 2 = 0 :=
+    --                                   by {exact nat.lt_one_iff.mp caltb,},
+    --                                   exact tec2, intro caoneb,
+    --                                   by_contra C, apply Lem2, apply eq.trans caseq,
+    --                                   exact caoneb.symm,
+    --                                   intro C, by_contra,
+    --                                   have pain : 0<2 := by {norm_num,},
+    --                                   have tec3 : (b + 1) % 2 < 2 :=
+    --                                   by {exact nat.mod_lt (b + 1) pain,},
+    --                                   linarith,},
+    -- have case_pre : a+1 = b+1+1 := by {rw ← nat.div_add_mod (a+1) 2,
+    --                                     rw ← nat.div_add_mod (b+1) 2,
+    --                                     linarith,},
+    -- have case : a = b+1 := by {linarith,},
+    -- exact succ_coprime a b case,
+    -- intro C, by_contra,
+    -- have pain : 0<2 := by {norm_num,},
+    -- have tec3 : (a + 1) % 2 < 2 := by {exact nat.mod_lt (a + 1) pain,},
+    -- linarith,
+  }
+
+lemma succ_coprime ( n m : ℕ ) (h : n = m+1) : nat.coprime n m :=
   by {rw h, rw nat.coprime_self_add_left, exact nat.coprime_one_left m,}
 
-example (n : nat) (h : 1≤n) : ∀A, A ∈ (powerset_len (n+1) (image (λ x, x+1) (range (2*n)))) →
-        ∃a,∃b, a∈A ∧ b∈A ∧ (a≠b) ∧ (nat.coprime a b) :=
-        by {intros A Adef, rw mem_powerset_len at Adef,
-            have Lem1 : ∃a,∃b, a∈A ∧ b∈A ∧ (a≠b) ∧ ((λ (x : ℕ), (x+1) / 2) a =
-                        (λ (x : ℕ), (x+1) / 2) b):=
-              by {apply my_pigeonhole n A (image (λ x, x+1) (range (n))) (λ x, (x+1) / 2),
-                  split, intros m mA, simp, use (((m+1) / 2) - 1),
-                  have tec1 : m ∈ image (λ (x : ℕ), x + 1) (range (2 * n)) :=
-                                                by {exact Adef.1 mA,},
-                  simp at tec1, rcases tec1 with ⟨a,a1,a2⟩,
-                  have tec2 : 1≤(m+1)/2 := by {rw nat.le_div_iff_mul_le',
-                                              linarith, norm_num,},
-                  split, rw tsub_lt_iff_right tec2, rw nat.div_lt_iff_lt_mul', 
-                  linarith, norm_num,
-                  linarith,
-                  split,
-                  rw card_image_of_injective, exact card_range n, dsimp [function.injective],
+-- Claim 1
+example (n ≥ 1) : ∀A  ⊆ range_from_one (2*n), A.card = (n+1) →
+        ∃a∈A, ∃b∈A, a ≠ b ∧ nat.coprime a b := by {
+          intros A A_domain A_card,
+          -- Lemma: ∃ a, b ∈ A with (a+1) // 2 = (b+1) // 2
+          let f := λ (x : ℕ), ((x+1) / 2),
+          have Lem1 : ∃a∈A, ∃b∈A, (a≠b) ∧ f a = f b :=
+            by {
+              apply my_pigeonhole' n A (range_from_one (n)) (f),
+              split,
+              -- Goal: A ⊆ {1, ..., 2*n}
+              intros m mA,
+              simp [range_from_one],
+              use (((m+1) / 2) - 1),
+              -- Lemma: m ∈ A ⇒ m ∈ {1, ..., 2*n}
+              have tec1 : m ∈ range_from_one(2*n) := by {
+                exact A_domain mA,
+              },
+              simp [range_from_one] at tec1,
+              rcases tec1 with ⟨a, a1, a2⟩,
+              -- Lemma: (m + 1) // 2 ≥ 1
+              have tec2 : 1 ≤ (m+1) / 2 := by {
+                rw nat.le_div_iff_mul_le', linarith, norm_num,
+              },
+              split,
+                -- Goal: (m + 1) / 2 - 1 < n
+                rw tsub_lt_iff_right tec2,
+                rw nat.div_lt_iff_lt_mul', 
+                linarith,
+                norm_num,
+                -- Goal: (m + 1) / 2 - 1 + 1 = f m
+                linarith,
+              -- Goal: |1, ..., n| = n and |A| > n
+              split,
+                -- Goal: |1, ..., n| = n
+                dsimp [range_from_one],
+                rw card_image_of_injective,
+                  -- Goal: |0, ..., n-1| = n
+                  exact card_range n,
+                  -- Goal: x ↦ x+1 is injective
+                  dsimp [function.injective],
                   intros a b aeb, linarith,
-                  rw Adef.2, linarith,},
-            rcases Lem1 with ⟨a, b, aA, bA, anb, abeq⟩, simp at abeq,
-            use a, use b, split, exact aA, split, exact bA, split, exact anb,
-            have Lem2 : (a+1)%2 ≠ (b+1)%2 := by {by_contra C,
-                                                 have tec : a+1 = b+1 :=
-                                                  by {rw ← nat.div_add_mod (a+1) 2,
-                                                      rw ← nat.div_add_mod (b+1) 2,
-                                                      linarith,},
-                                                 apply anb, linarith,},
-            apply lt_by_cases ((a + 1) % 2) 1,
-            intro caselt, have tec1 : (a + 1) % 2 = 0 := by {exact nat.lt_one_iff.mp caselt,},
-            have l1 : (b + 1) % 2 = 1 := by {apply lt_by_cases ((b + 1) % 2) 1, intro caltb,
-                                             have tec2 : (b + 1) % 2 = 0 :=
-                                              by {exact nat.lt_one_iff.mp caltb,},
-                                             by_contra, apply Lem2, apply eq.trans tec1,
-                                             exact tec2.symm,
-                                             simp,
-                                             intro C, by_contra,
-                                             have pain : 0<2 := by {norm_num,},
-                                             have tec3 : (b + 1) % 2 < 2 :=
-                                              by {exact nat.mod_lt (b + 1) pain,},
-                                             linarith,},
-            have case_pre : a+1+1 = b+1 := by {rw ← nat.div_add_mod (a+1) 2,
-                                               rw ← nat.div_add_mod (b+1) 2,
-                                               linarith,},
-            have case : a+1 = b := by {linarith,},
-            rw nat.coprime_comm, rw eq_comm at case, exact succ_coprime b a case,
-            intro caseq,
-            have l1 : (b + 1) % 2 = 0 := by {apply lt_by_cases ((b + 1) % 2) 1, intro caltb,
-                                             have tec2 : (b + 1) % 2 = 0 :=
-                                              by {exact nat.lt_one_iff.mp caltb,},
-                                             exact tec2, intro caoneb,
-                                             by_contra C, apply Lem2, apply eq.trans caseq,
-                                             exact caoneb.symm,
-                                             intro C, by_contra,
-                                             have pain : 0<2 := by {norm_num,},
-                                             have tec3 : (b + 1) % 2 < 2 :=
-                                              by {exact nat.mod_lt (b + 1) pain,},
-                                             linarith,},
-            have case_pre : a+1 = b+1+1 := by {rw ← nat.div_add_mod (a+1) 2,
-                                               rw ← nat.div_add_mod (b+1) 2,
-                                               linarith,},
-            have case : a = b+1 := by {linarith,},
-            exact succ_coprime a b case,
-            intro C, by_contra,
-            have pain : 0<2 := by {norm_num,},
-            have tec3 : (a + 1) % 2 < 2 := by {exact nat.mod_lt (a + 1) pain,},
-            linarith,}
+                -- Goal: |A| > n
+                rw A_card, linarith,
+              },
+          rcases Lem1 with ⟨a, aA, b, bA, anb, faefb⟩ ,
+          simp [f] at faefb,
+          use a, split, exact aA,
+          use b, split, exact bA,
+          split, exact anb,
+          have absucc : a = b+1 ∨ b = a+1 := neq_succ a b anb faefb,
+          cases absucc,
+          exact succ_coprime a b absucc,
+          exact nat.coprime.symmetric (succ_coprime b a absucc),
+        }
 
 -- Claim 2
 
@@ -392,9 +452,9 @@ lemma size_lemma (n : nat) : ((image (λ x, x+1) (range (2*n))).filter (λ x, x%
 open classical
 open_locale classical
 
-example (n : nat) : ∀A, A ∈ (powerset_len (n+1) (image (λ x, x+1) (range (2*n)))) →
+example (n : nat) : ∀A, A ∈ (powerset_len (n+1) (range_from_one (2*n))) →
         ∃a,∃b, a∈A ∧ b∈A ∧ (a≠b) ∧ (a ∣ b) :=
-        by {intros A Adef,
+        by {dsimp [range_from_one], intros A Adef,
             let f := λ (x : nat), if h : x ∈ (image (λ x, x+1) (range (2*n)))
                                   then nat.find (nat.find_spec (decompo_lemma n x h)) else 0,
             have pigeon : ∃a,∃b, a∈A ∧ b∈A ∧ (a≠b) ∧ (f a = f b) :=
