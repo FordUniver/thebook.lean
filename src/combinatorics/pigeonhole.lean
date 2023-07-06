@@ -264,63 +264,43 @@ lemma my_generalized_pigeonhole {α β : Type*} [decidable_eq α] [decidable_eq 
 
 -- 1. Numbers
 
+def range_from_one (n : ℕ) := image (λ x, x+1) (range (n))
 
-def range_from_one (n : nat) := image (λ x, x+1) (range (n))
+def residue_cases_two (n : ℕ) {P : Prop}
+  (h₁ : n % 2 = 0 → P) (h₂ : n % 2 = 1 → P) : P := by {
+  have : n % 2 < 2 := nat.mod_lt n dec_trivial,
+  apply lt_by_cases (n % 2) 1,
+  rw nat.lt_one_iff, exact h₁,
+  exact h₂, intros nP, linarith,
+}
+
+def residue_cases (n m : ℕ) {P : Sort*}
+  (h : ∀r ∈ range (m), n % m = r → P) : P := by {
+  sorry
+}
 
 lemma neq_succ ( n m : ℕ ) ( h1 : n ≠ m ) ( h2 : (n+1) / 2 = (m+1) / 2 ) : 
   n = m+1 ∨ m = n+1 := by {
-    sorry
-    -- -- Lemma: (a+1) % 2 ≠ (b+1) % 2
-    -- have Lem2 : (a+1)%2 ≠ (b+1)%2 := by {
-    --   by_contra C,
-    --   have tec : a+1 = b+1 := by {
-    --     rw ← nat.div_add_mod (a+1) 2,
-    --     rw ← nat.div_add_mod (b+1) 2,
-    --     linarith,
-    --   },
-    --   apply anb,
-    --   linarith,
-    -- },
-    -- apply lt_by_cases ((a + 1) % 2) 1,
-    -- intro caselt,
-    -- have tec1 : (a + 1) % 2 = 0 := by {exact nat.lt_one_iff.mp caselt,},
-    -- have l1 : (b + 1) % 2 = 1 := by {apply lt_by_cases ((b + 1) % 2) 1, intro caltb,
-    --                                   have tec2 : (b + 1) % 2 = 0 :=
-    --                                   by {exact nat.lt_one_iff.mp caltb,},
-    --                                   by_contra, apply Lem2, apply eq.trans tec1,
-    --                                   exact tec2.symm,
-    --                                   simp,
-    --                                   intro C, by_contra,
-    --                                   have pain : 0<2 := by {norm_num,},
-    --                                   have tec3 : (b + 1) % 2 < 2 :=
-    --                                   by {exact nat.mod_lt (b + 1) pain,},
-    --                                   linarith,},
-    -- have case_pre : a+1+1 = b+1 := by {rw ← nat.div_add_mod (a+1) 2,
-    --                                     rw ← nat.div_add_mod (b+1) 2,
-    --                                     linarith,},
-    -- have case : a+1 = b := by {linarith,},
-    -- rw nat.coprime_comm, rw eq_comm at case, exact succ_coprime b a case,
-    -- intro caseq,
-    -- have l1 : (b + 1) % 2 = 0 := by {apply lt_by_cases ((b + 1) % 2) 1, intro caltb,
-    --                                   have tec2 : (b + 1) % 2 = 0 :=
-    --                                   by {exact nat.lt_one_iff.mp caltb,},
-    --                                   exact tec2, intro caoneb,
-    --                                   by_contra C, apply Lem2, apply eq.trans caseq,
-    --                                   exact caoneb.symm,
-    --                                   intro C, by_contra,
-    --                                   have pain : 0<2 := by {norm_num,},
-    --                                   have tec3 : (b + 1) % 2 < 2 :=
-    --                                   by {exact nat.mod_lt (b + 1) pain,},
-    --                                   linarith,},
-    -- have case_pre : a+1 = b+1+1 := by {rw ← nat.div_add_mod (a+1) 2,
-    --                                     rw ← nat.div_add_mod (b+1) 2,
-    --                                     linarith,},
-    -- have case : a = b+1 := by {linarith,},
-    -- exact succ_coprime a b case,
-    -- intro C, by_contra,
-    -- have pain : 0<2 := by {norm_num,},
-    -- have tec3 : (a + 1) % 2 < 2 := by {exact nat.mod_lt (a + 1) pain,},
-    -- linarith,
+    -- Lemma: (a+1) % 2 ≠ (b+1) % 2
+    have Lem2 : (n+1)%2 ≠ (m+1)%2 := by {
+      by_contra C, apply h1,
+      linarith [nat.div_add_mod (n+1) 2, nat.div_add_mod (m+1) 2],
+    },
+    apply residue_cases_two (n+1),
+      -- Case 1: (n + 1) % 2 == 0 → m = n + 1
+      intro n_residue, apply or.inr, 
+      have l1 : (m + 1) % 2 = 1 := by {
+        apply residue_cases_two (m+1), intro m_residue,
+        exfalso, rw m_residue at Lem2, apply Lem2, exact n_residue, simp},
+      rw (add_left_inj 1).symm,
+      linarith [nat.div_add_mod (n+1) 2, nat.div_add_mod (m+1) 2],
+      -- Case 2: (n + 1) % 2 == 1 → n = m + 1
+      intro n_residue, apply or.inl,
+      have l1 : (m + 1) % 2 = 0 := by {
+        apply residue_cases_two (m+1), simp, intro m_residue,
+        exfalso, rw m_residue at Lem2, apply Lem2, exact n_residue},
+      rw (add_left_inj 1).symm,
+      linarith [nat.div_add_mod (n+1) 2, nat.div_add_mod (m+1) 2],
   }
 
 lemma succ_coprime ( n m : ℕ ) (h : n = m+1) : nat.coprime n m :=
@@ -328,59 +308,70 @@ lemma succ_coprime ( n m : ℕ ) (h : n = m+1) : nat.coprime n m :=
 
 -- Claim 1
 example (n ≥ 1) : ∀A  ⊆ range_from_one (2*n), A.card = (n+1) →
-        ∃a∈A, ∃b∈A, a ≠ b ∧ nat.coprime a b := by {
-          intros A A_domain A_card,
-          -- Lemma: ∃ a, b ∈ A with (a+1) // 2 = (b+1) // 2
-          let f := λ (x : ℕ), ((x+1) / 2),
-          have Lem1 : ∃a∈A, ∃b∈A, (a≠b) ∧ f a = f b :=
-            by {
-              apply my_pigeonhole' n A (range_from_one (n)) (f),
-              split,
-              -- Goal: A ⊆ {1, ..., 2*n}
-              intros m mA,
-              simp [range_from_one],
-              use (((m+1) / 2) - 1),
-              -- Lemma: m ∈ A ⇒ m ∈ {1, ..., 2*n}
-              have tec1 : m ∈ range_from_one(2*n) := by {
-                exact A_domain mA,
-              },
-              simp [range_from_one] at tec1,
-              rcases tec1 with ⟨a, a1, a2⟩,
-              -- Lemma: (m + 1) // 2 ≥ 1
-              have tec2 : 1 ≤ (m+1) / 2 := by {
-                rw nat.le_div_iff_mul_le', linarith, norm_num,
-              },
-              split,
-                -- Goal: (m + 1) / 2 - 1 < n
-                rw tsub_lt_iff_right tec2,
-                rw nat.div_lt_iff_lt_mul', 
-                linarith,
-                norm_num,
-                -- Goal: (m + 1) / 2 - 1 + 1 = f m
-                linarith,
-              -- Goal: |1, ..., n| = n and |A| > n
-              split,
-                -- Goal: |1, ..., n| = n
-                dsimp [range_from_one],
-                rw card_image_of_injective,
-                  -- Goal: |0, ..., n-1| = n
-                  exact card_range n,
-                  -- Goal: x ↦ x+1 is injective
-                  dsimp [function.injective],
-                  intros a b aeb, linarith,
-                -- Goal: |A| > n
-                rw A_card, linarith,
-              },
-          rcases Lem1 with ⟨a, aA, b, bA, anb, faefb⟩ ,
-          simp [f] at faefb,
-          use a, split, exact aA,
-          use b, split, exact bA,
-          split, exact anb,
+  ∃a∈A, ∃b∈A, a ≠ b ∧ nat.coprime a b := by {
+    intros A A_domain A_card,
+    -- Lemma: ∃ a, b ∈ A with (a+1) // 2 = (b+1) // 2
+    let f := λ (x : ℕ), ((x+1) / 2),
+    have Lem1 : ∃a∈A, ∃b∈A, (a≠b) ∧ f a = f b :=
+      by {
+        apply my_pigeonhole' n A (range_from_one (n)) (f),
+        split,
+        -- Goal: A ⊆ {1, ..., 2*n}
+        intros m mA,
+        simp [range_from_one],
+        use (((m+1) / 2) - 1),
+        -- Lemma: m ∈ A ⇒ m ∈ {1, ..., 2*n}
+        have tec1 : m ∈ range_from_one(2*n) := by {
+          exact A_domain mA,
+        },
+        simp [range_from_one] at tec1,
+        rcases tec1 with ⟨a, a1, a2⟩,
+        -- Lemma: (m + 1) // 2 ≥ 1
+        have tec2 : 1 ≤ (m+1) / 2 := by {
+          rw nat.le_div_iff_mul_le', linarith, norm_num,
+        },
+        split,
+          -- Goal: (m + 1) / 2 - 1 < n
+          rw tsub_lt_iff_right tec2,
+          rw nat.div_lt_iff_lt_mul', 
+          linarith,
+          norm_num,
+          -- Goal: (m + 1) / 2 - 1 + 1 = f m
+          linarith,
+        -- Goal: |1, ..., n| = n and |A| > n
+        split,
+          -- Goal: |1, ..., n| = n
+          dsimp [range_from_one],
+          rw card_image_of_injective,
+            -- Goal: |0, ..., n-1| = n
+            exact card_range n,
+            -- Goal: x ↦ x+1 is injective
+            dsimp [function.injective],
+            intros a b aeb, linarith,
+          -- Goal: |A| > n
+          rw A_card, linarith,
+        },
+    rcases Lem1 with ⟨a, aA, b, bA, anb, faefb⟩ ,
+    simp [f] at faefb,
+    use a,
+    split,
+      -- Goal: a ∈ A
+      exact aA,
+      -- Goal: ∃ (b : ℕ) (H : b ∈ A), a ≠ b ∧ a.coprime b
+      use b,
+      split,
+        -- Goal: b ∈ A
+        exact bA,
+        -- Goal: a ≠ b ∧ a.coprime b
+        split,
+          -- Goal: a ≠ b
+          exact anb,
+          -- Goal: a.coprime b
           have absucc : a = b+1 ∨ b = a+1 := neq_succ a b anb faefb,
           cases absucc,
           exact succ_coprime a b absucc,
           exact nat.coprime.symmetric (succ_coprime b a absucc),
-        }
+  }
 
 -- Claim 2
 
