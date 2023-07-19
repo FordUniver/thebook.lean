@@ -8,120 +8,98 @@ import data.nat.parity
 
 import tactic
 
-
 open finset
+
+variables {α β : Type*}
 
 -- Pigeonhole principle
 
-lemma my_pigeonhole {α β : Type*} [decidable_eq α] [decidable_eq β]
-        (n : nat) :
-        ∀(S : finset α), ∀(T : finset β),
-        ∀(f : α → β), ((∀(s : α), s∈S → f s ∈ T) ∧  
-        (T.card = n) ∧ (n < S.card)) →  
-        ∃a, ∃b, a∈S ∧ b∈S ∧ (a≠b) ∧ (f a = f b) :=
-  by {induction n with n ih,
-      intros S T f,
-      rintros ⟨map, tec, size⟩,    
-      rw card_pos at size,
-      cases size with s sS,
-      specialize map s sS,
-      rw card_eq_zero at tec,
-      rw tec at map,
-      by_contra, exact not_mem_empty (f s) map, --base done
-      intros S T f,
-      rintros ⟨map, tec, size⟩,
-      -- take a t in T
-      have tT_pred : ∃t,t∈T :=
-        by {have pain : n.succ = n+1 := by {refl}, rw pain at tec,
-            have tmp : 0 < T.card := by {linarith,}, rw card_pos at tmp,
-            exact tmp,},
-      cases tT_pred with t tT,
-      by_cases (∃a, a∈S ∧ f a = t), -- is there an antecdant of t ?
-      rcases h with ⟨a, aS, fat⟩,
-      by_cases (∃b, b∈S ∧ f b = t ∧ a ≠ b), --is there another ?
-      rcases h with ⟨b, bS, fbt, bna⟩, 
-      use a, use b, rw ← fat at fbt, rw eq_comm at fbt,
-      exact ⟨aS, bS, bna, fbt⟩,  
-      --exactly one antecedant
-      push_neg at h,
-      let S' := erase S a,
-      let T' := erase T t,
-      have map' : ∀(s : α), s∈S' → f s ∈ T' :=
-        by {intros s sS,
-            dsimp [T'], dsimp [S'] at sS,
+def maps_to {α β : Type*} (f : α → β) (s : finset α) (t : finset β) : Prop := ∀ ⦃x⦄, x ∈ s → f x ∈ t
+
+lemma pigeonhole
+    {α β : Type*} [decidable_eq α] [decidable_eq β]
+    (S : finset α) (T : finset β) (f : α → β) (n : nat) :
+    (maps_to f S T ∧ (T.card = n) ∧ (n < S.card)) → ¬(f.injective) := by {
+        
+        -- Induction on n = |T|
+        revert T, revert S,
+        induction n with n ih,
+
+        -- Base Case when T = ∅
+        rintros S T ⟨map, Tcard, size⟩,
+        rw card_pos at size,
+        cases size with s sS,
+        simp [maps_to] at map,
+        specialize map sS,
+        rw card_eq_zero at Tcard,
+        rw Tcard at map,
+        by_contra,
+        exact not_mem_empty (f s) map,
+
+        -- Inductive Step
+        rintros S T ⟨map, Tcard, Scard⟩,
+
+        -- grab some t ∈ T
+        have tec : 0 < T.card := by {simp [Tcard]},
+        rw card_pos at tec,
+        cases tec with t tT,
+
+        by_cases (∃a, a∈S ∧ f a = t),
+        -- if t has at least one antecedant(s)
+        rcases h with ⟨a, aS, fat⟩,
+          by_cases (∃b, b∈S ∧ f b = t ∧ a ≠ b),
+
+          -- if t has at least two antecedents
+          rcases h with ⟨b, bS, fbt, bna⟩,
+          simp [function.injective], -- unravel injectivity
+          use a, use b,
+          simp [fat, fbt, bna],
+
+          -- if t has exactly one antecedent
+          push_neg at h,
+          let S' := erase S a,
+          let T' := erase T t,
+
+          have map' : maps_to f S' T' := by {
+            dsimp [S', T'],
+            intros s sS,
             rw mem_erase at *,
             split,
             by_contra c,
             specialize h s sS.2 c,
             rw eq_comm at h,
             exact sS.1 h,
-            exact map s sS.2,},
-      have sizeT' : T'.card = n :=
-        by {have l : T'.card = T.card - 1:= by {apply card_erase_of_mem,
-                                                exact tT,},
-            have pain : n.succ = n+1 := by {refl}, rw pain at tec,
-            have pain2 : 1 ≤ T.card := by {have tmp : T.nonempty :=
-                                             by {use t, exact tT,},
-                                           rw ← card_pos at tmp,
-                                           linarith,},
-            linarith,},
-      have sizeS' : n < S'.card :=
-        by {have l : S'.card = S.card - 1:= by {apply card_erase_of_mem,
-                                                exact aS,},
-            have pain : n.succ = n+1 := by {refl}, rw pain at tec,
-            have pain2 : 1 ≤ S.card := by {have tmp : T.nonempty :=
-                                            by {use t, exact tT,},
-                                           rw ← card_pos at tmp,
-                                           linarith,},
-            linarith,},
-      specialize ih S' T' f ⟨map', sizeT', sizeS'⟩,  
-      have inS : S' ⊆ S := by {dsimp [S'], refine erase_subset a S,},
-      cases ih with a A, cases A with b B, rcases B with ⟨aS', bS', anb, feq⟩, 
-      use a, use b, exact ⟨inS aS', inS bS', anb, feq⟩,
-      -- no antecedants
-      push_neg at h,
-      let T' := erase T t,
-      have map' : ∀(s : α), s∈S → f s ∈ T' :=
-        by {intros s sS,
-            dsimp [T'],
-            rw mem_erase at *,
-            split,
-            exact h s sS,
-            exact map s sS,},
-      have sizeT' : T'.card = n :=
-        by {have l : T'.card = T.card - 1:= by {apply card_erase_of_mem,
-                                                exact tT,},
-            have pain : n.succ = n+1 := by {refl}, rw pain at tec,
-            have pain2 : 1 ≤ T.card := by {have tmp : T.nonempty :=
-                                            by {use t, exact tT,},
-                                           rw ← card_pos at tmp,
-                                           linarith,},
-            linarith,},
-      have sizeS : n < S.card :=
-        by {have pain : n.succ = n+1 := by {refl}, rw pain at tec,
-            have pain2 : 1 ≤ S.card := by {have tmp : T.nonempty :=
-                                            by {use t, exact tT,},
-                                           rw ← card_pos at tmp,
-                                           linarith,},
-            linarith,},
-      specialize ih S T' f ⟨map', sizeT', sizeS⟩, 
-      exact ih,
-      }
+            exact map sS.2},
+    
+          have card' : T'.card = n ∧ n < S'.card := by {
+            dsimp [S', T'],
+            rw [card_erase_of_mem tT, card_erase_of_mem aS],
+            simp [Tcard],
+            rw nat.succ_eq_add_one at Scard,
+            have Sne : 1 ≤ S.card := by {linarith},
+            linarith},
+            
+          exact ih S' T' ⟨map', card'.1, card'.2⟩,
 
-lemma my_pigeonhole' {α β : Type*} [decidable_eq α] [decidable_eq β]
-        (n : nat) :
-        ∀(S : finset α), ∀(T : finset β),
-        ∀(f : α → β), ((∀(s : α), s∈S → f s ∈ T) ∧  
-        (T.card = n) ∧ (n < S.card)) →  
-        ∃a∈S, ∃b∈S, (a≠b) ∧ (f a = f b) :=
-  by {
-    intros _ _ _ H,
-    have L : ∃a, ∃b, a∈S ∧ b∈S ∧ (a≠b) ∧ (f a = f b) := by {
-      apply my_pigeonhole, exact H,
-    },
-    rcases L with ⟨a, b, a_S, b_S, anb, fafb⟩,
-    exact ⟨a, a_S, b, b_S, anb, fafb⟩, 
-  }
+        -- if t has at no antecedant
+        let T' := erase T t,
+
+        have map' : ∀(s : α), s∈S → f s ∈ T' := by {
+            dsimp [T'],
+            intros s sS,
+            rw mem_erase at *,
+            push_neg at h,
+            exact ⟨h s sS, map sS⟩},
+
+        have Tcard' : T'.card = n := by {
+            dsimp [T'],
+            rw [card_erase_of_mem tT],
+            simp [Tcard]},
+
+        replace Scard : n < S.card := by {apply nat.lt_of_succ_lt, exact Scard},
+
+        exact ih S T' ⟨map', Tcard', Scard⟩,
+    }
 
 -- Partitions and cardinals, as prelude to generalized pigeonhole
 
