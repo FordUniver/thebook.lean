@@ -1,3 +1,7 @@
 /build
 /lakefile.olean
 /lake-packages/*
+/build
+/lakefile.olean
+/lake-packages/*
+*.olean
