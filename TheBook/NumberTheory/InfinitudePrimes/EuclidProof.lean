@@ -27,7 +27,7 @@ theorem infinitude_primes
       contradiction
     }
 
-    use p, p_prime, p_not_in_S
+    exact ⟨p, p_prime, p_not_in_S⟩
   }
 
 theorem canonical_infinitude_primes :
