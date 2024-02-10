@@ -1,0 +1,11 @@
+stages:
+  - build
+
+update-and-build:
+  image: leanprovercommunity/lean:debian
+  stage: build
+  only:
+    - master
+  script:
+    - lake update
+    - lake build
