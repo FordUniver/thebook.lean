@@ -3,7 +3,7 @@ stages:
 
 update-and-build:
   image:
-    name: leanprovercommunity/lean:debian
+    name: registry.git.zib.de/docker/ais2t/lean
     entrypoint: ["/bin/bash", "-c"]
   stage: build
   only:
