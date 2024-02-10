@@ -2,7 +2,9 @@ stages:
   - build
 
 update-and-build:
-  image: leanprovercommunity/lean:debian
+  image:
+    name: leanprovercommunity/lean:debian
+    entrypoint: ["/bin/sh", "-c"]
   stage: build
   only:
     - master
