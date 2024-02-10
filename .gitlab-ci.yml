@@ -9,5 +9,5 @@ update-and-build:
   only:
     - master
   script:
-    - lake update
-    - lake build
+    - 'lake update'
+    - 'lake build'
