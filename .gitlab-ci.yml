@@ -7,10 +7,6 @@ build_lean_project:
   before_script:
     - apt-get update && apt-get install -y curl git
     - curl -sS https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
-    - which lean
-    - which lake
-    - which elan
+    - lean --help
   script:
-    - which lean
-    - which lake
-    - which elan
+    - lean --help
