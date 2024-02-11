@@ -6,7 +6,7 @@ open scoped BigOperators
 
 theorem euclid_infinitude_primes
   (S : Finset ℕ) (hS : ∀ s ∈ S, Nat.Prime s) : ∃ p, Nat.Prime p ∧ p ∉ S := by {
-    let n := (∏ i in S, i).succ
+    let n := (∏ i in S, i) + 1
 
     have n_ne_one : n ≠ 1 := by {
       rw [Nat.succ_ne_succ, Finset.prod_ne_zero_iff]
@@ -20,7 +20,7 @@ theorem euclid_infinitude_primes
       by_contra p_in_S
       have p_dvd_ProdS : p ∣ (∏ i in S, i) := Finset.dvd_prod_of_mem (fun i => i) p_in_S
       have p_dvd_one : p ∣ 1 := (Nat.dvd_add_right p_dvd_ProdS).mp p_dvd_n
-      have p_ndvd_one : ¬p ∣ 1 := Nat.Prime.not_dvd_one p_prime
+      have p_not_dvd_one : ¬p ∣ 1 := Nat.Prime.not_dvd_one p_prime
       contradiction
     }
 
