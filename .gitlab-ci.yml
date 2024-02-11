@@ -5,7 +5,7 @@ build_lean_project:
   image: python:3.11-bookworm
   stage: build
   before_script:
-    - apt-get update && apt-get install -y curl
+    - apt-get update && apt-get install -y curl git
     - curl -sS https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
     - which lean
     - which lake
