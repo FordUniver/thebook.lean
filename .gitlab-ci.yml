@@ -1,11 +1,15 @@
 stages:
   - build
 
-update-and-build:
-  image: leanprovercommunity/lean:debian
+build_lean_project:
+  image: debian:bookworm
   stage: build
-  only:
-    - master
+  before_script:
+    - apt-get update && apt-get install -y curl
+    - curl -O https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh
+    - sh elan-init.sh -y && rm elan-init.sh
+    - elan toolchain install stable && elan toolchain install nightly
+    - chmod -R 777 /opt/elan
   script:
     - lake update
     - lake build
