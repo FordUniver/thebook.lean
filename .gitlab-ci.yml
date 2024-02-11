@@ -6,7 +6,7 @@ build_lean_project:
   stage: build
   before_script:
     - apt-get update && apt-get install -y curl git
+    - curl -sS https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
     - export PATH="$HOME/.elan/bin:$PATH"
   script:
-    - curl -sS https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
-    - lean --help
+    - lake clean && lake update && lake build
