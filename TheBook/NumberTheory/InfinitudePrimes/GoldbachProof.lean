@@ -63,7 +63,7 @@ lemma l1
     }
     have x_eq_one : x = 1 :=  Nat.dvd_one.mp x_dvd_one
     contradiction
-}
+  }
 
 theorem goldbach_infinitude_of_primes : ∃ P : ℕ → ℕ, Injective P ∧ ∀ k, (P k).Prime := by {
   choose P P_prime P_dvd_fermat using fun n ↦ Nat.exists_prime_and_dvd (fermat_ne_one n)
