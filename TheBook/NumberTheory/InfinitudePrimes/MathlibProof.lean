@@ -2,7 +2,7 @@ import Mathlib.Tactic
 
 open scoped Nat BigOperators
 
-theorem infinitude_primes
+theorem mathlib_infinitude_primes
   (n : ℕ) : ∃ p, n ≤ p ∧ Nat.Prime p := by {
     let p := Nat.minFac (n ! + 1)
 
@@ -15,9 +15,4 @@ theorem infinitude_primes
         p_prime.not_dvd_one h₂
 
     exact ⟨p, p_ge_n, p_prime⟩
-  }
-
-theorem canonical_infinitude_primes :
-  Infinite { p : ℕ | Nat.Prime p} := by {
-    sorry
   }

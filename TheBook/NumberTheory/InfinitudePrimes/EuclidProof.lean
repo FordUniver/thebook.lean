@@ -1,10 +1,11 @@
-import Mathlib.Tactic
+import Mathlib.Algebra.BigOperators.Basic
+import Mathlib.Data.Nat.Prime
+import Mathlib.Data.Set.Finite
 
-open scoped Nat BigOperators
+open scoped BigOperators
 
--- TODO: remove hS requirement
 
-theorem infinitude_primes
+theorem euclid_infinitude_primes
   (S : Finset ℕ) (hS : ∀ p ∈ S, Nat.Prime p) : ∃ p, Nat.Prime p ∧ p ∉ S := by {
     let sprod := (∏ i in S, i)
     have sprod_ne_zero : sprod ≠ 0 := by {
@@ -30,7 +31,22 @@ theorem infinitude_primes
     exact ⟨p, p_prime, p_not_in_S⟩
   }
 
-theorem canonical_infinitude_primes :
-  Infinite { p : ℕ | Nat.Prime p} := by {
-    sorry
+theorem euclid_infinitude_primes_standardised : { p : ℕ | Nat.Prime p}.Infinite := by {
+  rw [Set.Infinite]
+  by_contra con
+
+  let S := Set.Finite.toFinset con
+  have S_prime : ∀ p ∈ S, Nat.Prime p := by {
+    intro p p_in_S
+    rw [Set.Finite.mem_toFinset con] at p_in_S
+    rw [Set.mem_setOf_eq] at p_in_S
+    exact p_in_S
   }
+
+  obtain ⟨p, ⟨p_prime, p_not_in_S⟩⟩ := euclid_infinitude_primes S S_prime
+
+  apply p_not_in_S
+  rw [Set.Finite.mem_toFinset con]
+  rw [Set.mem_setOf_eq]
+  exact p_prime
+}
