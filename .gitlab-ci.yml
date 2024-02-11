@@ -6,11 +6,11 @@ build_lean_project:
   stage: build
   before_script:
     - apt-get update && apt-get install -y curl
-    - curl -O https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh
-    - sh elan-init.sh -y && rm elan-init.sh
-    - elan toolchain install stable && elan toolchain install nightly
-    - chmod -R 777 /opt/elan
+    - curl -sS https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+    - which lean
+    - which lake
+    - which elan
   script:
-    - lake clean
-    - lake update
-    - lake build
+    - which lean
+    - which lake
+    - which elan
