@@ -2,7 +2,7 @@ stages:
   - build
 
 build_lean_project:
-  image: debian:bookworm
+  image: python:3.11-bookworm
   stage: build
   before_script:
     - apt-get update && apt-get install -y curl
