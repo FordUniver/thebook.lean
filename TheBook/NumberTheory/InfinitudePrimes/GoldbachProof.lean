@@ -50,7 +50,7 @@ lemma F_coprime (k n : ℕ) (k_ne_n: k ≠ n) : Nat.Coprime (F k) (F n) := by
     exact Nat.eq_of_lt_succ_of_not_lt (lt_of_le_of_ne m_le_two m_ne_two) (Nat.not_lt.mpr (Nat.one_le_iff_ne_zero.mpr m_ne_zero))
 
 /-- Proof of the infinitude of primes --/
-theorem infinitude_of_primes : ∃ P : ℕ → ℕ, Injective P ∧ ∀ k, (P k).Prime := by {
+theorem infinitude_of_primes : ∃ P : ℕ → ℕ, Injective P ∧ ∀ k, (P k).Prime := by
   choose P P_prime P_dvd_fermat using fun n ↦ Nat.exists_prime_and_dvd (ne_of_gt (F_ge_two n))
   have P_inj : Injective P := by
     intros m n Pm_eq_Pn
@@ -59,12 +59,5 @@ theorem infinitude_of_primes : ∃ P : ℕ → ℕ, Injective P ∧ ∀ k, (P k)
     have Pm_dvd_one   : P m ∣ 1                    := F_coprime m n m_ne_n ▸ Pm_dvd_gcd
     exact Nat.Prime.ne_one (P_prime m) (Nat.dvd_one.mp Pm_dvd_one)
   exact ⟨P, P_inj, P_prime⟩
-}
-
-/-- Proof of the standardized infinitude of primes -/
-theorem infinitude_primes_standardized : { p : ℕ | Nat.Prime p}.Infinite := by {
-  obtain ⟨P, P_inj, P_im_prime⟩ := infinitude_of_primes
-  exact Set.infinite_of_injective_forall_mem P_inj P_im_prime
-}
 
 end GoldbachIfinitudePrimes

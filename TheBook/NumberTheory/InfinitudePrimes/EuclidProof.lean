@@ -14,8 +14,7 @@ theorem infinitude_primes
       rw [Nat.succ_ne_succ, Finset.prod_ne_zero_iff]
       exact fun s s_in_S => Nat.Prime.ne_zero (hS s s_in_S)
 
-    obtain ⟨p, p_prime, p_dvd_n⟩ : ∃ p, Nat.Prime p ∧ p ∣ n :=
-      Nat.exists_prime_and_dvd n_ne_one
+    obtain ⟨p, p_prime, p_dvd_n⟩ := Nat.exists_prime_and_dvd n_ne_one
 
     have p_not_in_S : p ∉ S := by
       by_contra p_in_S
@@ -26,23 +25,4 @@ theorem infinitude_primes
 
     exact ⟨p, p_prime, p_not_in_S⟩
 
-
-theorem infinitude_primes_standardized : { p : ℕ | Nat.Prime p}.Infinite := by {
-  rw [Set.Infinite]
-  by_contra con
-
-  let S := Set.Finite.toFinset con
-  have S_prime : ∀ p ∈ S, Nat.Prime p := by {
-    intro p p_in_S
-    rw [Set.Finite.mem_toFinset con] at p_in_S
-    rw [Set.mem_setOf_eq] at p_in_S
-    exact p_in_S
-  }
-
-  obtain ⟨p, ⟨p_prime, p_not_in_S⟩⟩ := infinitude_primes S S_prime
-
-  apply p_not_in_S
-  rw [Set.Finite.mem_toFinset con]
-  rw [Set.mem_setOf_eq]
-  exact p_prime
-}
+end EuclidInfinitudePrimes
