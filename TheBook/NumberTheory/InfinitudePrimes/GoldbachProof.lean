@@ -27,13 +27,14 @@ lemma F_prod_form (n : ℕ) : (∏ k in range n, F k) = F n - 2 := by
       _ = 2 ^ (2 ^ Nat.succ n) - 1              := by simp [Nat.mul_sub_right_distrib, Nat.mul_add]; rw [tsub_add_tsub_cancel (Nat.le_mul_self (2 ^ 2 ^ n)) (Nat.one_le_two_pow (2 ^ n))]; rw [←Nat.pow_two, ←Nat.pow_mul', ←Nat.pow_succ']
       _ = F (Nat.succ n) - 2                    := by exact rfl
 
-lemma coprime_iff_all_divisors_one (k n : ℕ) : Nat.Coprime k n ↔ ∀ m, m ∣ k ∧ m ∣ n → m = 1 :=
+/-- Two numbers are coprime iff all their divisors are one -/
+lemma coprime_iff_divisors_one (k n : ℕ) : Nat.Coprime k n ↔ ∀ m, m ∣ k ∧ m ∣ n → m = 1 :=
   ⟨λ k_n_coprime _ => (λ ⟨m_dvd_k, m_dvd_n⟩ => Nat.eq_one_of_dvd_coprimes k_n_coprime m_dvd_k m_dvd_n),
    λ h => h (Nat.gcd k n) ⟨Nat.gcd_dvd_left k n, Nat.gcd_dvd_right k n⟩⟩
 
 /-- Fermat numbers are pairwise coprime -/
 lemma F_coprime (k n : ℕ) (k_ne_n: k ≠ n) : Nat.Coprime (F k) (F n) := by
-  rw [coprime_iff_all_divisors_one]
+  rw [coprime_iff_divisors_one]
   intro m ⟨m_dvd_Fk, m_dvd_Fn⟩
 
   wlog k_lt_n : k < n
