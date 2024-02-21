@@ -44,7 +44,7 @@ theorem third_equivalence : (∀ n : ℕ, (∃ p, Nat.Prime p ∧ p > n)) ↔ �
 theorem fourth_equivalence : { p : ℕ | Nat.Prime p}.Infinite ↔ ∃ (P : ℕ → ℕ), (Injective P) ∧ (∀ k, (P k).Prime) := by
   apply Iff.intro
   · let primes := { p : ℕ | Nat.Prime p}
-    let P := λ k => (Nat.nth (primes.Mem) k)
+    let P := λ n => (Nat.nth (primes.Mem) n)
     intro h
     exact ⟨P, Nat.nth_injective h, λ k => Nat.nth_mem_of_infinite h k⟩
   · intro ⟨P, P_inj, P_im_prime⟩
