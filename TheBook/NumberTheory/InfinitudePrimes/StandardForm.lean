@@ -35,7 +35,6 @@ theorem third_equivalence : (∀ n : ℕ, (∃ p, Nat.Prime p ∧ p > n)) ↔ �
       exact ⟨p, ⟨p_prime, p_notin_S⟩⟩
     · rw [Finset.not_nonempty_iff_eq_empty.mp h]
       exact ⟨2, Nat.prime_two, Finset.not_mem_empty 2⟩
-
   · intro rhs n
     obtain ⟨p, p_prime, p_notin_S⟩ := rhs (Finset.range (n + 1))
     have h : p > n := by simp [Finset.mem_range] at p_notin_S; exact p_notin_S
