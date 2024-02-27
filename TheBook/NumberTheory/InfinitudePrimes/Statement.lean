@@ -1,12 +1,15 @@
 import Mathlib.Data.Nat.Prime
 import Mathlib.Data.Nat.Nth
-import Mathlib.Data.Set.Finite
+import Mathlib.Tactic.TFAE
 
-open Function
+theorem infinitude_primes_tfae : List.TFAE [
+    { p : ℕ | Nat.Prime p}.Infinite,
+    ∀ (S : Finset ℕ), (∃ p, Nat.Prime p ∧ p ∉ S),
+    (∀ (S : Finset ℕ) (_ : ∀ s ∈ S, Nat.Prime s), (∃ p, Nat.Prime p ∧ p ∉ S)),
+    (∀ n : ℕ, (∃ p, Nat.Prime p ∧ p > n)),
+    ∃ (P : ℕ → ℕ), (Function.Injective P) ∧ (∀ k, (P k).Prime) ] := by
 
-namespace infinitude_primes_equivalence
-
-theorem first_equivalence : { p : ℕ | Nat.Prime p}.Infinite ↔ ∀ (S : Finset ℕ), (∃ p, Nat.Prime p ∧ p ∉ S) := by
+  tfae_have 1 ↔ 2
   constructor
   · exact λ primes_are_infinite S => Set.Infinite.exists_not_mem_finset primes_are_infinite S
   · intro rhs
@@ -16,16 +19,16 @@ theorem first_equivalence : { p : ℕ | Nat.Prime p}.Infinite ↔ ∀ (S : Finse
     rw [Set.Finite.mem_toFinset con, Set.mem_setOf_eq] at p_not_in_S
     contradiction
 
-theorem second_equivalence : (∀ (S : Finset ℕ) (hS : ∀ s ∈ S, Nat.Prime s), (∃ p, Nat.Prime p ∧ p ∉ S)) ↔  (∀ (S : Finset ℕ), (∃ p, Nat.Prime p ∧ p ∉ S)):= by
+  tfae_have 2 ↔ 3
   constructor
-  · intro lhs S
+  · exact fun a S _ => a S
+  · intro rhs S
     let Sprimes := S.filter Nat.Prime
-    obtain ⟨p, p_prime, p_notin_Sprimes⟩ := lhs Sprimes (λ _ g => (Finset.mem_filter.mp g).right)
+    obtain ⟨p, p_prime, p_notin_Sprimes⟩ := rhs Sprimes (λ _ g => (Finset.mem_filter.mp g).right)
     obtain p_notin_S := λ p_in_S => p_notin_Sprimes (Finset.mem_filter.mpr ⟨p_in_S, p_prime⟩)
     exact ⟨p, ⟨p_prime, p_notin_S⟩⟩
-  · exact fun a S _ => a S
 
-theorem third_equivalence : (∀ n : ℕ, (∃ p, Nat.Prime p ∧ p > n)) ↔ ∀ (S : Finset ℕ), (∃ p, Nat.Prime p ∧ p ∉ S) := by
+  tfae_have 4 ↔ 2
   constructor
   · intro lhs S
     by_cases h : S.Nonempty
@@ -40,7 +43,7 @@ theorem third_equivalence : (∀ n : ℕ, (∃ p, Nat.Prime p ∧ p > n)) ↔ �
     have h : p > n := by simp [Finset.mem_range] at p_notin_S; exact p_notin_S
     exact ⟨p, ⟨p_prime, h⟩⟩
 
-theorem fourth_equivalence : { p : ℕ | Nat.Prime p}.Infinite ↔ ∃ (P : ℕ → ℕ), (Injective P) ∧ (∀ k, (P k).Prime) := by
+  tfae_have 1 ↔ 5
   constructor
   · let primes := { p : ℕ | Nat.Prime p}
     let P := λ n => (Nat.nth (primes.Mem) n)
@@ -48,4 +51,4 @@ theorem fourth_equivalence : { p : ℕ | Nat.Prime p}.Infinite ↔ ∃ (P : ℕ 
   · intro ⟨P, P_inj, P_im_prime⟩
     exact Set.infinite_of_injective_forall_mem P_inj P_im_prime
 
-end infinitude_primes_equivalence
+  tfae_finish
