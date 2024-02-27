@@ -5,7 +5,7 @@ import Mathlib.Data.Set.Finite
 
 open Finset Function BigOperators
 
-namespace GoldbachIfinitudePrimes
+namespace GoldbachInfinitudePrimes
 
 /-- Definition of the Fermat numbers -/
 def F (n : ℕ) : ℕ := 2 ^ 2 ^ n + 1
@@ -60,4 +60,4 @@ theorem infinitude_of_primes : ∃ P : ℕ → ℕ, Injective P ∧ ∀ k, (P k)
     exact Nat.Prime.ne_one (P_prime m) (Nat.dvd_one.mp Pm_dvd_one)
   exact ⟨P, P_inj, P_prime⟩
 
-end GoldbachIfinitudePrimes
+end GoldbachInfinitudePrimes
