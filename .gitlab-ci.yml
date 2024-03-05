@@ -3,7 +3,7 @@ stages:
 
 mirror_repository_to_github:
   stage: mirror
-  image: alpine/latest
+  image: alpine:latest
   only:
     - master  # Adjust based on your needs
   script:
