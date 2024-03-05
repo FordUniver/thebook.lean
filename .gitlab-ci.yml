@@ -1,12 +1,33 @@
 stages:
-  - build
+  - mirror
 
-build_lean_project:
-  image: python:3.11-bookworm
-  stage: build
-  before_script:
-    - apt-get update && apt-get install -y curl git
-    - curl -sS https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
-    - export PATH="$HOME/.elan/bin:$PATH"
+mirror_repository_to_github:
+  stage: mirror
+  image: alpine/latest
+  only:
+    - master  # Adjust based on your needs
   script:
-    - lake clean && lake update && lake build
+    - apk add --no-cache git
+    - git config --global user.email "spiegel@zib.com"
+    - git config --global user.name "Bot"
+    - 'echo "machine github.com login TheBookBot password ${GITHUB_TOKEN}" > ~/.netrc'
+    - git remote add github https://github.com/forduniver/thebook.lean.git
+    - git push --force github HEAD:master  # Adjust the target branch if necessary
+  before_script:
+    - git checkout master  # Ensure you're on the correct branch
+  after_script:
+    - git remote remove github
+
+# stages:
+#   - build
+# 
+# build_lean_project:
+#   image: python:3.11-bookworm
+#   stage: build
+#   before_script:
+#     - apt-get update && apt-get install -y curl git
+#     - curl -sS https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+#     - export PATH="$HOME/.elan/bin:$PATH"
+#   script:
+#     - lake clean && lake update && lake build
+# 
