@@ -37,6 +37,6 @@ mirror:
         git push --verbose
       fi
   before_script:
-    - apk update && apk add --no-cache git
+    - apk update && apk add --no-cache git rsync
     - git checkout master
     - git pull
