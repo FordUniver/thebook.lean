@@ -29,12 +29,13 @@ mirror:
     - cd $temp
     - rm .gitlab-ci.yml
     - git add -A
-    - git commit -m "mirror ($LATEST_COMMIT_MSG)"
-    - git push --verbose
-
-    # - git ls-remote https://github.com/FordUniver/thebook.lean.git
-    # - git remote add github https://github.com/FordUniver/thebook.lean.git
-    # extends- git push --verbose --force github HEAD:main
+    - |
+      if git diff --cached --quiet; then
+        echo "No changes in _data, skipping commit."
+      else
+        git commit -m "mirror ($LATEST_COMMIT_MSG)"
+        git push --verbose
+      fi
   before_script:
     - apk update && apk add --no-cache git
     - git checkout master
