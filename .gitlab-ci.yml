@@ -28,7 +28,7 @@ mirror:
     - cp -r * $temp
     - cd $temp
     - rm .gitlab-ci.yml
-    - git add -A *
+    - git add -A
     - git commit -m "mirror ($LATEST_COMMIT_MSG)"
     - git push --verbose
 
