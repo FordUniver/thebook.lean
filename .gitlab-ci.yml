@@ -1,22 +1,20 @@
 stages:
-  - verify
+#  - verify
   - mirror
 
-build:
-  image: python:3.11-bookworm
-  stage: verify
-  before_script:
-    - apt-get update && apt-get install -y curl git
-    - curl -sS https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
-    - export PATH="$HOME/.elan/bin:$PATH"
-  script:
-    - lake clean && lake update && lake build
+# verify:
+#   image: python:3.11-bookworm
+#   stage: verify
+#   before_script:
+#     - apt-get update && apt-get install -y curl git
+#     - curl -sS https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+#     - export PATH="$HOME/.elan/bin:$PATH"
+#   script:
+#     - lake clean && lake update && lake build
 
-mirror_to_github:
+mirror:
   stage: mirror
   image: alpine:latest
-  # dependencies:
-  #   - build
   only:
     - master
   script:
