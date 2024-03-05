@@ -16,6 +16,7 @@ mirror_repository_to_github:
   before_script:
     - apk update && apk add --no-cache git  # Ensure git is installed
     - git checkout master  # Ensure you're on the correct branch
+    - git pull
   after_script:
     - git remote remove github
 
