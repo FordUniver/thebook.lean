@@ -25,7 +25,7 @@ mirror:
     - temp=$(mktemp -d)
     - git clone --depth=1 "https://github.com/FordUniver/thebook.lean.git" $temp
     - rm -rf $temp/*
-    - cp -r * $temp
+    - rsync -av --exclude='.git/' ./ $temp/
     - cd $temp
     - rm .gitlab-ci.yml
     - git add -A
