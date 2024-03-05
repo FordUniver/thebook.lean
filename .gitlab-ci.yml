@@ -27,6 +27,7 @@ mirror:
     - rm -rf $temp/*
     - cp -r * $temp
     - cd $temp
+    - rm .gitlab-ci.yml
     - git add -A *
     - git commit -m "mirror ($LATEST_COMMIT_MSG)"
     - git push --verbose
@@ -38,5 +39,3 @@ mirror:
     - apk update && apk add --no-cache git
     - git checkout master
     - git pull
-  after_script:
-    - git remote remove github
