@@ -7,17 +7,22 @@ mirror_repository_to_github:
   only:
     - master
   script:
+    - git branch
+    - git status
+    - git pull origin master --rebase
+    - git status
     - apk add --no-cache git
     - git config --global user.email "spiegel@zib.com"
     - git config --global user.name "Bot"
     - 'echo "machine github.com login TheBookBot password ${GITHUB_TOKEN}" > ~/.netrc'
     - git ls-remote https://github.com/FordUniver/thebook.lean.git
     - git remote add github https://github.com/FordUniver/thebook.lean.git
+    - git status
     - git push --verbose --force github HEAD:main
   before_script:
     - apk update && apk add --no-cache git
-    - git checkout master
-    - git pull
+    # - git checkout master
+    # - git pull
   after_script:
     - git remote remove github
 
