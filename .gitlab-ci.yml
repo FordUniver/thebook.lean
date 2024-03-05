@@ -15,18 +15,27 @@ build:
 mirror_to_github:
   stage: mirror
   image: alpine:latest
-  dependencies:
-    - build
+  # dependencies:
+  #   - build
   only:
     - master
   script:
-    - git status
     - git config --global user.email "spiegel@zib.com"
-    - git config --global user.name "Bot"
+    - git config --global user.name "Mirror Bot"
     - 'echo "machine github.com login TheBookBot password ${GITHUB_TOKEN}" > ~/.netrc'
-    - git ls-remote https://github.com/FordUniver/thebook.lean.git
-    - git remote add github https://github.com/FordUniver/thebook.lean.git
-    - git push --verbose --force github HEAD:main
+    - LATEST_COMMIT_MSG=$(git log -1 --pretty=%B)
+    - temp=$(mktemp -d)
+    - git clone --depth=1 "https://github.com/FordUniver/thebook.lean.git" $temp
+    - rm -rf $temp/*
+    - cp -r * $temp
+    - cd $temp
+    - git add -A *
+    - git commit -m "mirror ($LATEST_COMMIT_MSG)"
+    - git push --verbose
+
+    # - git ls-remote https://github.com/FordUniver/thebook.lean.git
+    # - git remote add github https://github.com/FordUniver/thebook.lean.git
+    # extends- git push --verbose --force github HEAD:main
   before_script:
     - apk update && apk add --no-cache git
     - git checkout master
