@@ -2,4 +2,3 @@
 -- Import modules here that should be built as part of the library.
 import TheBook.NumberTheory.InfinitudePrimes.EuclidProof
 import TheBook.NumberTheory.InfinitudePrimes.GoldbachProof
-import TheBook.NumberTheory.InfinitudePrimes.MathlibProof
