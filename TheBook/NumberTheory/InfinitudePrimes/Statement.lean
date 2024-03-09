@@ -2,7 +2,7 @@ import Mathlib.Data.Nat.Prime
 import Mathlib.Data.Nat.Nth
 import Mathlib.Tactic.TFAE
 
-theorem infinitude_primes_tfae : List.TFAE [
+theorem infinitude_of_primes_tfae : List.TFAE [
     { p : ℕ | Nat.Prime p}.Infinite,
     ∀ (S : Finset ℕ), (∃ p, Nat.Prime p ∧ p ∉ S),
     (∀ (S : Finset ℕ) (_ : ∀ s ∈ S, Nat.Prime s), (∃ p, Nat.Prime p ∧ p ∉ S)),
