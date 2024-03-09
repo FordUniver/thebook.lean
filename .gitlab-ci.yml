@@ -1,7 +1,8 @@
 stages:
   - verify
+  - mirror
 
-build_lean_project:
+verify:
   image: python:3.11-bookworm
   stage: verify
   before_script:
@@ -10,3 +11,32 @@ build_lean_project:
     - export PATH="$HOME/.elan/bin:$PATH"
   script:
     - lake clean && lake update && lake build
+    
+mirror:
+  stage: mirror
+  image: alpine:latest
+  only:
+    - master
+  script:
+    - git config --global user.email "spiegel@zib.com"
+    - git config --global user.name "Mirror Bot"
+    - 'echo "machine github.com login TheBookBot password ${GITHUB_TOKEN}" > ~/.netrc'
+    - LATEST_COMMIT_MSG=$(git log -1 --pretty=%B)
+    - temp=$(mktemp -d)
+    - git clone --depth=1 "https://github.com/FordUniver/thebook.lean.git" $temp
+    - rm -rf $temp/*
+    - rsync -av --exclude='.git/' ./ $temp/
+    - cd $temp
+    - rm .gitlab-ci.yml
+    - git add -A
+    - |
+      if git diff --cached --quiet; then
+        echo "No changes in _data, skipping commit."
+      else
+        git commit -m "mirror ($LATEST_COMMIT_MSG)"
+        git push --verbose
+      fi
+  before_script:
+    - apk update && apk add --no-cache git rsync
+    - git checkout master
+    - git pull
