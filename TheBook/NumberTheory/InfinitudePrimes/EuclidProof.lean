@@ -6,7 +6,7 @@ open BigOperators
 
 namespace EuclidInfinitudePrimes
 
-theorem infinitude_primes
+theorem infinitude_of_primes
   (S : Finset ℕ) (hS : ∀ s ∈ S, Nat.Prime s) : ∃ p, Nat.Prime p ∧ p ∉ S := by
     let n := (∏ i in S, i) + 1
 
