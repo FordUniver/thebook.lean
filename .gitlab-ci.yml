@@ -26,16 +26,20 @@ update:
     - echo "Latest Lean version is $RELEASE_TAG"
     - grep -q "leanprover/lean4:${RELEASE_TAG}" lean-toolchain && echo "Lean version ${RELEASE_TAG} is already in use." && exit 0
     - |
-      if [ $(curl -s --header "PRIVATE-TOKEN: ${UPDATE_TOKEN}" "https://gitlab.com/api/v4/projects/2411/issues?search=Lean update to $RELEASE_TAG failed" | jq '. | length') -ne 0 ]; then
+      if [ "$(curl -s --header "PRIVATE-TOKEN: ${UPDATE_TOKEN}" "https://gitlab.com/api/v4/projects/2411/issues?search=Lean update to $RELEASE_TAG failed" | jq '. | length' || echo 0)" -ne 0 ]; then
         echo "Update to ${RELEASE_TAG} previously failed, issue already exists."
         exit 0
       fi
     - echo "leanprover/lean4:${RELEASE_TAG}" > lean-toolchain
     - |
-      if ! (lake clean && lake update && lake exe cache get && lake build); then
-        curl --request POST --header "PRIVATE-TOKEN: ${UPDATE_TOKEN}" --data "title=Lean update to $RELEASE_TAG failed" --data "description=An attempt to update to Lean version $RELEASE_TAG failed during build." "https://gitlab.com/api/v4/projects/2411/issues"
+      OUTPUT=$(lake clean && lake update && lake exe cache get && lake build && false 2>&1) || {
+        ERROR_MSG=$(echo "An attempt to update to Lean version $RELEASE_TAG failed during build. Error output: $OUTPUT")
+        curl --request POST --header "PRIVATE-TOKEN: ${UPDATE_TOKEN}" \
+            --data-urlencode "title=Lean update to $RELEASE_TAG failed" \
+            --data-urlencode "description=${ERROR_MSG}" \
+            "https://gitlab.com/api/v4/projects/2411/issues"
         exit 0
-      fi
+      }
     - git add -A && git commit -m "Updated Lean toolchain to $RELEASE_TAG" && git push origin master
 
 mirror:
