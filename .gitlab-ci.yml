@@ -1,6 +1,7 @@
 stages:
  # - verify
-  - update
+  - update-lean
+  - update-mathlib
   - mirror
 
 # verify:
@@ -13,8 +14,8 @@ stages:
 #   script:
 #     - lake clean && lake update && lake exe cache get && lake build
 
-update:
-  stage: update
+update-lean:
+  stage: update-lean
   image: python:3.11-bookworm
   before_script:
     - apt-get update && apt-get install -y curl git jq
@@ -32,7 +33,7 @@ update:
     - echo "leanprover/lean4:${RELEASE_TAG}" > lean-toolchain
     - |
       OUTPUT=$(lake clean && lake update && lake exe cache get && lake build 2>&1) || {
-        ERROR_MSG=$(echo -e "An attempt to update to Lean version $RELEASE_TAG failed during build. Error output: \n ```$OUTPUT``")
+        ERROR_MSG=$(echo -e "An attempt to update to Lean version $RELEASE_TAG failed during build. Error output: \n ```$OUTPUT```")
         curl --request POST --header "PRIVATE-TOKEN: ${UPDATE_PIPELINE}" \
             --data-urlencode "title=Lean update to $RELEASE_TAG failed" \
             --data-urlencode "description=${ERROR_MSG}" \
@@ -46,6 +47,13 @@ update:
       git commit -m "Updated Lean toolchain to $RELEASE_TAG"
       git push https://${UPDATE_PIPELINE}@git.zib.de/cspiegel/thebook.lean.git master
 
+update-mathlib:
+  stage: update-mathlib
+  image: python:3.11-bookworm
+  before_script:
+    - apt-get update && apt-get install -y curl git jq
+    - curl -sS https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+    - export PATH="$HOME/.elan/bin:$PATH"
 
 mirror:
   stage: mirror
