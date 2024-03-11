@@ -24,7 +24,7 @@ lemma F_prod_form (n : ℕ) : (∏ k in range n, F k) = F n - 2 := by
       _ = (∏ k in range n, F k) * F n           := Finset.prod_range_succ F n
       _ = (F n - 2) * F n                       := by rw [ih]
       _ = (2 ^ 2 ^ n - 1) * (2 ^ 2 ^ n + 1)     := by exact rfl
-      _ = 2 ^ (2 ^ Nat.succ n) - 1              := by simp [Nat.mul_sub_right_distrib, Nat.mul_add]; rw [tsub_add_tsub_cancel (Nat.le_mul_self (2 ^ 2 ^ n)) (Nat.one_le_two_pow (2 ^ n))]; rw [←Nat.pow_two, ←Nat.pow_mul', ←Nat.pow_succ']
+      _ = 2 ^ (2 ^ Nat.succ n) - 1              := by simp [Nat.mul_sub_right_distrib, Nat.mul_add]; rw [tsub_add_tsub_cancel (Nat.le_mul_self (2 ^ 2 ^ n)) (Nat.one_le_two_pow)]; rw [←Nat.pow_two, ←Nat.pow_mul', ←Nat.pow_succ']
       _ = F (Nat.succ n) - 2                    := by exact rfl
 
 /-- Two numbers are coprime iff all their divisors are one -/
