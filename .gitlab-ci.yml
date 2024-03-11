@@ -27,7 +27,6 @@ update:
     - grep -q "leanprover/lean4:${RELEASE_TAG}" lean-toolchain && echo "Lean version ${RELEASE_TAG} is already in use." && exit 0
     - |
       issues_json=$(curl -s --header "PRIVATE-TOKEN: ${UPDATE_PIPELINE}" "https://git.zib.de/api/v4/projects/2411/issues")
-      echo $issues_json
       issue_matches=$(echo "$issues_json" | jq '[.[] | select(.title | test("Lean update to '"$RELEASE_TAG"' failed"))] | length')
       if [ "$issue_matches" -ne 0 ]; then echo "Update to ${RELEASE_TAG} previously failed, issue already exists." && exit 0; fi
     - echo "leanprover/lean4:${RELEASE_TAG}" > lean-toolchain
@@ -40,7 +39,13 @@ update:
             "https://git.zib.de/api/v4/projects/2411/issues" || exit 1
         exit 1
       }
-    - git add -A && git commit -m "Updated Lean toolchain to $RELEASE_TAG" && git push origin master
+    - |
+      git config --global user.email "spiegel@zib.de"
+      git config --global user.name "Auto Update"
+      git add -A
+      git commit -m "Updated Lean toolchain to $RELEASE_TAG"
+      git push https://${UPDATE_PIPELINE}@git.zib.de/cspiegel/thebook.lean.git master
+
 
 mirror:
   stage: mirror
