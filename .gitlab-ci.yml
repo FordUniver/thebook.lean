@@ -33,7 +33,7 @@ update:
     - sed -i 's|\("https://github.com/leanprover-community/mathlib4.git"@\)"[^"]*"|\1"$RELEASE_TAG"|' lakefile.lean
     - |
       OUTPUT=$(lake clean && lake update && lake exe cache get && lake build 2>&1) || {
-        ERROR_MSG=$(echo -e "An attempt to update to Lean version $RELEASE_TAG failed during build. Error output: \n \`\`\`$OUTPUT\`\`\`")
+        ERROR_MSG=$(echo -e "An attempt to update to Lean version $RELEASE_TAG failed during build. Error output: \n $OUTPUT")
         curl --request POST --header "PRIVATE-TOKEN: ${UPDATE_PIPELINE}" \
             --data-urlencode "title=mathlib4 update to $RELEASE_TAG failed" \
             --data-urlencode "description=${ERROR_MSG}" \
