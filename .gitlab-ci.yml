@@ -1,7 +1,6 @@
 stages:
  # - verify
-  - update-lean
-  - update-mathlib
+  - update
   - mirror
 
 # verify:
@@ -14,7 +13,7 @@ stages:
 #   script:
 #     - lake clean && lake update && lake exe cache get && lake build
 
-update-lean:
+update:
   stage: update-lean
   image: python:3.11-bookworm
   before_script:
@@ -23,14 +22,14 @@ update-lean:
     - export PATH="$HOME/.elan/bin:$PATH"
   script:
     - git checkout master && git pull
-    - RELEASE_TAG=$(curl -s "https://api.github.com/repos/leanprover/lean4/releases" | jq -r '.[0].tag_name')
-    - echo "Latest Lean version is $RELEASE_TAG"
-    - grep -q "leanprover/lean4:${RELEASE_TAG}" lean-toolchain && echo "Lean version ${RELEASE_TAG} is already in use." && exit 0
+    - RELEASE_TAG=$(curl -s "https://api.github.com/repos/leanprover-community/mathlib4/releases" | jq -r '.[0].tag_name')
+    - echo "Latest mathlib4 version is $RELEASE_TAG"
+    - grep -q "https://github.com/leanprover-community/mathlib4.git"@"${RELEASE_TAG}" lakefile.lean && echo "mathlib4 version ${RELEASE_TAG} is already in use." && exit 0
     - |
       issues_json=$(curl -s --header "PRIVATE-TOKEN: ${UPDATE_PIPELINE}" "https://git.zib.de/api/v4/projects/2411/issues")
-      issue_matches=$(echo "$issues_json" | jq '[.[] | select(.title | test("Lean update to '"$RELEASE_TAG"' failed"))] | length')
+      issue_matches=$(echo "$issues_json" | jq '[.[] | select(.title | test("mathlib4 update to '"$RELEASE_TAG"' failed"))] | length')
       if [ "$issue_matches" -ne 0 ]; then echo "Update to ${RELEASE_TAG} previously failed, issue already exists." && exit 0; fi
-    - echo "leanprover/lean4:${RELEASE_TAG}" > lean-toolchain
+    - sed -i 's/https:\/\/github.com\/leanprover-community\/mathlib4.git@\"\K.*(\")/https:\/\/github.com\/leanprover-community\/mathlib4.git@\"$RELEASE_TAG"\1/' lakefile.lean
     - |
       OUTPUT=$(lake clean && lake update && lake exe cache get && lake build 2>&1) || {
         ERROR_MSG=$(echo -e "An attempt to update to Lean version $RELEASE_TAG failed during build. Error output: \n ```$OUTPUT```")
@@ -43,19 +42,9 @@ update-lean:
     - |
       git config --global user.email "spiegel@zib.de"
       git config --global user.name "Auto Update"
-      git add lean-toolchain
+      git add -A
       git commit -m "Updated Lean toolchain to $RELEASE_TAG"
       git push https://${UPDATE_PIPELINE}@git.zib.de/cspiegel/thebook.lean.git master
-
-update-mathlib:
-  stage: update-mathlib
-  image: python:3.11-bookworm
-  before_script:
-    - apt-get update && apt-get install -y curl git jq
-    - curl -sS https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
-    - export PATH="$HOME/.elan/bin:$PATH"
-  script:
-    - echo "SKIP"
 
 mirror:
   stage: mirror
