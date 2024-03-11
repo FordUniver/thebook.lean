@@ -25,6 +25,7 @@ update:
     - RELEASE_TAG=$(curl -s "https://api.github.com/repos/leanprover/lean4/releases" | jq -r '.[0].tag_name')
     - echo "Latest Lean version is $RELEASE_TAG"
     - grep -q "leanprover/lean4:${RELEASE_TAG}" lean-toolchain && echo "Lean version ${RELEASE_TAG} is already in use." && exit 0
+    - echo $UPDATE_PIPELINE
     - |
       if [ "$(curl -s --header "PRIVATE-TOKEN: ${UPDATE_PIPELINE}" "https://gitlab.com/api/v4/projects/2411/issues?search=Lean update to $RELEASE_TAG failed" | jq '. | length' || echo 0)" -ne 0 ]; then
         echo "Update to ${RELEASE_TAG} previously failed, issue already exists."
