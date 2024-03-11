@@ -24,7 +24,8 @@ update:
     - git checkout master; git pull
     - RELEASE_TAG=$(curl -s "https://api.github.com/repos/leanprover/lean4/releases" | jq -r '.[0].tag_name')
     - echo "Latest Lean version is $RELEASE_TAG"
-    - if ! grep -q "leanprover/lean4:${RELEASE_TAG}" lean-toolchain; then
+    - |
+      if ! grep -q "leanprover/lean4:${RELEASE_TAG}" lean-toolchain; then
         echo "leanprover/lean4:${RELEASE_TAG}" > lean-toolchain
         lake clean && lake update && lake exe cache get && lake build
       fi
