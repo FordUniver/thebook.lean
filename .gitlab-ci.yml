@@ -14,7 +14,7 @@ stages:
 #     - lake clean && lake update && lake exe cache get && lake build
 
 update:
-  stage: update-lean
+  stage: update
   image: python:3.11-bookworm
   before_script:
     - apt-get update && apt-get install -y curl git jq
