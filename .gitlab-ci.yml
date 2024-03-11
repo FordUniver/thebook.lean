@@ -29,7 +29,7 @@ update:
       issues_json=$(curl -s --header "PRIVATE-TOKEN: ${UPDATE_PIPELINE}" "https://git.zib.de/api/v4/projects/2411/issues")
       issue_matches=$(echo "$issues_json" | jq '[.[] | select(.title | test("mathlib4 update to '"$RELEASE_TAG"' failed"))] | length')
       if [ "$issue_matches" -ne 0 ]; then echo "Update to ${RELEASE_TAG} previously failed, issue already exists." && exit 0; fi
-    - sed -i 's/https:\/\/github.com\/leanprover-community\/mathlib4.git@\"\K.*(\")/https:\/\/github.com\/leanprover-community\/mathlib4.git@\"$RELEASE_TAG"\1/' lakefile.lean
+    - sed -i 's|\("https://github.com/leanprover-community/mathlib4.git"@\)"[^"]*"|\1"$RELEASE_TAG"|' lakefile.lean
     - |
       OUTPUT=$(lake clean && lake update && lake exe cache get && lake build 2>&1) || {
         ERROR_MSG=$(echo -e "An attempt to update to Lean version $RELEASE_TAG failed during build. Error output: \n ```$OUTPUT```")
