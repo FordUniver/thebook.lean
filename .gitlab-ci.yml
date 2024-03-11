@@ -43,7 +43,7 @@ update-lean:
     - |
       git config --global user.email "spiegel@zib.de"
       git config --global user.name "Auto Update"
-      git add -A
+      git add lean-toolchain
       git commit -m "Updated Lean toolchain to $RELEASE_TAG"
       git push https://${UPDATE_PIPELINE}@git.zib.de/cspiegel/thebook.lean.git master
 
