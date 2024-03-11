@@ -25,12 +25,12 @@ update:
     - >
       RELEASE_TAG=$(curl -s "https://api.github.com/repos/leanprover-community/mathlib4/tags" | jq -r '.[] | .name | select((startswith("v4.")) and (test("^v4\\.\\d+\\.\\d+(-rc\\d+)?$")))' | head -n 1)
     - echo "Latest mathlib4 version is $RELEASE_TAG"
-    - grep -q "https://github.com/leanprover-community/mathlib4.git@${RELEASE_TAG}" lakefile.lean && echo "mathlib4 version ${RELEASE_TAG} is already in use." && exit 0
+    - grep -q "\"https://github.com/leanprover-community/mathlib4.git\"@\"${RELEASE_TAG}\""" lakefile.lean && echo "mathlib4 version ${RELEASE_TAG} is already in use." && exit 0
     - |
       issues_json=$(curl -s --header "PRIVATE-TOKEN: ${UPDATE_PIPELINE}" "https://git.zib.de/api/v4/projects/2411/issues")
       issue_matches=$(echo "$issues_json" | jq '[.[] | select(.title | test("mathlib4 update to '"$RELEASE_TAG"' failed"))] | length')
       if [ "$issue_matches" -ne 0 ]; then echo "Update to ${RELEASE_TAG} previously failed, issue already exists." && exit 0; fi
-    - sed -i 's|\("https://github.com/leanprover-community/mathlib4.git"@\)"[^"]*"|\1"$RELEASE_TAG"|' lakefile.lean
+    - sed -i 's|\("https://github.com/leanprover-community/mathlib4.git"@\)"[^"]*"|\1"${RELEASE_TAG}"|' lakefile.lean
     - |
       OUTPUT=$(lake clean && lake update && lake exe cache get && lake build 2>&1)
       BUILD_EXIT_CODE=$?
