@@ -22,7 +22,8 @@ update:
     - export PATH="$HOME/.elan/bin:$PATH"
   script:
     - git checkout master && git pull
-    - RELEASE_TAG=$(curl -s "https://api.github.com/repos/leanprover-community/mathlib4/releases" | jq -r '.[0].tag_name')
+    - >
+      RELEASE_TAG=$(curl -s "https://api.github.com/repos/leanprover-community/mathlib4/tags" | grep -Po '"name": "\Kv4\.\d+\.\d+(?=")' | head -n 1)
     - echo "Latest mathlib4 version is $RELEASE_TAG"
     - grep -q "https://github.com/leanprover-community/mathlib4.git"@"${RELEASE_TAG}" lakefile.lean && echo "mathlib4 version ${RELEASE_TAG} is already in use." && exit 0
     - |
