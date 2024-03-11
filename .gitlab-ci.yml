@@ -23,7 +23,7 @@ update:
   script:
     - git checkout master && git pull
     - >
-      RELEASE_TAG=$(curl -s "https://api.github.com/repos/leanprover-community/mathlib4/tags" | grep -Po '"name": "\Kv4\.\d+\.\d+(?=")' | head -n 1)
+      RELEASE_TAG=$(curl -s "https://api.github.com/repos/leanprover-community/mathlib4/tags" | jq -r '.[] | .name | select((startswith("v4.")) and (test("^v4\\.\\d+\\.\\d+(-rc\\d+)?$")))' | head -n 1)
     - echo "Latest mathlib4 version is $RELEASE_TAG"
     - grep -q "https://github.com/leanprover-community/mathlib4.git"@"${RELEASE_TAG}" lakefile.lean && echo "mathlib4 version ${RELEASE_TAG} is already in use." && exit 0
     - |
@@ -33,9 +33,9 @@ update:
     - sed -i 's|\("https://github.com/leanprover-community/mathlib4.git"@\)"[^"]*"|\1"$RELEASE_TAG"|' lakefile.lean
     - |
       OUTPUT=$(lake clean && lake update && lake exe cache get && lake build 2>&1) || {
-        ERROR_MSG=$(echo -e "An attempt to update to Lean version $RELEASE_TAG failed during build. Error output: \n ```$OUTPUT```")
+        ERROR_MSG=$(echo -e "An attempt to update to Lean version $RELEASE_TAG failed during build. Error output: \n \`\`\`$OUTPUT\`\`\`")
         curl --request POST --header "PRIVATE-TOKEN: ${UPDATE_PIPELINE}" \
-            --data-urlencode "title=Lean update to $RELEASE_TAG failed" \
+            --data-urlencode "title=mathlib4 update to $RELEASE_TAG failed" \
             --data-urlencode "description=${ERROR_MSG}" \
             "https://git.zib.de/api/v4/projects/2411/issues" || exit 1
         exit 0
@@ -44,7 +44,7 @@ update:
       git config --global user.email "spiegel@zib.de"
       git config --global user.name "Auto Update"
       git add -A
-      git commit -m "Updated Lean toolchain to $RELEASE_TAG"
+      git commit -m "Updated mathlib4 to $RELEASE_TAG"
       git push https://${UPDATE_PIPELINE}@git.zib.de/cspiegel/thebook.lean.git master
 
 mirror:
