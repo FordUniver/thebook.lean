@@ -1,6 +1,6 @@
 stages:
- # - verify
-  - update
+  - verify
+#  - update
   - mirror
 
 # verify:
@@ -13,45 +13,45 @@ stages:
 #   script:
 #     - lake clean && lake update && lake exe cache get && lake build
 
-update:
-  stage: update
-  image: python:3.11-bookworm
-  before_script:
-    - apt-get update && apt-get install -y curl git jq
-    - curl -sS https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
-    - export PATH="$HOME/.elan/bin:$PATH"
-  script:
-    - git checkout master && git pull
-    - >
-      RELEASE_TAG=$(curl -s "https://api.github.com/repos/leanprover-community/mathlib4/tags" | jq -r '.[] | .name | select((startswith("v4.")) and (test("^v4\\.\\d+\\.\\d+(-rc\\d+)?$")))' | head -n 1)
-    - echo "Latest mathlib4 version is $RELEASE_TAG"
-    - grep -q "\"https://github.com/leanprover-community/mathlib4.git\"@\"${RELEASE_TAG}\""" lakefile.lean && echo "mathlib4 version ${RELEASE_TAG} is already in use." && exit 0
-    - |
-      issues_json=$(curl -s --header "PRIVATE-TOKEN: ${UPDATE_PIPELINE}" "https://git.zib.de/api/v4/projects/2411/issues")
-      issue_matches=$(echo "$issues_json" | jq '[.[] | select(.title | test("mathlib4 update to '"$RELEASE_TAG"' failed"))] | length')
-      if [ "$issue_matches" -ne 0 ]; then echo "Update to ${RELEASE_TAG} previously failed, issue already exists." && exit 0; fi
-    - sed -i 's|\("https://github.com/leanprover-community/mathlib4.git"@\)"[^"]*"|\1"${RELEASE_TAG}"|' lakefile.lean
-    - |
-      OUTPUT=$(lake clean && lake update && lake exe cache get && lake build 2>&1)
-      BUILD_EXIT_CODE=$?
-
-      if [ "$BUILD_EXIT_CODE" -ne 0 ]; then
-        ERROR_MSG=$(echo -e "An attempt to update to Lean version $RELEASE_TAG failed during build. Error output: \n $OUTPUT")
-        curl --request POST --header "PRIVATE-TOKEN: ${UPDATE_PIPELINE}" \
-            --data-urlencode "title=mathlib4 update to $RELEASE_TAG failed" \
-            --data-urlencode "description=${ERROR_MSG}" \
-            "https://git.zib.de/api/v4/projects/2411/issues" || exit 1
-      else
-        echo "Build successful."
-      fi
-
-      exit 0
-    - |
-      git config --global user.email "spiegel@zib.de"
-      git config --global user.name "Auto Update"
-      git add -A
-      git commit -m "Updated mathlib4 to $RELEASE_TAG"
-      git push https://${UPDATE_PIPELINE}@git.zib.de/cspiegel/thebook.lean.git master
+# update:
+#   stage: update
+#   image: python:3.11-bookworm
+#   before_script:
+#     - apt-get update && apt-get install -y curl git jq
+#     - curl -sS https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y
+#     - export PATH="$HOME/.elan/bin:$PATH"
+#   script:
+#     - git checkout master && git pull
+#     - >
+#       RELEASE_TAG=$(curl -s "https://api.github.com/repos/leanprover-community/mathlib4/tags" | jq -r '.[] | .name | select((startswith("v4.")) and (test# ("^v4\\.\\d+\\.\\d+(-rc\\d+)?$")))' | head -n 1)
+#     - echo "Latest mathlib4 version is $RELEASE_TAG"
+#     - grep -q "\"https://github.com/leanprover-community/mathlib4.git\"@\"${RELEASE_TAG}\""" lakefile.lean && echo "mathlib4 version ${RELEASE_TAG} is # already in use." && exit 0
+#     - |
+#       issues_json=$(curl -s --header "PRIVATE-TOKEN: ${UPDATE_PIPELINE}" "https://git.zib.de/api/v4/projects/2411/issues")
+#       issue_matches=$(echo "$issues_json" | jq '[.[] | select(.title | test("mathlib4 update to '"$RELEASE_TAG"' failed"))] | length')
+#       if [ "$issue_matches" -ne 0 ]; then echo "Update to ${RELEASE_TAG} previously failed, issue already exists." && exit 0; fi
+#     - sed -i 's|\("https://github.com/leanprover-community/mathlib4.git"@\)"[^"]*"|\1"${RELEASE_TAG}"|' lakefile.lean
+#     - |
+#       OUTPUT=$(lake clean && lake update && lake exe cache get && lake build 2>&1)
+#       BUILD_EXIT_CODE=$?
+# 
+#       if [ "$BUILD_EXIT_CODE" -ne 0 ]; then
+#         ERROR_MSG=$(echo -e "An attempt to update to Lean version $RELEASE_TAG failed during build. Error output: \n $OUTPUT")
+#         curl --request POST --header "PRIVATE-TOKEN: ${UPDATE_PIPELINE}" \
+#             --data-urlencode "title=mathlib4 update to $RELEASE_TAG failed" \
+#             --data-urlencode "description=${ERROR_MSG}" \
+#             "https://git.zib.de/api/v4/projects/2411/issues" || exit 1
+#       else
+#         echo "Build successful."
+#       fi
+# 
+#       exit 0
+#     - |
+#       git config --global user.email "spiegel@zib.de"
+#       git config --global user.name "Auto Update"
+#       git add -A
+#       git commit -m "Updated mathlib4 to $RELEASE_TAG"
+#       git push https://${UPDATE_PIPELINE}@git.zib.de/cspiegel/thebook.lean.git master
 
 mirror:
   stage: mirror
