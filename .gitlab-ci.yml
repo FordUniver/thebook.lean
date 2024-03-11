@@ -38,8 +38,8 @@ update:
         curl --request POST --header "PRIVATE-TOKEN: ${UPDATE_PIPELINE}" \
             --data-urlencode "title=Lean update to $RELEASE_TAG failed" \
             --data-urlencode "description=${ERROR_MSG}" \
-            "https://gitlab.com/api/v4/projects/2411/issues" || exit 1
-        exit 0
+            "https://gitlab.com/api/v4/projects/2411/issues" || echo "ERROR!!!" && exit 1
+        exit 1
       }
     - git add -A && git commit -m "Updated Lean toolchain to $RELEASE_TAG" && git push origin master
 
