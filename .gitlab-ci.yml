@@ -32,7 +32,7 @@ update:
     - echo "leanprover/lean4:${RELEASE_TAG}" > lean-toolchain
     - |
       OUTPUT=$(lake clean && lake update && lake exe cache get && lake build 2>&1) || {
-        ERROR_MSG=$(echo "An attempt to update to Lean version $RELEASE_TAG failed during build. Error output: $OUTPUT")
+        ERROR_MSG=$(echo -e "An attempt to update to Lean version $RELEASE_TAG failed during build. Error output: \n ```$OUTPUT```")
         curl --request POST --header "PRIVATE-TOKEN: ${UPDATE_PIPELINE}" \
             --data-urlencode "title=Lean update to $RELEASE_TAG failed" \
             --data-urlencode "description=${ERROR_MSG}" \
