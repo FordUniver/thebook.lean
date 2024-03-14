@@ -84,7 +84,7 @@ lemma B (a : ℤ) (b : ℕ) (h : b > 0) : IsClosed (N a b) := by
       apply Set.disjoint_right.mpr
       intro n b_dvd b_dvd'
       simp [el_N_of_dvd] at b_dvd b_dvd'
-      have b_dvd_idx : b ∣ idx := by have l := Int.dvd_sub b_dvd' b_dvd; simp [Int.ofNat_dvd] at l; exact l
+      have b_dvd_idx : b ∣ idx := by have := Int.dvd_sub b_dvd' b_dvd; simp [Int.ofNat_dvd] at this; exact this
       exact (Nat.not_dvd_of_pos_of_lt idx_lw idx_up) b_dvd_idx
 
     have N_covers' : Ub ∪ N a b = Set.univ := by
