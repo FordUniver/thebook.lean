@@ -20,15 +20,6 @@ lemma N_sub (a b m: ℤ) : N a (b * m) ⊆ N a b := by
   rw [el_N_of_dvd] at *
   exact Int.dvd_trans (Exists.intro m rfl) h
   
-lemma N_disjoint (a₁ a₂ b: ℤ) (h : ¬ b ∣ (a₁ - a₂)) : N a₁ b ∩ N a₂ b = ∅ := by
-  by_contra contra
-  push_neg at contra
-  obtain ⟨n, n_in_Na₁b, n_in_Na₂b⟩ := contra
-  rw [el_N_of_dvd] at n_in_Na₁b n_in_Na₂b
-  have : b ∣ (n - a₂) - (n - a₁) := Int.dvd_sub n_in_Na₂b n_in_Na₁b
-  have : b ∣ (a₁ - a₂) := by simp at this; exact this
-  contradiction
-  
 instance int_topology : TopologicalSpace ℤ where
   IsOpen O := O = ∅ ∨ (∀ a : O, ∃ b, b ≠ 0 ∧ N a b ⊆ O)
 
