@@ -130,9 +130,7 @@ theorem infinitude_primes : { p : ℕ | Nat.Prime p }.Infinite := by
   have U_close : IsClosed (⋃ p ∈ {p : ℕ | Nat.Prime p}, N 0 p) := by
     have (p : ℕ) (p_prime : p ∈ {p : ℕ | Nat.Prime p}) : IsClosed (N 0 p) := by simp at p_prime; exact B 0 p (Nat.Prime.pos p_prime)
     exact Set.Finite.isClosed_biUnion (Set.not_infinite.mp h) this
-  
   have one_open : IsOpen {1, -1} := isClosed_compl_iff.mp (Z_as_U ▸ U_close)
-
   have one_infinite := A {1, -1} one_open (Set.Nonempty.ne_empty (Set.insert_nonempty 1 {-1}))
 
   exact one_infinite (Set.toFinite {1, -1})
