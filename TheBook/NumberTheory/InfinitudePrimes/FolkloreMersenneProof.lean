@@ -5,8 +5,6 @@ import Mathlib.FieldTheory.Finite.Basic
 
 namespace FolkloreMersenneInfinitudePrimes
 
-example (h₁ : Even a) (h₂ : a ≥ 1) : Odd (a - 1) := Nat.Even.sub_odd h₂ h₁ (Exists.intro Nat.zero rfl)
-
 -- Let q be a prime dividing 2^p − 1
 lemma mersenne_prime_dvd_gt (p q : ℕ) [p_prime: Fact (Nat.Prime p)] [q_prime : Fact (Nat.Prime q)] (h : q ∣ 2^p - 1) : p < q := by
 
