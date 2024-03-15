@@ -114,7 +114,8 @@ theorem infinitude_primes : { p : ℕ | Nat.Prime p }.Infinite := by
     · simp [el_N_of_dvd] at *
       obtain ⟨p, p_prime, p_dvd_n⟩ := n_el
       have p_ndvd_one := Int.ofNat_dvd.not.mpr (Prime.not_dvd_one (Nat.prime_iff.mp p_prime))
-      push_neg; constructor <;> by_contra c <;> rw [c, ←Nat.cast_one] at p_dvd_n <;> simp [Int.dvd_neg.mpr] at p_dvd_n <;> exact p_ndvd_one p_dvd_n
+      push_neg; constructor
+      all_goals {by_contra c; rw [c, ←Nat.cast_one] at p_dvd_n ; simp [Int.dvd_neg.mpr] at p_dvd_n; exact p_ndvd_one p_dvd_n}
 
   by_contra h
   
