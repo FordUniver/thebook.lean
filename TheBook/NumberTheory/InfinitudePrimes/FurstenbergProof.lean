@@ -68,7 +68,7 @@ lemma B (a : ℤ) (b : ℕ) (h : b > 0) : IsClosed (N a b) := by
 
   have N_eq_Ubc : N a b = Ubᶜ := by
 
-    have N_disj' : Ub ∩ N a b = ∅ := by
+    have N_disjoint : Ub ∩ N a b = ∅ := by
       rw [Set.iUnion_inter]; simp
       intro idx idx_lw idx_up
       apply Set.disjoint_iff_inter_eq_empty.mp
@@ -78,7 +78,7 @@ lemma B (a : ℤ) (b : ℕ) (h : b > 0) : IsClosed (N a b) := by
       have b_dvd_idx : b ∣ idx := by have := Int.dvd_sub b_dvd' b_dvd; simp [Int.ofNat_dvd] at this; exact this
       exact (Nat.not_dvd_of_pos_of_lt idx_lw idx_up) b_dvd_idx
 
-    have N_covers' : Ub ∪ N a b = Set.univ := by
+    have N_covers : Ub ∪ N a b = Set.univ := by
       apply Set.Subset.antisymm_iff.mpr
       constructor
       · exact λ _ _ ↦ trivial
@@ -95,7 +95,7 @@ lemma B (a : ℤ) (b : ℕ) (h : b > 0) : IsClosed (N a b) := by
           have minus_i_dvd: (b : ℤ) ∣ (n - (a + i)) := Int.sub_sub n a i ▸ Int.dvd_sub_of_emod_eq rfl
           exact ⟨ ⟨nat_i_ge_0, nat_i_lt_b⟩, Int.toNat_of_nonneg i_ge_0 ▸ minus_i_dvd⟩
 
-    exact (compl_unique N_disj' N_covers').symm
+    exact (compl_unique N_disjoint N_covers).symm
 
   rw [N_eq_Ubc]
   apply isClosed_compl_iff.mpr
