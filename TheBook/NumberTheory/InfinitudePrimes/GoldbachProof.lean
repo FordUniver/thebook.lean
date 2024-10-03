@@ -1,7 +1,7 @@
-import Mathlib.Algebra.BigOperators.Basic
-import Mathlib.Data.Nat.Prime
-import Mathlib.Data.Nat.Parity
+import Mathlib.Data.Fintype.Parity
+import Mathlib.Data.Nat.Prime.Basic
 import Mathlib.Data.Set.Finite
+import Mathlib.Algebra.BigOperators.Fin
 
 open Finset Function BigOperators
 

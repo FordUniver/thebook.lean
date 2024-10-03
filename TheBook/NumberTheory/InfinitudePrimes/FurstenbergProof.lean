@@ -1,5 +1,5 @@
 import Mathlib.Topology.Basic
-import Mathlib.Data.Nat.Prime
+import Mathlib.Data.Nat.Prime.Basic
 import Mathlib.Data.Set.Basic
 import Mathlib.Data.ZMod.Basic
 
@@ -89,7 +89,7 @@ lemma B (a : ℤ) (b : ℕ) (h : b > 0) : IsClosed (N a b) := by
         · exact Or.inr (Int.modEq_zero_iff_dvd.mp (i_cases))
         · apply Or.inl
           use Int.toNat i
-          have i_ge_0 : i ≥ 0 := Int.emod_nonneg (n - a) (Int.coe_nat_ne_zero_iff_pos.mpr h)
+          have i_ge_0 : i ≥ 0 := Int.emod_nonneg (n - a) (Int.natCast_ne_zero_iff_pos.mpr h)
           have nat_i_ge_0 := Int.lt_toNat.mpr (Ne.lt_of_le' i_cases i_ge_0)
           have nat_i_lt_b := (Int.toNat_lt i_ge_0).mpr (Int.emod_lt_of_pos (n - a) (Int.ofNat_pos.mpr h))
           have minus_i_dvd: (b : ℤ) ∣ (n - (a + i)) := Int.sub_sub n a i ▸ Int.dvd_sub_of_emod_eq rfl
@@ -100,7 +100,7 @@ lemma B (a : ℤ) (b : ℕ) (h : b > 0) : IsClosed (N a b) := by
   rw [N_eq_Ubc]
   apply isClosed_compl_iff.mpr
   apply isOpen_iUnion
-  exact λ i ↦ N_open (a + i) b (Int.coe_nat_ne_zero_iff_pos.mpr h)
+  exact λ i ↦ N_open (a + i) b (Int.natCast_ne_zero_iff_pos.mpr h)
 
 theorem infinitude_primes : { p : ℕ | Nat.Prime p }.Infinite := by
   have Z_as_U : {1, -1}ᶜ = (⋃ p ∈ {p : ℕ | Nat.Prime p}, N 0 p) := by
