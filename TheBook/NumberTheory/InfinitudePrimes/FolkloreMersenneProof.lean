@@ -1,4 +1,4 @@
-import Mathlib.Data.Nat.Prime
+import Mathlib.Data.Nat.Prime.Basic
 import Mathlib.Data.Set.Finite
 import Mathlib.Data.ZMod.Basic
 import Mathlib.FieldTheory.Finite.Basic
@@ -19,7 +19,7 @@ lemma mersenne_prime_dvd_gt (p q : ℕ) [p_prime: Fact (Nat.Prime p)] [q_prime :
   -- This group has q − 1 elements. By Lagrange’s theorem we know that the order of every element divides the size of the group, that is, we have p | q − 1
   have two_ne_zero : (2 : ZMod q) ≠ 0 := by
     by_contra contra
-    have q_lq_two : q ≤ 2 := (Nat.Prime.dvd_factorial q_prime.out).mp ((ZMod.nat_cast_zmod_eq_zero_iff_dvd 2 q).mp contra)
+    have q_lq_two : q ≤ 2 := (Nat.Prime.dvd_factorial q_prime.out).mp ((ZMod.natCast_zmod_eq_zero_iff_dvd 2 q).mp contra)
     have q_gt_two : q > 2 := Nat.lt_of_le_of_ne (Nat.Prime.two_le q_prime.out) (Odd.ne_two_of_dvd_nat (Nat.Even.sub_odd (Nat.one_le_two_pow) ( even_iff_two_dvd.mpr (dvd_pow_self 2 (Nat.Prime.ne_zero p_prime.out))) (Exists.intro Nat.zero rfl)) h).symm
     exact (Nat.not_lt.mpr q_lq_two) q_gt_two
     

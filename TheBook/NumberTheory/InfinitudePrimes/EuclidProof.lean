@@ -1,5 +1,5 @@
-import Mathlib.Algebra.BigOperators.Basic
-import Mathlib.Data.Nat.Prime
+import Mathlib.Algebra.BigOperators.Fin
+import Mathlib.Data.Nat.Prime.Basic
 import Mathlib.Data.Set.Finite
 
 open BigOperators
