@@ -73,13 +73,12 @@ lemma simplified_cauchy_schwarz (f : V' → ℝ) : #V * (∑ v ∈ V, f v ^ 2) �
 theorem mantel (h: G.CliqueFree 3) : #G.edgeFinset ≤ n^2 / 4 := by
 
   -- The degrees of two adjacent vertices cannot sum to more than n
-  have (i j : V') (hij: G.Adj i j) : d(i) + d(j) ≤ n := by
+  have adj_degree_bnd (i j : V') (hij: G.Adj i j) : d(i) + d(j) ≤ n := by
     -- Otherwise there would exist a vertex k adjacent to both i and j by pigeonhole principle
     by_contra hc
     simp at hc
 
-
-    -- these two blocks should be combined into one
+    -- these twoor three blocks should be combined and simplified
     have : #(N(i) ∩ N(j)) + n ≥ #N(i) + #N(j) := by
       have : #(N(i) ∩ N(j)) + #(N(i) ∪ N(j)) = #N(i) + #N(j) := Finset.card_inter_add_card_union _ _
       have : #(N(i) ∪ N(j)) ≤ n := Finset.card_le_univ _
@@ -91,29 +90,49 @@ theorem mantel (h: G.CliqueFree 3) : #G.edgeFinset ≤ n^2 / 4 := by
       obtain ⟨k, h⟩ := Finset.card_pos.mp this
       simp [Set.mem_inter_iff] at h
       exact Exists.intro k h
+    
+    obtain ⟨k, hik, hjk⟩ := this -- can't this be combined with the above?
 
     -- But then i, j, k would form a triangle, contradicting the assumption that G has no 3-cliques
-    obtain ⟨k, hik, hjk⟩ := this
     exact h {i, j, k} (sorry)
 
-  let sum_degrees_of_edge (e : E') : ℕ := Sym2.lift ⟨λ x y => d(x) + d(y), λ x y => by simp [Nat.add_comm]⟩ e
+  let sum_deg (e : E') : ℕ := Sym2.lift ⟨λ x y => d(x) + d(y), by simp [Nat.add_comm]⟩ e
+
+  have t1 : n^2 * ∑ (e ∈ E), 1 = n * ∑ (e ∈ E), n := by
+    have : n * ∑ (e ∈ E), 1 = ∑ (e ∈ E), n * 1 := Finset.mul_sum G.edgeFinset (fun i => 1) n
+    have : ∑ (e ∈ E), n * 1 = ∑ (e ∈ E), n := by simp 
+    have : n * ∑ (e ∈ E), 1 = ∑ (e ∈ E), n := by linarith
+    have : n * (n * ∑ (e ∈ E), 1) = n * (∑ (e ∈ E), n) := congrArg (HMul.hMul n) this
+    linarith
+
+  have t2 (e : E') (he: e ∈ E) : sum_deg e ≤ n := by
+    obtain ⟨i, j⟩ := e
+    exact adj_degree_bnd _ _ ((SimpleGraph.mem_edgeSet G).mp (SimpleGraph.mem_edgeFinset.mp he))
+
+  have t3 : ∑ (e ∈ E), sum_deg e = ∑ (v ∈ V), d(v)^2 := by
+    -- seems like double counting again?
+    sorry
+
+  have t4 : (∑ (v ∈ V), d(v))^2 ≤ n * ∑ (v ∈ V), d(v)^2 := by
+    have := @sq_sum_le_card_mul_sum_sq V' ℝ _ V (λ v => G.degree v)
+    -- this is effectively what we want, but with annoying casting ...
+    sorry
 
   -- We slightly modify the argument to avoid division (in particular by zero)
   have := calc n^2 * #E
-    _ ≥ n^2 * ∑ (e ∈ E), sum_degrees_of_edge e  := by sorry
-    _ = n * ∑ (v ∈ V), d(v)^2                   := by sorry
-    _ ≥ (∑ (v ∈ V),  d(v))^2                    := by sorry -- sq_sum_le_card_mul_sum_sq
-    _ = (2 * #E)^2                              := by rw [handshake]
-    _ = 4 * #E^2                                := by linarith
+    _ = n^2 * ∑ (e ∈ E), 1          := by simp
+    _ = n * ∑ (e ∈ E), n            := t1 --replace
+    _ ≥ n * ∑ (e ∈ E), sum_deg e    := Nat.mul_le_mul_left n (Finset.sum_le_sum t2) --replace
+    _ = n * ∑ (v ∈ V), d(v)^2       := by simp [t3] --replace
+    _ ≥ (∑ (v ∈ V),  d(v))^2        := t4 -- replace
+    _ = (2 * #E)^2                  := by rw [handshake]
+    _ = 4 * #E^2                    := by linarith
 
+  -- now show #E ≤ n^2 / 4 by "simply" dividing by 4 * #E
   -- technically not quite correct because we are in Nat and division rounds down
   -- perhapos correcting it to the floor ceiling notation fixes it?
   -- or perhaps the floor ceiling aligns with the division already?
-  have : #E ≤ n^2 / 4 := by sorry
-
-  exact this
-
-#check sq_sum_le_card_mul_sum_sq
+  sorry
 
 
 -- Probably needs to use floor and ceil to be precise ...
