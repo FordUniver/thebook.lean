@@ -63,11 +63,11 @@ lemma handshake : ∑ v : V', d(v) = 2 * #E :=
 #check Finset.sum_mul_sq_le_sq_mul_sq
 
 lemma simplified_cauchy_schwarz (f : V' → ℕ) : #V * (∑ v ∈ V, f v ^ 2) ≥ (∑ v ∈ V, f v) ^ 2 := by
-  let id (_ : V') : ℕ := 1
+  let const_one (_ : V') : ℕ := 1
   calc (∑ v ∈ V, f v) ^ 2
-    _ = (∑ v ∈ V, (id v) * f v)^2 := by simp [id]
-    _ ≤ (∑ v ∈ V, (id v)^2) * (∑ v ∈ V, f v^2) := by simp [Finset.sum_mul_sq_le_sq_mul_sq]
-    _ = #V * (∑ v ∈ V, f v^2) := by simp [id]
+    _ = (∑ v ∈ V, (const_one v) * f v)^2 := by simp [const_one]
+    _ ≤ (∑ v ∈ V, (const_one v)^2) * (∑ v ∈ V, f v^2) := by simp [Finset.sum_mul_sq_le_sq_mul_sq]
+    _ = #V * (∑ v ∈ V, f v^2) := by simp [const_one]
 
 theorem mantel (h: G.CliqueFree 3) : #G.edgeFinset ≤ n^2 / 4 := by
 
@@ -85,8 +85,6 @@ theorem mantel (h: G.CliqueFree 3) : #G.edgeFinset ≤ n^2 / 4 := by
   let sum_degrees_of_edge (e : E') : ℕ := Sym2.lift ⟨λ x y => d(x) + d(y), λ x y => by simp [Nat.add_comm]⟩ e
 
   let id (v : V') : ℕ := 1
-
-  -- Does the simple CS already exist in mathlib? Should we define it ourselves?
 
   -- We slightly modify the argument to avoid division (in particular by zero)
   have := calc n^2 * #E
