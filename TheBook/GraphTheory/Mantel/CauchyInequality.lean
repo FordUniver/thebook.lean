@@ -60,9 +60,14 @@ lemma handshake : ∑ v : V', d(v) = 2 * #E :=
    _ = ∑ e ∈ E, 2                        := by sorry --rw [edges_have_two_incident_vertices]
    _ = 2 * #E                            := by simp [Nat.mul_comm]
 
-lemma handshake' : ∑ v ∈ V, d(v) = 2 * #E := by simp [handshake]
-
 #check Finset.sum_mul_sq_le_sq_mul_sq
+
+lemma simplified_cauchy_schwarz (f : V' → ℕ) : #V * (∑ v ∈ V, f v ^ 2) ≥ (∑ v ∈ V, f v) ^ 2 := by
+  let id (_ : V') : ℕ := 1
+  calc (∑ v ∈ V, f v) ^ 2
+    _ = (∑ v ∈ V, (id v) * f v)^2 := by simp [id]
+    _ ≤ (∑ v ∈ V, (id v)^2) * (∑ v ∈ V, f v^2) := by simp [Finset.sum_mul_sq_le_sq_mul_sq]
+    _ = #V * (∑ v ∈ V, f v^2) := by simp [id]
 
 theorem mantel (h: G.CliqueFree 3) : #G.edgeFinset ≤ n^2 / 4 := by
 
@@ -79,14 +84,17 @@ theorem mantel (h: G.CliqueFree 3) : #G.edgeFinset ≤ n^2 / 4 := by
 
   let sum_degrees_of_edge (e : E') : ℕ := Sym2.lift ⟨λ x y => d(x) + d(y), λ x y => by simp [Nat.add_comm]⟩ e
 
+  let id (v : V') : ℕ := 1
+
+  -- Does the simple CS already exist in mathlib? Should we define it ourselves?
+
   -- We slightly modify the argument to avoid division (in particular by zero)
-  have := calc
-        n^2 * #E
-    _ ≥ n^2 * ∑ (e ∈ E), sum_degrees_of_edge e := by sorry
-    _ = ∑ (v : V), d(v)^2                      := by sorry
-    _ ≥ (∑ (v : V), d(v))^2                    := by sorry -- Finset.sum_mul_sq_le_sq_mul_sq
-    _ = (2 * #E)^2                             := by simp [handshake]
-    _ = 4 * #E^2                               := by linarith
+  have := calc n^2 * #E
+    _ ≥ n^2 * ∑ (e ∈ E), sum_degrees_of_edge e  := by sorry
+    _ = n * ∑ (v ∈ V), d(v)^2                   := by sorry
+    _ ≥ (∑ (v ∈ V),  d(v))^2                    := simplified_cauchy_schwarz (λ v => G.degree v)
+    _ = (2 * #E)^2                              := by rw [handshake]
+    _ = 4 * #E^2                                := by linarith
 
   have : #E ≤ n^2 / 4 := by sorry
 
