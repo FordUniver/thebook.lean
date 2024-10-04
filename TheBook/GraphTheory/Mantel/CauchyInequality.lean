@@ -6,51 +6,91 @@ import Mathlib.Combinatorics.Enumerative.DoubleCounting
 import Mathlib.Algebra.Order.BigOperators.Ring.Finset
 import Aesop
 
+
+prefix:100 "#" => Finset.card
+set_option linter.unusedSectionVars false
+
 namespace CauchyMantelTheorem
 
--- Assume V is a finite type
-variable {V : Type*} [Fintype V] [DecidableEq V]
-variable (G : SimpleGraph V) [DecidableRel G.Adj]
-instance : Fintype G.edgeSet := G.fintypeEdgeSet
+variable {V' : Type*} [Fintype V'] [DecidableEq V']
+variable (G : SimpleGraph V') [DecidableRel G.Adj]
 
-lemma degree_eq_number_of_incident_edges (v : V) : G.degree v = Finset.card (Finset.filter (λ e => v ∈ e) G.edgeFinset) := by sorry
+local notation "V" => @Finset.univ V' _
+abbrev E' := Sym2 V'
+local notation "E" => G.edgeFinset
+local notation "d(" v ")" => G.degree v
+local notation "n" => Fintype.card V'
 
-lemma edges_have_two_incident_vertices (e : Sym2 V) {h: e ∈ G.edgeFinset} : Finset.card (Finset.filter (λ v => v ∈ e) (@Finset.univ V _)) = 2 := by
-  calc Finset.card (Finset.filter (λ v => v ∈ e) (@Finset.univ V _))
-    _ = 2 := by sorry
+lemma degree_eq_number_of_incident_edges (v : V') : d(v) = #(G.incidenceFinset v) := by
+  -- need to show a one-to-one correspondence between the set of edges incident to v and the set of vertices v
+  -- should be able to use incidenceSetEquivNeighborSet for this
+  sorry
+
+lemma edges_have_two_incident_vertices (e : E') {he: e ∈ E} : #{v : V' | v ∈ e}.toFinset = 2 := by
+  -- The issue is that edges are Sym2 V' and there does not seem any
+  -- way of obtaining a set of two distinct elements from that
+
+  have : #{v : V' | v ∈ e} ≤ 2 := by
+    sorry
+
+  -- Finset.card_ne_zero_of_mem
+  have : #{v : V' | v ∈ e} ≠ 0 := by
+    obtain ⟨v₁, v₂⟩ := e
+    have : v₁ ∈ e := by sorry
+    sorry
+
+  have : #{v : V' | v ∈ e} ≥ 2 := by
+    obtain ⟨v₁, v₂⟩ := e
+    have : v₁ ≠ v₂ := SimpleGraph.not_isDiag_of_mem_edgeFinset he
+    have : v₁ ∈ {v : V' | v ∈ e} := by sorry
+    have : v₂ ∈ {v : V' | v ∈ e} := by sorry
+    sorry
+
+  sorry
+
+
 
 -- This is equivalent to SimpleGraph.sum_degrees_eq_twice_card_edges G in mathlib
-lemma handshake : ∑ v : V, G.degree v = 2 * G.edgeFinset.card := by 
-  let E := G.edgeFinset
-  let V' := @Finset.univ V _
+lemma handshake : ∑ v : V', d(v) = 2 * #E := 
+  calc ∑ v : V', d(v)
+   _ = ∑ v : V', #(G.incidenceFinset v)  := by sorry --simp [degree_eq_number_of_incident_edges]
+   _ = ∑ v ∈ V, #{e ∈ E | v ∈ e}         := by sorry
+   _ = ∑ e ∈ E, #{v ∈ V | v ∈ e}         := Finset.sum_card_bipartiteAbove_eq_sum_card_bipartiteBelow _
+   _ = ∑ e ∈ E, #{v : V' | v ∈ e}        := by sorry
+   _ = ∑ e ∈ E, 2                        := by sorry --rw [edges_have_two_incident_vertices]
+   _ = 2 * #E                            := by simp [Nat.mul_comm]
 
-  calc ∑ v : V, G.degree v
-  --  _ = ∑ v ∈ V', Finset.card {e ∈ E | v ∈ e} := by sorry --simp [degree_eq_number_of_incident_edges]
-   _ = ∑ v ∈ V', Finset.card (Finset.filter (λ e => v ∈ e) E) := by simp [degree_eq_number_of_incident_edges]
-   _ = ∑ e ∈ E, Finset.card (Finset.filter (λ v => v ∈ e) V') := Finset.sum_card_bipartiteAbove_eq_sum_card_bipartiteBelow (λ v e => v ∈ e)
-  --  _ = ∑ e ∈ E, Finset.card {v ∈ V' | v ∈ e} := Finset.sum_card_bipartiteAbove_eq_sum_card_bipartiteBelow (λ v e => v ∈ e)
-   _ = ∑ e ∈ E, 2 := by sorry -- edges_have_two_incident_vertices
-   _ = 2 * E.card := by simp [V', edges_have_two_incident_vertices, Nat.mul_comm]
+lemma handshake' : ∑ v ∈ V, d(v) = 2 * #E := by simp [handshake]
 
+#check Finset.sum_mul_sq_le_sq_mul_sq
 
-#check Finset.sum_mul_sq_le_sq_mul_sq -- probably the Cauchy-Schwarz inequality we want
+theorem mantel (h: G.CliqueFree 3) : #G.edgeFinset ≤ n^2 / 4 := by
 
-theorem mantel (h: G.CliqueFree 3) : G.edgeFinset.card ≤ (Fintype.card V)^2 / 4 := by
-  let n := Fintype.card V
-  let E := G.edgeFinset
-  let V' := @Finset.univ V _
+  -- The degrees of two adjacent vertices cannot sum to more than n
+  have (i j : V') (hij: G.Adj i j) : d(i) + d(j) ≤ n := by
+    -- Otherwise principle there would exist a vertex k adjacent to both i and j by pigeonhole principle
+    by_contra h'
+    have : ∃ k : V', G.Adj i k ∧ G.Adj j k := by sorry
 
-  have (i j : V) (h: G.Adj i j) : G.degree i + G.degree j ≤ n := by sorry
-  let sum_degrees_of_edge (e : Sym2 V) : ℕ := Sym2.lift ⟨λ x y => G.degree x + G.degree y, λ x y => by simp [Nat.add_comm]⟩ e
-  have : ∑ (e ∈ E), sum_degrees_of_edge e ≤ n * E.card := by sorry
-  have : ∑ (e ∈ E), sum_degrees_of_edge e = ∑ (v : V), (G.degree v)^2 := by sorry
-  have : E.card*n ≥ ∑ (v : V), (G.degree v)^2 := by sorry
-  have : ∑ (v : V), (G.degree v)^2 ≥ (∑ (v : V), G.degree v)^2 / n := by sorry
-  have : (∑ (v : V), G.degree v)^2 / n = (2 * E.card)^2 / n := by rw [handshake]
-  have : (2 * E.card)^2 = 4 * E.card^2 := by linarith
-  have : (2 * E.card)^2 / n = 4 * E.card^2 / n := by aesop
-  
-  sorry
+    -- But then i, j, k would form a triangle, contradicting the assumption that G has no 3-cliques
+    obtain ⟨k, hik, hjk⟩ := this
+    have : G.IsNClique 3 {i, j, k} := by sorry
+    exact h {i, j, k} this
+
+  let sum_degrees_of_edge (e : E') : ℕ := Sym2.lift ⟨λ x y => d(x) + d(y), λ x y => by simp [Nat.add_comm]⟩ e
+
+  -- We slightly modify the argument to avoid division (in particular by zero)
+  have := calc
+        n^2 * #E
+    _ ≥ n^2 * ∑ (e ∈ E), sum_degrees_of_edge e := by sorry
+    _ = ∑ (v : V), d(v)^2                      := by sorry
+    _ ≥ (∑ (v : V), d(v))^2                    := by sorry -- Finset.sum_mul_sq_le_sq_mul_sq
+    _ = (2 * #E)^2                             := by simp [handshake]
+    _ = 4 * #E^2                               := by linarith
+
+  have : #E ≤ n^2 / 4 := by sorry
+
+  exact this
 
 -- Probably needs to use floor and ceil to be precise ...
 theorem mantel_equality (h: G.CliqueFree 3) : 0 = 0 := by
