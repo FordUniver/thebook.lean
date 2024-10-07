@@ -7,10 +7,11 @@ import Mathlib.Combinatorics.SimpleGraph.DegreeSum
 import Mathlib.Combinatorics.Enumerative.DoubleCounting
 import Mathlib.Algebra.Order.BigOperators.Ring.Finset
 import Mathlib.Algebra.Order.Chebyshev
+import Mathlib.Tactic.Basic
 import Aesop
 
+-- set_option trace.aesop true
 set_option autoImplicit false
-
 
 prefix:100 "#" => Finset.card
 set_option linter.unusedSectionVars false
@@ -27,6 +28,8 @@ local notation "N(" v ")" => G.neighborFinset v
 local notation "d(" v ")" => G.degree v
 local notation "n" => Fintype.card V'
 
+attribute [aesop safe] SimpleGraph.adj_symm
+
 theorem mantel (h: G.CliqueFree 3) : #E ≤ (n^2 / 4) := by
 
   -- The degrees of two adjacent vertices cannot sum to more than n
@@ -40,41 +43,30 @@ theorem mantel (h: G.CliqueFree 3) : #E ≤ (n^2 / 4) := by
       have : #(N(i) ∪ N(j)) ≤ n := Finset.card_le_univ _
       linarith
 
-    have : #(N(i) ∩ N(j)) > 0 := (Nat.lt_add_left_iff_pos.mp (Nat.lt_of_lt_of_le hc this))
-
     have ⟨k, hik, hjk⟩ : ∃ k : V', G.Adj i k ∧ G.Adj j k := by
-      obtain ⟨k, h⟩ := Finset.card_pos.mp this
+      obtain ⟨k, h⟩ := Finset.card_pos.mp (Nat.lt_add_left_iff_pos.mp (Nat.lt_of_lt_of_le hc this))
       simp [Set.mem_inter_iff] at h
       exact Exists.intro k h
 
     -- But then i, j, k would form a triangle, contradicting the assumption that G has no 3-cliques
-    have is_clique : G.IsClique {i, j, k} := by
-      intros x hx y hy hxney
-      all_goals rcases hx with rfl | rfl | rfl <;> 
-                rcases hy with rfl | rfl | rfl <;> 
-                simp [hij, hik, hjk, G.adj_symm hij, G.adj_symm hik, G.adj_symm hjk] <;> 
-                exact False.elim (hxney rfl)
+    have has_card : #{k, j, i} = 3 := by
+      apply SimpleGraph.Adj.ne' at hij
+      apply SimpleGraph.Adj.ne' at hik
+      apply SimpleGraph.Adj.ne' at hjk
+      simp [hij, hik, hjk]
 
-    have has_card : #{i, j, k} = 3 := by
-      simp [SimpleGraph.Adj.ne' (id (G.adj_symm hij)), SimpleGraph.Adj.ne' (id (G.adj_symm hik)), SimpleGraph.Adj.ne' (id (G.adj_symm hjk))]
-
-    exact h {i, j, k} ⟨by simp [is_clique], has_card⟩ 
+    exact h {k, j, i} ⟨by aesop, has_card⟩ 
 
   let sum_deg (e : E') : ℕ := Sym2.lift ⟨λ x y => d(x) + d(y), by simp [Nat.add_comm]⟩ e
-
+  
   have t1 : n^2 * ∑ (e ∈ E), 1 = n * ∑ (e ∈ E), n := by
     have : n * ∑ (e ∈ E), 1 = ∑ (e ∈ E), n * 1 := Finset.mul_sum E (fun i => 1) n
-    have : ∑ (e ∈ E), n * 1 = ∑ (e ∈ E), n := by simp
-    have : n * ∑ (e ∈ E), 1 = ∑ (e ∈ E), n := by linarith
-    have : n * (n * ∑ (e ∈ E), 1) = n * (∑ (e ∈ E), n) := congrArg (HMul.hMul n) this
+    have : n * (n * ∑ (e ∈ E), 1) = n * (∑ (e ∈ E), n) := by aesop
     linarith
 
-  have t2 (e : E') (he: e ∈ E) : sum_deg e ≤ n := by
-    obtain ⟨i, j⟩ := e
-    exact adj_degree_bnd _ _ ((SimpleGraph.mem_edgeSet G).mp (SimpleGraph.mem_edgeFinset.mp he))
+  have t2 (e : E') (he: e ∈ E) : sum_deg e ≤ n := by obtain ⟨i, j⟩ := e; aesop
 
   have t3 : ∑ (e ∈ E), sum_deg e = ∑ (v ∈ V), d(v)^2 := by
-    -- seems like double counting again?
     sorry
 
   have t4 : (∑ (v ∈ V), d(v))^2 ≤ n * ∑ (v ∈ V), d(v)^2 := by
