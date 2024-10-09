@@ -6,5 +6,6 @@ import TheBook.NumberTheory.InfinitudePrimes.GoldbachProof
 import TheBook.NumberTheory.InfinitudePrimes.FolkloreMersenneProof
 import TheBook.NumberTheory.InfinitudePrimes.FurstenbergProof
 
+import TheBook.GraphTheory.Mantel.Basic
 import TheBook.GraphTheory.Mantel.CauchyInequality
 import TheBook.GraphTheory.Mantel.ArithmeticGeometricMean
