@@ -80,30 +80,30 @@ attribute [aesop safe] Sym2.Mem.other
 --     _ = 2 * ∑ e ∈ E, 1                := Eq.symm (Finset.mul_sum E (λ _ ↦ 1) 2)
 --     _ = 2 * #E                        := by simp
 
-
 -- Mantel's Theorem
 theorem mantel (h: G.CliqueFree 3) : #E ≤ (n^2 / 4) := by
 
   -- The degrees of two adjacent vertices cannot sum to more than n
   have adj_degree_bnd (i j : α) (hij: G.Adj i j) : d(i) + d(j) ≤ n := by
-    -- Assume the contrary
+    -- Assume the contrary ...
     by_contra hc; simp at hc
 
-    -- then by pigeonhole there would exist a vertex k adjacent to both i and j
+    -- ... then by pigeonhole there would exist a vertex k adjacent to both i and j ...
     obtain ⟨k, h⟩ := Finset.inter_nonempty_of_card_lt_card_add_card _ _ hc
     simp at h
     obtain ⟨hik, hjk⟩ := h
 
-    -- But then i, j, k would form a triangle, contradicting the assumption that G has no 3-cliques
+    -- ... but then i, j, k would form a triangle, contradicting that G is triangle-free
     exact h {k, j, i} ⟨by aesop, by simp [hij.ne', hik.ne', hjk.ne']⟩ 
 
-  -- We need to define the sum of the degrees of the vertices of an edge and establish some properties
+  -- We need to define the sum of the degrees of the vertices of an edge ...
   let sum_deg (e : Sym2 α) : ℕ := Sym2.lift ⟨λ x y ↦ d(x) + d(y), by simp [Nat.add_comm]⟩ e
 
-  -- and establish a variant of adj_degree_bnd for this notion
+  -- ... and establish a variant of adj_degree_bnd ...
   have adj_degree_bnd' (e : Sym2 α) (he: e ∈ E) : sum_deg e ≤ n := by
     induction e with | _ v w => simp at he; exact adj_degree_bnd v w (by simp [he])
 
+  -- ... as well as
   have sum_deg_eq (e : Sym2 α) (he: e ∈ E) : sum_deg e = ∑ v ∈ {v ∈ V | v ∈ e}, d(v) := by sorry
 
   have sum_sum_deg_eq_sum_sum_sq : ∑ e ∈ E, sum_deg e = ∑ v ∈ V, d(v)^2 := by
@@ -113,21 +113,20 @@ theorem mantel (h: G.CliqueFree 3) : #E ≤ (n^2 / 4) := by
       _ = ∑ e ∈ E, (∑ v ∈ V, d(v) * χ(v ∈ {v ∈ V | v ∈ e}))     := sorry -- AESOP SHOULD SOLVE THIS
       _ = ∑ e ∈ E, (∑ v ∈ V, d(v) * χ(v ∈ e))              := by simp
       _ = ∑ v ∈ V, (∑ e ∈ E, (d(v) * χ(v ∈ e)))            := Finset.sum_comm
-      _ = ∑ v ∈ V, (d(v) * (∑ e ∈ E, χ(v ∈ e)))            := Finset.sum_congr rfl (λ v a ↦ Eq.symm (Finset.mul_sum E (λ i ↦ χ(v ∈ i)) d(v)))
+      _ = ∑ v ∈ V, (d(v) * (∑ e ∈ E, χ(v ∈ e)))            := Finset.sum_congr rfl (λ v a ↦ (Finset.mul_sum E (λ i ↦ χ(v ∈ i)) d(v)).symm)
       _ = ∑ v ∈ V, d(v)^2                                  := Finset.sum_congr rfl (by simp [adj_degree_bnd'])
 
   -- We slightly modify the argument to avoid division (in particular by zero)
-  let one (_ : α) : ℕ := 1
   have := calc n^2 * #E
-    _ = n^2 * ∑ e ∈ E, 1                         := by simp
-    _ = n * (n * ∑ e ∈ E, 1)                     := by linarith
-    _ = n * (∑ e ∈ E, n)                         := by have := Finset.mul_sum E (λ _ ↦ 1) n; aesop
-    _ ≥ n * ∑ e ∈ E, sum_deg e                   := Nat.mul_le_mul_left n (Finset.sum_le_sum sum_deg_ub)
-    _ = (∑ v ∈ V, one v^2) * ∑ v ∈ V, d(v)^2     := by simp [sum_sum_deg_eq_sum_sum_sq, one]
-    _ ≥ (∑ v ∈ V, one v * d(v))^2                := Finset.sum_mul_sq_le_sq_mul_sq V one (λ v ↦ d(v))
-    _ = (∑ v ∈ V, d(v))^2                        := by simp [one]
-    _ = (2 * #E)^2                               := by simp [handshake]
-    _ = 4 * #E^2                                 := by linarith
+    _ = n * (n * ∑ e ∈ E, 1)                     := by simp [Nat.mul_assoc]
+    _ = n * (∑ e ∈ E, n)                         := by rw [Finset.mul_sum]; simp
+    _ ≥ n * ∑ e ∈ E, sum_deg e                   := Nat.mul_le_mul_left _ (Finset.sum_le_sum adj_degree_bnd')
+    _ = (∑ v ∈ V, d(v)^2) * (∑ v ∈ V, 1^2)       := by simp [Nat.mul_comm, sum_sum_deg_eq_sum_sum_sq]
+    _ ≥ (∑ v ∈ V, d(v) * 1)^2                    := (Finset.sum_mul_sq_le_sq_mul_sq V (λ v ↦ d(v)) 1)
+    _ = (2 * #E)^2                               := by simp [G.sum_degrees_eq_twice_card_edges]
+    _ = 4 * #E^2                                 := by ring
+
+  sorry
 
   -- now show #E ≤ n^2 / 4 by "simply" dividing by 4 * #E
   by_cases hE : #E = 0
