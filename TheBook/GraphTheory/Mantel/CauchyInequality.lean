@@ -42,83 +42,79 @@ attribute [aesop safe] SimpleGraph.Adj.ne
 attribute [aesop safe] HMul.hMul
 attribute [aesop safe] Sym2.Mem.other
 
-@[simp]
-def asFinset (e : Sym2 α) : Finset α := {v ∈ V | v ∈ e}
 
 -- edges have two vertices
-lemma card_edge_eq_two (e : Sym2 α) (he : e ∈ E): #(asFinset e) = 2 := by
-  rw [Finset.card_eq_two]
-  induction e with | _ v w =>
-    use v, w, (by aesop)
-    ext; simp
+-- lemma card_edge_eq_two (e : Sym2 α) (he : e ∈ E): #{v ∈ V | v ∈ e} = 2 := by
+--   rw [Finset.card_eq_two]
+--   induction e with | _ v w =>
+--     use v, w, (by aesop)
+--     ext; simp
 
 -- degree of v is the sum of the indicator functions of the edges containing v
-lemma aux (e : Sym2 α) (v : α) : #{w' ∈ V | s(v,w') = e} = χ(v ∈ e) := by
-  by_cases hve : v ∈ e
-  · let S := {w' ∈ V | s(v,w') = e}
-    have : Sym2.Mem.other hve ∈ S := by aesop
-    have : #S ≠ 0 := Finset.card_ne_zero_of_mem this
-    by_contra hc; simp [hve] at hc
-    have : ∃ a ∈ S, ∃ b ∈ S, a ≠ b := Finset.one_lt_card.mp ((Nat.two_le_iff (#S)).mpr ⟨this, hc⟩)
-    aesop
-  · aesop
+-- lemma aux (e : Sym2 α) (v : α) : #{w' ∈ V | s(v,w') = e} = χ(v ∈ e) := by
+--   by_cases hve : v ∈ e
+--   · let S := {w' ∈ V | s(v,w') = e}
+--     have : Sym2.Mem.other hve ∈ S := by aesop
+--     have : #S ≠ 0 := Finset.card_ne_zero_of_mem this
+--     by_contra hc; simp [hve] at hc
+--     have : ∃ a ∈ S, ∃ b ∈ S, a ≠ b := Finset.one_lt_card.mp ((Nat.two_le_iff (#S)).mpr ⟨this, hc⟩)
+--     aesop
+--   · aesop
 
-lemma deg_sum_edges (v : α) : d(v) = ∑ e ∈ E, χ(v ∈ e) := by
-  calc d(v)
-    _ = #{w | G.Adj v w}.toFinset                := rfl
-    _ = ∑ w ∈ V, χ(G.Adj v w)                    := by simp
-    _ = ∑ w ∈ V, ∑ e ∈ E, χ(s(v,w) = e)          := by simp
-    _ = ∑ e ∈ E, ∑ w ∈ V, χ(s(v,w) = e)          := Finset.sum_comm
-    _ = ∑ e ∈ E, ∑ w ∈ {w' ∈ V | s(v,w') = e}, 1 := by simp
-    _ = ∑ e ∈ E, #{w' ∈ V | s(v,w') = e}         := by simp
-    _ = ∑ e ∈ E, χ(v ∈ e)                        := by simp [aux]
+-- lemma deg_sum_edges (v : α) : d(v) = ∑ e ∈ E, χ(v ∈ e) := by
+--   calc d(v)
+--     _ = #{w | G.Adj v w}.toFinset                := rfl
+--     _ = ∑ w ∈ V, χ(G.Adj v w)                    := by simp
+--     _ = ∑ w ∈ V, ∑ e ∈ E, χ(s(v,w) = e)          := by simp
+--     _ = ∑ e ∈ E, ∑ w ∈ V, χ(s(v,w) = e)          := Finset.sum_comm
+--     _ = ∑ e ∈ E, ∑ w ∈ {w' ∈ V | s(v,w') = e}, 1 := by simp
+--     _ = ∑ e ∈ E, #{w' ∈ V | s(v,w') = e}         := by simp
+--     _ = ∑ e ∈ E, χ(v ∈ e)                        := by simp [aux]
 
-lemma handshake : ∑ v ∈ V, d(v) = 2 * #E := by
-  calc  ∑ v ∈ V, d(v)
-    _ = ∑ v ∈ V, ∑ e ∈ E, χ(v ∈ e)    := by simp [deg_sum_edges]
-    _ = ∑ e ∈ E, ∑ v ∈ V, χ(v ∈ e)    := Eq.symm Finset.sum_comm
-    _ = ∑ e ∈ E, #asFinset e          := Finset.sum_congr rfl (λ e _ ↦ (Finset.card_filter (λ v ↦ v ∈ e) _).symm)
-    _ = ∑ e ∈ E, 2                    := Finset.sum_congr rfl (λ e he ↦ card_edge_eq_two e he)
-    _ = 2 * ∑ e ∈ E, 1                := Eq.symm (Finset.mul_sum E (λ _ ↦ 1) 2)
-    _ = 2 * #E                        := by simp
+-- lemma handshake : ∑ v ∈ V, d(v) = 2 * #E := by
+--   calc  ∑ v ∈ V, d(v)
+--     _ = ∑ v ∈ V, ∑ e ∈ E, χ(v ∈ e)    := by simp [deg_sum_edges]
+--     _ = ∑ e ∈ E, ∑ v ∈ V, χ(v ∈ e)    := Eq.symm Finset.sum_comm
+--     _ = ∑ e ∈ E, #{v ∈ V | v ∈ e}     := Finset.sum_congr rfl (λ e _ ↦ (Finset.card_filter (λ v ↦ v ∈ e) _).symm)
+--     _ = ∑ e ∈ E, 2                    := Finset.sum_congr rfl (λ e he ↦ card_edge_eq_two e he)
+--     _ = 2 * ∑ e ∈ E, 1                := Eq.symm (Finset.mul_sum E (λ _ ↦ 1) 2)
+--     _ = 2 * #E                        := by simp
+
 
 -- Mantel's Theorem
 theorem mantel (h: G.CliqueFree 3) : #E ≤ (n^2 / 4) := by
 
   -- The degrees of two adjacent vertices cannot sum to more than n
   have adj_degree_bnd (i j : α) (hij: G.Adj i j) : d(i) + d(j) ≤ n := by
-    -- Otherwise there would exist a vertex k adjacent to both i and j by pigeonhole principle
-    by_contra hc
-    simp at hc
+    -- Assume the contrary
+    by_contra hc; simp at hc
 
-    have : #(N(i) ∩ N(j)) + n ≥ #N(i) + #N(j) := by
-      have := Finset.card_inter_add_card_union N(i) N(j)
-      have := Finset.card_le_univ (N(i) ∪ N(j))
-      linarith
-
-    obtain ⟨k, h⟩ := Finset.card_pos.mp (Nat.lt_add_left_iff_pos.mp (Nat.lt_of_lt_of_le hc this))
+    -- then by pigeonhole there would exist a vertex k adjacent to both i and j
+    obtain ⟨k, h⟩ := Finset.inter_nonempty_of_card_lt_card_add_card _ _ hc
     simp at h
     obtain ⟨hik, hjk⟩ := h
 
-    -- -- But then i, j, k would form a triangle, contradicting the assumption that G has no 3-cliques
+    -- But then i, j, k would form a triangle, contradicting the assumption that G has no 3-cliques
     exact h {k, j, i} ⟨by aesop, by simp [hij.ne', hik.ne', hjk.ne']⟩ 
 
   -- We need to define the sum of the degrees of the vertices of an edge and establish some properties
   let sum_deg (e : Sym2 α) : ℕ := Sym2.lift ⟨λ x y ↦ d(x) + d(y), by simp [Nat.add_comm]⟩ e
 
-  have sum_deg_ub (e : Sym2 α) (he: e ∈ E) : sum_deg e ≤ n := by induction e with | _ v w => aesop
+  -- and establish a variant of adj_degree_bnd for this notion
+  have adj_degree_bnd' (e : Sym2 α) (he: e ∈ E) : sum_deg e ≤ n := by
+    induction e with | _ v w => simp at he; exact adj_degree_bnd v w (by simp [he])
 
-  have sum_deg_eq (e : Sym2 α) (he: e ∈ E) : sum_deg e = ∑ v ∈ asFinset e, d(v) := by sorry
+  have sum_deg_eq (e : Sym2 α) (he: e ∈ E) : sum_deg e = ∑ v ∈ {v ∈ V | v ∈ e}, d(v) := by sorry
 
   have sum_sum_deg_eq_sum_sum_sq : ∑ e ∈ E, sum_deg e = ∑ v ∈ V, d(v)^2 := by
     let S (e : Sym2 α) := {v ∈ V | v ∈ e}
     calc  ∑ e ∈ E, sum_deg e
-      _ = ∑ e ∈ E, ∑ v ∈ asFinset e, d(v)                  := Finset.sum_congr rfl sum_deg_eq
-      _ = ∑ e ∈ E, (∑ v ∈ V, d(v) * χ(v ∈ asFinset e))     := sorry -- AESOP SHOULD SOLVE THIS
+      _ = ∑ e ∈ E, ∑ v ∈ {v ∈ V | v ∈ e}, d(v)                  := Finset.sum_congr rfl sum_deg_eq
+      _ = ∑ e ∈ E, (∑ v ∈ V, d(v) * χ(v ∈ {v ∈ V | v ∈ e}))     := sorry -- AESOP SHOULD SOLVE THIS
       _ = ∑ e ∈ E, (∑ v ∈ V, d(v) * χ(v ∈ e))              := by simp
       _ = ∑ v ∈ V, (∑ e ∈ E, (d(v) * χ(v ∈ e)))            := Finset.sum_comm
       _ = ∑ v ∈ V, (d(v) * (∑ e ∈ E, χ(v ∈ e)))            := Finset.sum_congr rfl (λ v a ↦ Eq.symm (Finset.mul_sum E (λ i ↦ χ(v ∈ i)) d(v)))
-      _ = ∑ v ∈ V, d(v)^2                                  := Finset.sum_congr rfl (by simp [deg_sum_edges])
+      _ = ∑ v ∈ V, d(v)^2                                  := Finset.sum_congr rfl (by simp [adj_degree_bnd'])
 
   -- We slightly modify the argument to avoid division (in particular by zero)
   let one (_ : α) : ℕ := 1
