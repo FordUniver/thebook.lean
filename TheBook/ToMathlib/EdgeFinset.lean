@@ -33,6 +33,9 @@ instance : Coe (Sym2 α) (Finset α) := ⟨Sym2.toFinset⟩
 @[simp] lemma coe_toFinset {z : Sym2 α} : ((z : Finset α) : Set α) = z := by
   ext; simp
 
+lemma toFinset_eq [Fintype α] {e : Sym2 α} : (e : Finset α) = {v | v ∈ e}.toFinset := by
+  ext; simp
+
 end Sym2
 
 

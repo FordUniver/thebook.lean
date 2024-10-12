@@ -1,6 +1,9 @@
 import TheBook.ToMathlib.EdgeFinset
 import TheBook.ToMathlib.WeightedDoubleCounting
+import Mathlib.Combinatorics.SimpleGraph.Basic
+import Mathlib.Combinatorics.SimpleGraph.Finite
 import Mathlib.Combinatorics.SimpleGraph.Clique
+import Mathlib.Algebra.Order.BigOperators.Ring.Finset
 import Aesop
 
 set_option trace.aesop true
@@ -23,9 +26,9 @@ local notation "χ(" p ")" => if p then 1 else 0
 local notation "n" => Fintype.card α
 
 attribute [simp] Nat.pow_two
--- attribute [simp] Finset.sum_congr
--- attribute [simp] Finset.one_lt_card
--- attribute [simp] Finset.card_ne_zero_of_mem
+attribute [simp] Finset.sum_congr
+attribute [simp] Finset.one_lt_card
+attribute [simp] Finset.card_ne_zero_of_mem
 -- attribute [aesop safe] Finset.mul_sum
 -- attribute [aesop safe] Finset.card_eq_sum_ones
 attribute [aesop safe] SimpleGraph.adj_symm
@@ -42,7 +45,7 @@ theorem mantel (h: G.CliqueFree 3) : #E ≤ (n^2 / 4) := by
     -- Assume the contrary ...
     by_contra hc; simp at hc
 
-    -- -- ... then by pigeonhole there would exist a vertex k adjacent to both i and j ...
+    -- ... then by pigeonhole there would exist a vertex k adjacent to both i and j ...
     obtain ⟨k, h⟩ := Finset.inter_nonempty_of_card_lt_card_add_card (by simp) (by simp) hc
     simp at h
     obtain ⟨hik, hjk⟩ := h
@@ -61,19 +64,16 @@ theorem mantel (h: G.CliqueFree 3) : #E ≤ (n^2 / 4) := by
   have sum_deg_eq (e : Sym2 α) (he: e ∈ E) : sum_deg e = ∑ v ∈ e, d(v) := by
     induction e with | _ v w => simp at he; simp [sum_deg, he.ne]
 
-  have (e : Sym2 α) : e = {v | v ∈ e}.toFinset := by
-    sorry
-
   -- ... and finally
   have sum_sum_deg_eq_sum_deg_sq : ∑ e ∈ E, sum_deg e = ∑ v ∈ V, d(v)^2 := by
     calc  ∑ e ∈ E, sum_deg e
-      _ = ∑ e ∈ E, ∑ v ∈ e, d(v)                 := Finset.sum_congr rfl sum_deg_eq
-      _ = ∑ e ∈ E, ∑ v ∈ {v' ∈ V | v' ∈ e}, d(v) := by sorry
-      _ = ∑ v ∈ V, ∑ e ∈ {e' ∈ E | v ∈ e'}, d(v) := sum_sum_bipartiteAbove_eq_sum_sum_bipartiteBelow' _ E V (λ _ v ↦ d(v))
-      _ = ∑ v ∈ V, ∑ e ∈ I(v), d(v)              := Finset.sum_congr rfl (λ v ↦ (by sorry))
-      _ = ∑ v ∈ V, d(v)^2                        := by simp
+      _ = ∑ e ∈ E, ∑ v ∈ e, d(v)                  := Finset.sum_congr rfl sum_deg_eq
+      _ = ∑ e ∈ E, ∑ v ∈ {v' | v' ∈ e}, d(v)      := by simp [Sym2.toFinset_eq]
+      _ = ∑ v ∈ V, ∑ e ∈ {e' ∈ E | v ∈ e'}, d(v)  := Finset.sum_sum_bipartiteAbove_eq_sum_sum_bipartiteBelow _ E V (λ _ v ↦ d(v))
+      _ = ∑ v ∈ V, ∑ e ∈ I(v), d(v)               := Finset.sum_congr rfl (λ v ↦ by simp [G.incidenceFinset_eq_filter v]))
+      _ = ∑ v ∈ V, d(v)^2                         := by simp
 
-  -- We slightly modify the argument to avoid division (in particular by zero)
+  -- We slightly modify the argument to avoid division by a potentially zero n
   have := calc #E * n^2
     _ = (n * (∑ e ∈ E, 1)) * n               := by simp [Nat.mul_assoc, Nat.mul_comm]
     _ = (∑ e ∈ E, n) * n                     := by rw [Finset.mul_sum]; simp
@@ -87,7 +87,6 @@ theorem mantel (h: G.CliqueFree 3) : #E ≤ (n^2 / 4) := by
   by_cases hE : #E = 0
   · aesop
   · push_neg at hE
-    
     sorry
 
 -- Probably needs to use floor and ceil to be precise ...
