@@ -3,6 +3,7 @@ import TheBook.ToMathlib.WeightedDoubleCounting
 import Mathlib.Combinatorics.SimpleGraph.Basic
 import Mathlib.Combinatorics.SimpleGraph.Finite
 import Mathlib.Combinatorics.SimpleGraph.Clique
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
 import Mathlib.Algebra.Order.BigOperators.Ring.Finset
 import Aesop
 
@@ -25,7 +26,7 @@ local notation "d(" v ")" => G.degree v
 local notation "χ(" p ")" => if p then 1 else 0
 local notation "n" => Fintype.card α
 
-attribute [simp] Nat.pow_two
+-- attribute [simp] Nat.pow_two
 attribute [simp] Finset.sum_congr
 attribute [simp] Finset.one_lt_card
 attribute [simp] Finset.card_ne_zero_of_mem
@@ -70,12 +71,12 @@ theorem mantel (h: G.CliqueFree 3) : #E ≤ (n^2 / 4) := by
       _ = ∑ e ∈ E, ∑ v ∈ e, d(v)                  := Finset.sum_congr rfl sum_deg_eq
       _ = ∑ e ∈ E, ∑ v ∈ {v' | v' ∈ e}, d(v)      := by simp [Sym2.toFinset_eq]
       _ = ∑ v ∈ V, ∑ e ∈ {e' ∈ E | v ∈ e'}, d(v)  := Finset.sum_sum_bipartiteAbove_eq_sum_sum_bipartiteBelow _ E V (λ _ v ↦ d(v))
-      _ = ∑ v ∈ V, ∑ e ∈ I(v), d(v)               := Finset.sum_congr rfl (λ v ↦ by simp [G.incidenceFinset_eq_filter v]))
-      _ = ∑ v ∈ V, d(v)^2                         := by simp
+      _ = ∑ v ∈ V, ∑ e ∈ I(v), d(v)               := Finset.sum_congr rfl (λ v ↦ by simp [G.incidenceFinset_eq_filter v])
+      _ = ∑ v ∈ V, d(v)^2                         := by simp [Nat.pow_two]
 
   -- We slightly modify the argument to avoid division by a potentially zero n
   have := calc #E * n^2
-    _ = (n * (∑ e ∈ E, 1)) * n               := by simp [Nat.mul_assoc, Nat.mul_comm]
+    _ = (n * (∑ e ∈ E, 1)) * n               := by simp [Nat.pow_two, Nat.mul_assoc, Nat.mul_comm]
     _ = (∑ e ∈ E, n) * n                     := by rw [Finset.mul_sum]; simp
     _ ≥ (∑ e ∈ E, sum_deg e) * n             := Nat.mul_le_mul_right n (Finset.sum_le_sum adj_degree_bnd')
     _ = (∑ v ∈ V, d(v)^2) * (∑ v ∈ V, 1^2)   := by simp [sum_sum_deg_eq_sum_deg_sq]
