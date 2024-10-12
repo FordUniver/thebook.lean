@@ -26,18 +26,6 @@ local notation "d(" v ")" => G.degree v
 local notation "χ(" p ")" => if p then 1 else 0
 local notation "n" => Fintype.card α
 
--- attribute [simp] Nat.pow_two
-attribute [simp] Finset.sum_congr
-attribute [simp] Finset.one_lt_card
-attribute [simp] Finset.card_ne_zero_of_mem
--- attribute [aesop safe] Finset.mul_sum
--- attribute [aesop safe] Finset.card_eq_sum_ones
-attribute [aesop safe] SimpleGraph.adj_symm
--- attribute [aesop safe] SimpleGraph.Adj.ne
--- attribute [aesop safe] HMul.hMul
--- attribute [aesop safe] Sym2.Mem.other
-
-
 -- Mantel's Theorem
 theorem mantel (h: G.CliqueFree 3) : #E ≤ (n^2 / 4) := by
 
@@ -52,7 +40,7 @@ theorem mantel (h: G.CliqueFree 3) : #E ≤ (n^2 / 4) := by
     obtain ⟨hik, hjk⟩ := h
 
     -- ... but then i, j, k would form a triangle, contradicting that G is triangle-free
-    exact h {k, j, i} ⟨by aesop, by simp [hij.ne', hik.ne', hjk.ne']⟩
+    exact h {k, j, i} ⟨by aesop (add safe G.adj_symm), by simp [hij.ne', hik.ne', hjk.ne']⟩
 
   -- We need to define the sum of the degrees of the vertices of an edge ...
   let sum_deg (e : Sym2 α) : ℕ := Sym2.lift ⟨λ x y ↦ d(x) + d(y), by simp [Nat.add_comm]⟩ e
@@ -74,7 +62,7 @@ theorem mantel (h: G.CliqueFree 3) : #E ≤ (n^2 / 4) := by
       _ = ∑ v ∈ V, ∑ e ∈ I(v), d(v)               := Finset.sum_congr rfl (λ v ↦ by simp [G.incidenceFinset_eq_filter v])
       _ = ∑ v ∈ V, d(v)^2                         := by simp [Nat.pow_two]
 
-  -- We slightly modify the argument to avoid division by a potentially zero n
+  -- We slightly modify the main argument to avoid division by a potentially zero n ...
   have := calc #E * n^2
     _ = (n * (∑ e ∈ E, 1)) * n               := by simp [Nat.pow_two, Nat.mul_assoc, Nat.mul_comm]
     _ = (∑ e ∈ E, n) * n                     := by rw [Finset.mul_sum]; simp
@@ -84,14 +72,10 @@ theorem mantel (h: G.CliqueFree 3) : #E ≤ (n^2 / 4) := by
     _ = (2 * #E)^2                           := by simp [G.sum_degrees_eq_twice_card_edges]
     _ = 4 * #E^2                             := by ring
 
-  -- now show #E ≤ n^2 / 4 by "simply" dividing by 4 * #E
+  -- ... and now show #E ≤ n^2 / 4 by "simply" dividing by 4 * #E
   by_cases hE : #E = 0
   · aesop
   · push_neg at hE
     sorry
-
--- Probably needs to use floor and ceil to be precise ...
-theorem mantel_equality (h: G.CliqueFree 3) : 0 = 0 := by
-  sorry
 
 end CauchyMantelTheorem
