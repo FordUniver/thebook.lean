@@ -12,7 +12,7 @@ theorem infinitude_of_primes
 
     have n_ne_one : n ≠ 1 := by
       rw [Nat.succ_ne_succ, Finset.prod_ne_zero_iff]
-      exact fun s s_in_S ↦ Nat.Prime.ne_zero (hS s s_in_S)
+      exact λ s s_in_S ↦ Nat.Prime.ne_zero (hS s s_in_S)
 
     obtain ⟨p, p_prime, p_dvd_n⟩ := Nat.exists_prime_and_dvd n_ne_one
 
