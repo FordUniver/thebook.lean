@@ -2,6 +2,7 @@ import Mathlib.Data.Fintype.Parity
 import Mathlib.Data.Nat.Prime.Basic
 import Mathlib.Data.Set.Finite
 import Mathlib.Algebra.BigOperators.Fin
+import Aesop
 
 open Finset Function BigOperators
 
@@ -46,7 +47,7 @@ lemma F_coprime (k n : ℕ) (k_ne_n: k ≠ n) : Nat.Coprime (F k) (F n) := by
     have m_ne_zero  : m ≠ 0    := ne_zero_of_dvd_ne_zero (Nat.succ_ne_zero 1) m_dvd_two
     have m_le_two   : m ≤ 2    := Nat.le_of_dvd (Nat.two_pos) m_dvd_two
 
-    have m_ne_two   : m ≠ 2    := λ m_eq_two ↦ Nat.even_iff_not_odd.mp (even_iff_two_dvd.mpr (m_eq_two ▸ m_dvd_Fn)) (F_odd n)
+    have m_ne_two   : m ≠ 2    := λ m_eq_two ↦ Nat.not_odd_iff_even.mpr (even_iff_two_dvd.mpr (m_eq_two ▸ m_dvd_Fn)) (F_odd n)
     exact Nat.eq_of_lt_succ_of_not_lt (lt_of_le_of_ne m_le_two m_ne_two) (Nat.not_lt.mpr (Nat.one_le_iff_ne_zero.mpr m_ne_zero))
 
 /-- Proof of the infinitude of primes --/

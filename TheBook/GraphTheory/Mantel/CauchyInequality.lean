@@ -53,11 +53,11 @@ theorem mantel (h: G.CliqueFree 3) : #E ≤ (n^2 / 4) := by
   -- ... and finally (3) the identity for the sum of the squares of the degrees ...
   have sum_sum_deg_eq_sum_deg_sq : ∑ e ∈ E, sum_deg e = ∑ v ∈ V, d(v)^2 := by
     calc  ∑ e ∈ E, sum_deg e
-      _ = ∑ e ∈ E, ∑ v ∈ e, d(v)                      := Finset.sum_congr rfl sum_deg_eq
-      _ = ∑ e ∈ E, ∑ v ∈ {v' ∈ V | v' ∈ e}, d(v)      := Finset.sum_congr rfl (by intro e _; exact congrFun (congrArg Finset.sum (by ext; simp)) _)
-      _ = ∑ v ∈ V, ∑ _ ∈ {e ∈ E | v ∈ e}, d(v)        := Finset.sum_sum_bipartiteAbove_eq_sum_sum_bipartiteBelow _ E V _
-      _ = ∑ v ∈ V, ∑ _ ∈ I(v), d(v)                   := Finset.sum_congr rfl (λ v ↦ by simp [G.incidenceFinset_eq_filter v])
-      _ = ∑ v ∈ V, d(v)^2                             := by simp [Nat.pow_two]
+      _ = ∑ e ∈ E, ∑ v ∈ e, d(v)                  := Finset.sum_congr rfl sum_deg_eq
+      _ = ∑ e ∈ E, ∑ v ∈ {v' ∈ V | v' ∈ e}, d(v)  := Finset.sum_congr rfl (by intro e _; exact congrFun (congrArg Finset.sum (by ext; simp)) _)
+      _ = ∑ v ∈ V, ∑ _ ∈ {e ∈ E | v ∈ e}, d(v)    := Finset.sum_sum_bipartiteAbove_eq_sum_sum_bipartiteBelow _ E V _
+      _ = ∑ v ∈ V, ∑ _ ∈ I(v), d(v)               := Finset.sum_congr rfl (λ v ↦ by simp [G.incidenceFinset_eq_filter v])
+      _ = ∑ v ∈ V, d(v)^2                         := by simp [Nat.pow_two]
 
   -- We now slightly modify the main argument to avoid division by a potentially zero n ...
   have := calc #E * n^2
