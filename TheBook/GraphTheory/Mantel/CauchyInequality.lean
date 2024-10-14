@@ -7,20 +7,16 @@ import TheBook.ToMathlib.EdgeFinset
 import TheBook.ToMathlib.WeightedDoubleCounting
 import Aesop
 
-prefix:100 "#" => Finset.card
-set_option linter.unusedSectionVars false
-
 namespace CauchyMantelTheorem
 
 variable {α : Type*} [Fintype α] [DecidableEq α]
 variable {G : SimpleGraph α} [DecidableRel G.Adj]
 
+prefix:100 "#" => Finset.card
 local notation "V" => @Finset.univ α _
 local notation "E" => G.edgeFinset
-local notation "N(" v ")" => G.neighborFinset v
 local notation "I(" v ")" => G.incidenceFinset v
 local notation "d(" v ")" => G.degree v
-local notation "χ(" p ")" => if p then 1 else 0
 local notation "n" => Fintype.card α
 
 -- Mantel's Theorem
