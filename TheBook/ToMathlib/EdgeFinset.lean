@@ -86,13 +86,13 @@ section Mathlib.Combinatorics.SimpleGraph.Basic
 
 namespace SimpleGraph
 
-variable {G : SimpleGraph V} [DecidableEq V]
+variable {α : Type*} {G : SimpleGraph α} [DecidableEq α]
 
-lemma card_toFinset_of_mem_edgeSet (e : Sym2 V) (he : e ∈ G.edgeSet) :
-    (e : Finset V).card = 2 :=
+lemma card_toFinset_of_mem_edgeSet (e : Sym2 α) (he : e ∈ G.edgeSet) :
+    (e : Finset α).card = 2 :=
   Sym2.card_toFinset_of_not_isDiag (not_isDiag_of_mem_edgeSet _ he)
 
-lemma card_filter_mem_of_mem_edgeSet [Fintype V] (e : Sym2 V) (he : e ∈ G.edgeSet) :
+lemma card_filter_mem_of_mem_edgeSet [Fintype α] (e : Sym2 α) (he : e ∈ G.edgeSet) :
     Finset.card {v | v ∈ e} = 2 := by
   rw [← SimpleGraph.card_toFinset_of_mem_edgeSet _ he]
   congr; ext; simp
@@ -107,13 +107,13 @@ section Mathlib.Combinatorics.SimpleGraph.Finite
 
 namespace SimpleGraph
 
-variable [Fintype V] {G : SimpleGraph V} [DecidableRel G.Adj] [DecidableEq V]
+variable {α : Type*} [Fintype α] {G : SimpleGraph α} [DecidableRel G.Adj] [DecidableEq α]
 
-lemma card_toFinset_of_mem_edgeFinset (e : Sym2 V) (he : e ∈ G.edgeFinset) :
-    (e : Finset V).card = 2 :=
+lemma card_toFinset_of_mem_edgeFinset (e : Sym2 α) (he : e ∈ G.edgeFinset) :
+    (e : Finset α).card = 2 :=
   Sym2.card_toFinset_of_not_isDiag (not_isDiag_of_mem_edgeSet _ (mem_edgeFinset.mp he))
 
-lemma card_filter_mem_of_mem_edgeFinset (e : Sym2 V) (he : e ∈ G.edgeFinset) :
+lemma card_filter_mem_of_mem_edgeFinset (e : Sym2 α) (he : e ∈ G.edgeFinset) :
     Finset.card {v | v ∈ e} = 2 := by
   rw [← SimpleGraph.card_toFinset_of_mem_edgeFinset _ he]
   congr; ext; simp
