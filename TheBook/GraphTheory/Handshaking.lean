@@ -6,7 +6,7 @@ import TheBook.ToMathlib.EdgeFinset
 variable {α : Type*} [Fintype α] [DecidableEq α]
 variable {G : SimpleGraph α} [DecidableRel G.Adj]
 
-prefix:100 "#" => Finset.card
+local prefix:100 "#" => Finset.card
 local notation "E" => G.edgeFinset
 local notation "d(" v ")" => G.degree v
 local notation "I(" v ")" => G.incidenceFinset v
