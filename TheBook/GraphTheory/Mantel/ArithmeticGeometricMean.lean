@@ -10,7 +10,7 @@ variable [Fintype α] [DecidableEq α] [DecidableRel G.Adj] {n : ℕ} {a b c : �
 
 -- An independent set in a graph is a set of vertices that are pairwise nonadjacent.
 abbrev IsIndependentSet (G : SimpleGraph α) (s : Set α) : Prop :=
-  s.Pairwise (λ a b => ¬ G.Adj a b)
+  s.Pairwise (fun a b => ¬ G.Adj a b)
 
 
 -- All independent sets of a graph.
@@ -28,7 +28,7 @@ prefix:100 "#" => Finset.card
 
 
 -- The neighbors of a vertex i form an independent set in a trianlge free graph G.
-lemma neighbors_independent (h: G.CliqueFree 3) : IsIndependentSet G N( i ) := by
+lemma neighbors_independent (h: G.CliqueFree 3) : IsIndependentSet G N(i) := by
   by_contra nind
   rw [IsIndependentSet, Set.Pairwise] at nind
   rw [SimpleGraph.CliqueFree] at h
@@ -41,21 +41,20 @@ lemma neighbors_independent (h: G.CliqueFree 3) : IsIndependentSet G N( i ) := b
 -- TODO can i say A is a maximal independent set in a less verbose way plz
 -- The degree of a vertex i is less or equal α, the size of a largest independent set.
 lemma degreeLeqa (h: G.CliqueFree 3) (A : Finset α) :
-  (∀ B ∈ (allIndependentSets G), #B ≤ #A) → d(i) ≤ #A := by
-  have : N( i ) ∈ allIndependentSets G := by rw [allIndependentSets]; -- TODO why ∈ so difficult!
-                                             aesop;
-                                             apply neighbors_independent;
-                                             apply h
+    (∀ B ∈ (allIndependentSets G), #B ≤ #A) → d(i) ≤ #A := by
+  have : N(i) ∈ allIndependentSets G := by rw [allIndependentSets]; -- TODO why ∈ so difficult!
+                                            aesop;
+                                            apply neighbors_independent;
+                                            apply h
   intro maxA
   apply maxA N(i) this
 
 
 -- The set B = V \ A meets every edge of G.
-lemma B_meets_every_edge {A : Finset α} :
-  IsIndependentSet G A → (∀ I ∈ (allIndependentSets G), #I ≤ #A)
-  → (∀ e ∈ E, 1 ≤ #{ b ∈ (V \ A) | b ∈ e }) := by
+lemma B_meets_every_edge {A : Finset α} (indA : IsIndependentSet G A) :
+    (∀ I ∈ (allIndependentSets G), #I ≤ #A) → (∀ e ∈ E, 1 ≤ #{ b ∈ (V \ A) | b ∈ e }) := by
 
-    intro indA maxA e edgee
+    intro maxA e edgee
 
     by_contra c
     simp at c
@@ -71,8 +70,8 @@ lemma B_meets_every_edge {A : Finset α} :
 
 
 -- We count the edges of G by counting the endvertices in B.
-lemma count_edges_by_B {A : Finset α} :
-  IsIndependentSet G A → (∀ I ∈ (allIndependentSets G), #I ≤ #A) → #E ≤ ∑ i ∈ V \ A, d(i) := by
+lemma count_edges_by_B {A : Finset α} (indA : IsIndependentSet G A) :
+    (∀ I ∈ (allIndependentSets G), #I ≤ #A) → #E ≤ ∑ i ∈ V \ A, d(i) := by
 
    -- The number of edges adjacent to i is the degree of i. -- TODO duh?
    have n_adj_edges_eq_deg : ∀ i, #{e ∈ E | i ∈ e} = d(i) := by
@@ -80,19 +79,21 @@ lemma count_edges_by_B {A : Finset α} :
      rw [Eq.symm (SimpleGraph.card_incidenceFinset_eq_degree G i)]
      rw [SimpleGraph.incidenceFinset_eq_filter]
 
-   intro indA maxA
+   intro maxA
 
-   calc #E
-    _ = ∑ e ∈ E, 1                                := by simp
-    _ ≤ ∑ e ∈ E, #{ i ∈ (V \ A) | i ∈ e }         := Finset.sum_le_sum (B_meets_every_edge _ indA maxA)
-    _ = ∑ e ∈ E, ∑ i ∈ {i ∈ (V \ A) | i ∈ e}, 1   := by simp
-    _ = ∑ i ∈ V \ A, ∑ e ∈ {e ∈ E | i ∈ e}, 1     := Finset.sum_sum_bipartiteAbove_eq_sum_sum_bipartiteBelow _ _ _ _
-    _ = ∑ i ∈ V \ A, #{e ∈ E | i ∈ e}             := by simp
-    _ = ∑ i ∈ V \ A, d(i)                         := Finset.sum_congr (by rfl) (λ i _ => n_adj_edges_eq_deg i)
+   calc
+     #E = ∑ e ∈ E, 1                                := by simp
+      _ ≤ ∑ e ∈ E, #{ i ∈ (V \ A) | i ∈ e }         := Finset.sum_le_sum
+                                                         (B_meets_every_edge _ indA maxA)
+      _ = ∑ e ∈ E, ∑ i ∈ {i ∈ (V \ A) | i ∈ e}, 1   := by simp
+      _ = ∑ i ∈ V \ A, ∑ e ∈ {e ∈ E | i ∈ e}, 1     := Finset.sum_sum_bipartiteAbove_eq_sum_sum_bipartiteBelow _ _ _ _
+      _ = ∑ i ∈ V \ A, #{e ∈ E | i ∈ e}             := by simp
+      _ = ∑ i ∈ V \ A, d(i)                         := Finset.sum_congr
+                                                         (by rfl) (fun i _ => n_adj_edges_eq_deg i)
 
 
 -- The inequality of the arithmetic and geometric mean.
-lemma am_gm : (a : ℕ) → (b : ℕ) → 4 * a * b ≤ (a + b)^2 := λ a b => by
+lemma am_gm (a b : ℕ) : 4 * a * b ≤ (a + b)^2 := by
   have := two_mul_le_add_sq a b -- mathlib version of the am-gm.
   linarith -- is this ok to use?
 /- we could also...
@@ -106,14 +107,14 @@ lemma am_gm : (a : ℕ) → (b : ℕ) → 4 * a * b ≤ (a + b)^2 := λ a b => b
 
 
 -- Mantel's Theorem
-theorem mantel (h: G.CliqueFree 3) (A : Finset α) :
-IsIndependentSet G A → (∀ B ∈ (allIndependentSets G), #B ≤ #A) → #E ≤ (n^2 / 4) := by
+theorem mantel (h: G.CliqueFree 3) (A : Finset α) (indA : IsIndependentSet G A) :
+    (∀ B ∈ (allIndependentSets G), #B ≤ #A) → #E ≤ (n^2 / 4) := by
 
-  intro indA maxA
+  intro maxA
 
   have := calc #E
    _ ≤ ∑ i ∈ V \ A, d(i)   := count_edges_by_B G indA maxA
-   _ ≤ ∑ _ ∈ V \ A, #A     := Finset.sum_le_sum (λ a _ => degreeLeqa G h A maxA)
+   _ ≤ ∑ _ ∈ V \ A, #A     := Finset.sum_le_sum (fun a _ => degreeLeqa G h A maxA)
    _ = #(V \ A) * #A       := Finset.sum_const _ -- TODO simp can do this, do we prefer simp?
    _ = (#V - #A) * #A      := by simp [Finset.card_sdiff _]
 
