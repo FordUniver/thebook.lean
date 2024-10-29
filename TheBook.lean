@@ -1,5 +1,8 @@
 import TheBook.ToMathlib.EdgeFinset
 import TheBook.ToMathlib.WeightedDoubleCounting
+import TheBook.ToMathlib.IndependentSet
+import TheBook.ToMathlib.CliqueNumber
+import TheBook.ToMathlib.FinsetCard
 
 import TheBook.NumberTheory.InfinitudePrimes.Statement
 import TheBook.NumberTheory.InfinitudePrimes.EuclidProof

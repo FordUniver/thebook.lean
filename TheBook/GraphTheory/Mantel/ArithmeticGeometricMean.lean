@@ -3,6 +3,7 @@ import Mathlib.Combinatorics.SimpleGraph.Clique
 import Mathlib.Analysis.MeanInequalities -- has am-gm
 import TheBook.ToMathlib.WeightedDoubleCounting
 import TheBook.ToMathlib.IndependentSet
+import TheBook.ToMathlib.CliqueNumber
 
 
 namespace AMGMMantelTheorem
@@ -15,6 +16,8 @@ local notation "V" => @Finset.univ _ _
 local notation "E" => G.edgeFinset
 local notation "N(" v ")" => G.neighborFinset v
 local notation "d(" v ")" => G.degree v
+local notation "N(" v ")" => G.neighborFinset v
+local notation "d(" v ")" => G.degree v
 local notation "n" => Fintype.card α
 
 -- TODO move to ToMathlib
@@ -22,13 +25,24 @@ prefix:100 "#" => Finset.card
 
 -- TODO can i say A is a maximal independent set in a less verbose way plz
 -- The degree of a vertex i is less or equal α, the size of a largest independent set.
-lemma degreeLeqa (h: G.CliqueFree 3) (A : Finset α) :
-    (∀ I : Finset α , G.IsIndependentSet I → #I ≤ #A) → d(i) ≤ #A := by
-  have : G.IsIndependentSet N(i) :=
-    by simp only [Set.coe_toFinset, SimpleGraph.isIndependentSet_neighborSet_if_triangleFree _ h,
-    SimpleGraph.neighborFinset]
-  intro maxA
-  apply maxA N(i) this
+lemma degreeLeqa (h: G.CliqueFree 3) (v : α): G.degree v ≤ G.cocliqueNum := by
+  have := G.isIndependentSet_neighborSet_if_triangleFree h v
+  
+
+  sorry
+  -- have : G.IsIndependentSet (G.neighborFinset v) :=
+  --   by simp only [Set.coe_toFinset, SimpleGraph.isIndependentSet_neighborSet_if_triangleFree _ h,
+  --   SimpleGraph.neighborFinset]
+  -- intro maxA
+  -- apply maxA N(i) this
+    
+-- lemma degreeLeqa (h: G.CliqueFree 3) (A : Finset α) :
+--     (∀ I : Finset α , G.IsIndependentSet I → #I ≤ #A) → d(i) ≤ #A := by
+--   have : G.IsIndependentSet N(i) :=
+--     by simp only [Set.coe_toFinset, SimpleGraph.isIndependentSet_neighborSet_if_triangleFree _ h,
+--     SimpleGraph.neighborFinset]
+--   intro maxA
+--   apply maxA N(i) this
 
 
 -- The set B = V \ A meets every edge of G.
