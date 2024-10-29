@@ -2,17 +2,7 @@ import Mathlib.Data.Finset.Pairwise
 import Mathlib.Combinatorics.SimpleGraph.Clique
 import Mathlib.Analysis.MeanInequalities -- has am-gm
 import TheBook.ToMathlib.WeightedDoubleCounting
-
-
-namespace SimpleGraph
-
-variable {α : Type*} (G : SimpleGraph α)
-
--- An independent set in a graph is a set of vertices that are pairwise nonadjacent.
-abbrev IsIndependentSet (s : Set α) : Prop :=
-  s.Pairwise (fun a b => ¬ G.Adj a b)
-
-end SimpleGraph
+import TheBook.ToMathlib.IndependentSet
 
 
 namespace AMGMMantelTheorem
@@ -30,26 +20,13 @@ local notation "n" => Fintype.card α
 -- TODO move to ToMathlib
 prefix:100 "#" => Finset.card
 
-
--- The neighbors of a vertex i form an independent set in a trianlge free graph G.
-lemma neighbors_independent (h: G.CliqueFree 3) : G.IsIndependentSet N(i) := by
-  by_contra nind
-  rw [SimpleGraph.IsIndependentSet, Set.Pairwise] at nind
-  rw [SimpleGraph.CliqueFree] at h
-  simp [SimpleGraph.IsIndependentSet, Set.Pairwise] at nind
-  obtain ⟨j, _, k, _, _, _⟩ := nind
-  have : (i ≠ j) := by aesop
-  have : (i ≠ k) := by aesop
-  exact h {i, j, k} ⟨ by aesop , by aesop ⟩
-
-
 -- TODO can i say A is a maximal independent set in a less verbose way plz
 -- The degree of a vertex i is less or equal α, the size of a largest independent set.
 lemma degreeLeqa (h: G.CliqueFree 3) (A : Finset α) :
     (∀ I : Finset α , G.IsIndependentSet I → #I ≤ #A) → d(i) ≤ #A := by
-  have : G.IsIndependentSet N(i) := by rw [SimpleGraph.IsIndependentSet]
-                                       apply neighbors_independent
-                                       apply h
+  have : G.IsIndependentSet N(i) :=
+    by simp only [Set.coe_toFinset, SimpleGraph.isIndependentSet_neighborSet_if_triangleFree _ h,
+    SimpleGraph.neighborFinset]
   intro maxA
   apply maxA N(i) this
 
