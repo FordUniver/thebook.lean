@@ -9,24 +9,22 @@ import TheBook.ToMathlib.CliqueNumber
 namespace AMGMMantelTheorem
 
 variable {α : Type*} (G : SimpleGraph α)
-variable [Fintype α] [DecidableEq α] [DecidableRel G.Adj] {n : ℕ} {a b c : α} {A : Finset α}
+variable [Fintype α] [DecidableEq α] [DecidableRel G.Adj]
 
--- TODO move to seperate file
 local notation "V" => @Finset.univ _ _
 local notation "E" => G.edgeFinset
 local notation "N(" v ")" => G.neighborFinset v
 local notation "d(" v ")" => G.degree v
 local notation "n" => Fintype.card α
 
--- TODO move to ToMathlib
 prefix:100 "#" => Finset.card
 
 -- The degree of a vertex i is less or equal α, the size of a maximum independent set.
 lemma degreeLeqa (h: G.CliqueFree 3): d(i) ≤ G.cocliqueNum := by
   have : G.IsIndependentSet N(i) :=
-    by simp only [Set.coe_toFinset, G.isIndependentSet_neighborSet_if_triangleFree h,
-    SimpleGraph.neighborFinset]
-  exact G.independentSet_card_le_cocliqueNum N(i) this
+    by simp [Set.coe_toFinset, G.isIndependentSet_neighborSet_if_triangleFree h,
+    SimpleGraph.neighborFinset, SimpleGraph]
+  exact this.card_le_cocliqueNum
 
 -- We count the edges of G by counting the endvertices in B.
 lemma count_edges_by_B {A : Finset α} (indA : G.IsIndependentSet A) : #E ≤ ∑ i ∈ V \ A, d(i) := by
@@ -57,13 +55,11 @@ lemma am_gm (a b : ℕ) : 4 * a * b ≤ (a + b)^2 := by
   have := two_mul_le_add_sq a b -- mathlib version of the am-gm.
   linarith
 
-
 -- Mantel's Theorem
-theorem mantel (h: G.CliqueFree 3) (A : Finset α) (maxA : G.isMaximumIndependentSet A) :
-    #E ≤ (n^2 / 4) := by
+theorem mantel (h: G.CliqueFree 3) (maxA : G.IsMaximumIndependentSet A) : #E ≤ (n^2 / 4) := by
 
   have := calc #E
-   _ ≤ ∑ i ∈ V \ A, d(i)      := count_edges_by_B G maxA.left
+   _ ≤ ∑ i ∈ V \ A, d(i)      := count_edges_by_B G maxA.independentSet
    _ ≤ ∑ _ ∈ V \ A, #A        := Finset.sum_le_sum (fun _ _ =>
                                   (le_of_le_of_eq (degreeLeqa G h)
                                     (Eq.symm (G.maximumIndependentSet_card_eq_cocliqueNum A maxA))))
@@ -72,7 +68,7 @@ theorem mantel (h: G.CliqueFree 3) (A : Finset α) (maxA : G.isMaximumIndependen
 
   have := calc #E * 4 -- TODO how annoying
    _ = 4 * #E                 := mul_comm _ _
-   _ ≤ 4 * ((#V - #A) * #A)   := by simp_all only [Nat.ofNat_pos, mul_le_mul_left]; exact this
+   _ ≤ 4 * ((#V - #A) * #A)   := by simp_all; exact this
    _ = 4 * (#V - #A) * #A     := Eq.symm (mul_assoc _ _ _)
    _ ≤ ((#V - #A) + #A)^2     := am_gm (#V - #A) (#A)
    _ = (#V)^2                 := by rw [Nat.sub_add_cancel];
