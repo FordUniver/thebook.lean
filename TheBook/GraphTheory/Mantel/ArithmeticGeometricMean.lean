@@ -15,12 +15,13 @@ local notation "V" => @Finset.univ _ _
 local notation "E" => G.edgeFinset
 local notation "N(" v ")" => G.neighborFinset v
 local notation "d(" v ")" => G.degree v
+local notation "α(" G ")" => SimpleGraph.cocliqueNum G
 local notation "n" => Fintype.card α
 
 open Finset
 
 -- The degree of a vertex i is less or equal α, the size of a maximum independent set.
-lemma degreeLeqa (h: G.CliqueFree 3): d(i) ≤ G.cocliqueNum := by
+lemma degreeLeqa (h: G.CliqueFree 3): d(i) ≤ α(G) := by
   have : G.IsIndependentSet N(i) :=
     by simp [Set.coe_toFinset, G.isIndependentSet_neighborSet_if_triangleFree h,
     SimpleGraph.neighborFinset, SimpleGraph]
