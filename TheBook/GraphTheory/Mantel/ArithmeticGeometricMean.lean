@@ -58,14 +58,14 @@ theorem mantel (h: G.CliqueFree 3) (maxA : G.IsMaximumIndependentSet A) : #E ≤
    _ ≤ ∑ i ∈ V \ A, d(i)      := count_edges_by_B G maxA.independentSet
    _ ≤ ∑ _ ∈ V \ A, #A        := Finset.sum_le_sum (fun _ _ =>
                                   (le_of_le_of_eq ((nbhd_ind_of_triangle_free G h).card_le_cocliqueNum)
-                                    (Eq.symm (G.maximumIndependentSet_card_eq_cocliqueNum A maxA))))
+                                    (G.maximumIndependentSet_card_eq_cocliqueNum A maxA).symm))
    _ = #(V \ A) * #A          := Finset.sum_const _
    _ = (#V - #A) * #A         := by simp [Finset.card_sdiff _]; apply Or.inl; rfl
 
   have := calc #E * 4 -- TODO how annoying
    _ = 4 * #E                 := mul_comm _ _
    _ ≤ 4 * ((#V - #A) * #A)   := by simp_all; exact this
-   _ = 4 * (#V - #A) * #A     := Eq.symm (mul_assoc _ _ _)
+   _ = 4 * (#V - #A) * #A     := (mul_assoc _ _ _).symm
    _ ≤ ((#V - #A) + #A)^2     := am_gm (#V - #A) (#A)
    _ = (#V)^2                 := by rw [Nat.sub_add_cancel];
                                     exact (Finset.card_le_card (Finset.subset_univ A))
