@@ -31,9 +31,8 @@ lemma count_edges_by_B {A : Finset α} (indA : G.IsIndependentSet A) : #E ≤ �
 
   -- The number of edges adjacent to i is the degree of i. -- TODO duh?
   have n_adj_edges_eq_deg (i : α) : #{e ∈ E | i ∈ e} = d(i) := by
-    rw [(SimpleGraph.card_incidenceFinset_eq_degree G i).symm]
-    rw [SimpleGraph.incidenceFinset_eq_filter]
-    
+    rw [(G.card_incidenceFinset_eq_degree i).symm, G.incidenceFinset_eq_filter]
+
   -- every edge is adjacent to at least one vertex in V \ A
   have one_geq_n_adj_verts : ∀ e ∈ G.edgeFinset, 1 ≤ #{ i ∈ (V \ A) | i ∈ e } := by
     simp only [Finset.one_le_card, SimpleGraph.mem_edgeFinset]
@@ -45,8 +44,7 @@ lemma count_edges_by_B {A : Finset α} (indA : G.IsIndependentSet A) : #E ≤ �
      _ = ∑ e ∈ E, ∑ i ∈ {i ∈ (V \ A) | i ∈ e}, 1   := by simp
      _ = ∑ i ∈ V \ A, ∑ e ∈ {e ∈ E | i ∈ e}, 1     := Finset.sum_sum_bipartiteAbove_eq_sum_sum_bipartiteBelow _ _
      _ = ∑ i ∈ V \ A, #{e ∈ E | i ∈ e}             := by simp
-     _ = ∑ i ∈ V \ A, d(i)                         := Finset.sum_congr
-                                                        (by rfl) (λ i _ ↦ n_adj_edges_eq_deg i)
+     _ = ∑ i ∈ V \ A, d(i)                         := Finset.sum_congr (by rfl) (λ i _ ↦ n_adj_edges_eq_deg i)
 
 -- The inequality of the arithmetic and geometric mean.
 lemma am_gm (a b : ℕ) : 4 * a * b ≤ (a + b)^2 := by
