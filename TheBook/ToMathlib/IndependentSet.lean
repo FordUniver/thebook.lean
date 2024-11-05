@@ -15,8 +15,6 @@ An independent set is a set of vertices that are pairwise nonadjacent.
 
 
 
-local prefix:100 "#" => Finset.card
-
 open Finset Fintype Function
 
 namespace SimpleGraph

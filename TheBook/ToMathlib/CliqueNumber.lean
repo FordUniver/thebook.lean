@@ -4,8 +4,6 @@ import Mathlib.Order.SetNotation
 
 -- https://github.com/leanprover-community/mathlib4/pull/18608
 
-local prefix:100 "#" => Finset.card
-
 open Finset
 
 namespace SimpleGraph
