@@ -14,6 +14,7 @@ variable [Fintype α] [DecidableEq α] [DecidableRel G.Adj]
 local notation "V" => @Finset.univ _ _
 local notation "E" => G.edgeFinset
 local notation "N(" v ")" => G.neighborFinset v
+local notation "I(" v ")" => G.incidenceFinset v
 local notation "d(" v ")" => G.degree v
 local notation "α(" G ")" => SimpleGraph.cocliqueNum G
 local notation "n" => Fintype.card α
@@ -29,8 +30,7 @@ lemma nbhd_ind_of_triangle_free (h: G.CliqueFree 3): G.IsIndependentSet N(i) := 
 lemma count_edges_by_B {A : Finset α} (indA : G.IsIndependentSet A) : #E ≤ ∑ i ∈ V \ A, d(i) := by
 
    -- The number of edges adjacent to i is the degree of i. -- TODO duh?
-   have n_adj_edges_eq_deg : ∀ i, #{e ∈ E | i ∈ e} = d(i) := by
-     intro i
+   have n_adj_edges_eq_deg (i : α) : #{e ∈ E | i ∈ e} = d(i) := by
      rw [Eq.symm (SimpleGraph.card_incidenceFinset_eq_degree G i)]
      rw [SimpleGraph.incidenceFinset_eq_filter]
 
@@ -46,7 +46,7 @@ lemma count_edges_by_B {A : Finset α} (indA : G.IsIndependentSet A) : #E ≤ �
       _ = ∑ i ∈ V \ A, ∑ e ∈ {e ∈ E | i ∈ e}, 1     := Finset.sum_sum_bipartiteAbove_eq_sum_sum_bipartiteBelow _ _
       _ = ∑ i ∈ V \ A, #{e ∈ E | i ∈ e}             := by simp
       _ = ∑ i ∈ V \ A, d(i)                         := Finset.sum_congr
-                                                         (by rfl) (fun i _ => n_adj_edges_eq_deg i)
+                                                         (by rfl) (λ i _ ↦ n_adj_edges_eq_deg i)
 
 -- The inequality of the arithmetic and geometric mean.
 lemma am_gm (a b : ℕ) : 4 * a * b ≤ (a + b)^2 := by
