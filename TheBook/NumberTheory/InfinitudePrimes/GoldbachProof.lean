@@ -1,5 +1,6 @@
 import Mathlib.Data.Fintype.Parity
 import Mathlib.Data.Nat.Prime.Basic
+import Mathlib.Data.Nat.GCD.Basic
 import Mathlib.Data.Set.Finite
 import Mathlib.Algebra.BigOperators.Fin
 import Aesop
