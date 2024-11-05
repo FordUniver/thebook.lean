@@ -30,9 +30,9 @@ variable {s t : Set α}
 
 /-- An independent set in a graph is a set of vertices that are pairwise not adjacent. -/
 abbrev IsIndependentSet (s : Set α) : Prop :=
-  s.Pairwise (fun v w ↦ ¬G.Adj v w)
+  s.Pairwise (fun v w => ¬G.Adj v w)
 
-theorem isIndependentSet_iff : G.IsIndependentSet s ↔ s.Pairwise (fun v w ↦ ¬G.Adj v w) :=
+theorem isIndependentSet_iff : G.IsIndependentSet s ↔ s.Pairwise (fun v w => ¬G.Adj v w) :=
   Iff.rfl
 
 /-- An independent set is a clique in the complement graph and vice versa. -/
@@ -78,7 +78,7 @@ structure IsNIndependentSet (n : ℕ) (s : Finset α) : Prop where
   card_eq : s.card = n
 
 theorem isNIndependentSet_iff : G.IsNIndependentSet n s ↔ G.IsIndependentSet s ∧ s.card = n :=
-  ⟨fun h ↦ ⟨h.1, h.2⟩, fun h ↦ ⟨h.1, h.2⟩⟩
+  ⟨fun h => ⟨h.1, h.2⟩, fun h => ⟨h.1, h.2⟩⟩
 
 /-- An independent n-set is an n-clique in the complement graph and vice versa. -/
 theorem isNIndependentSet_iff_isNClique_of_complement :
@@ -106,7 +106,7 @@ structure IsMaximumIndependentSet (G : SimpleGraph α) (s : Finset α) : Prop wh
 theorem isMaximumIndependentSet_iff {s : Finset α} :
     G.IsMaximumIndependentSet s ↔
     G.IsIndependentSet s ∧ ∀ t : Finset α, G.IsIndependentSet t → #t ≤ #s :=
-  ⟨fun h ↦ ⟨h.1, h.2⟩, fun h ↦ ⟨h.1, h.2⟩⟩
+  ⟨fun h => ⟨h.1, h.2⟩, fun h => ⟨h.1, h.2⟩⟩
 
 lemma isMaximumIndependentSet_iff_compl_isMaximumClique (s : Finset α)  :
     G.IsMaximumIndependentSet s ↔ Gᶜ.IsMaximumClique s := by
@@ -121,7 +121,7 @@ structure IsMaximalIndependentSet (G : SimpleGraph α) (s : Finset α) : Prop wh
 theorem isMaximalIndependentSet_iff {s : Finset α} :
     G.IsMaximalIndependentSet s ↔
     G.IsIndependentSet s ∧ ∀ t : Finset α, G.IsIndependentSet t → s ⊆ t → t = s :=
-  ⟨fun h ↦ ⟨h.1, h.2⟩, fun h ↦ ⟨h.1, h.2⟩⟩
+  ⟨fun h => ⟨h.1, h.2⟩, fun h => ⟨h.1, h.2⟩⟩
 
 lemma isMaximalIndependentSet_iff_compl_isMaximalClique (s : Finset α)  :
     G.IsMaximalIndependentSet s ↔ Gᶜ.IsMaximalClique s := by

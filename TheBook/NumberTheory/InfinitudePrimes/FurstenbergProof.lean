@@ -9,7 +9,7 @@ def N (a b : ℤ) : Set ℤ := { a + b * n | n : ℤ}
 
 lemma N_infinite (a b : ℤ) (h : b ≠ 0) : (N a b).Infinite := by
   let f (n : ℤ) : N a b := ⟨a + b * n, by simp [N]⟩
-  have f_inj : Function.Injective f := λ a₁ a₂ f_eq ↦ by simp [f, h] at f_eq; exact f_eq
+  have f_inj : Function.Injective f := fun a₁ a₂ f_eq => by simp [f, h] at f_eq; exact f_eq
   exact Set.infinite_coe_iff.mp (Infinite.of_injective f f_inj)
 
 lemma el_N_of_dvd (a b n : ℤ) : n ∈ N a b ↔ b ∣ (n - a) := by
@@ -34,7 +34,7 @@ instance int_topology : TopologicalSpace ℤ where
       specialize sets_open U₀ U₀_in_U
       simp [or_iff_right (Set.Nonempty.ne_empty (Exists.intro a a_in_U₀))] at sets_open
       obtain ⟨b, b_ne_zero, N_contained⟩ := sets_open a a_in_U₀
-      exact ⟨b, b_ne_zero, λ _ a ↦ Set.subset_sUnion_of_mem U₀_in_U (N_contained a)⟩
+      exact ⟨b, b_ne_zero, fun _ a => Set.subset_sUnion_of_mem U₀_in_U (N_contained a)⟩
 
   isOpen_inter O₁ O₂ h₁ h₂ := by
     simp at *
@@ -50,12 +50,12 @@ instance int_topology : TopologicalSpace ℤ where
       have Nab1b2_su_Nab1 := N_sub a b₁ b₂
       have Nab1b2_su_Nab2 := N_sub a b₂ b₁
       rw [mul_comm] at Nab1b2_su_Nab2
-      exact ⟨mul_ne_zero b₁_ne_zero b₂_ne_zero, λ _ a => N₁_contained (Nab1b2_su_Nab1 a), λ _ a => N₂_contained (Nab1b2_su_Nab2 a)⟩
+      exact ⟨mul_ne_zero b₁_ne_zero b₂_ne_zero, fun _ a => N₁_contained (Nab1b2_su_Nab1 a), fun _ a => N₂_contained (Nab1b2_su_Nab2 a)⟩
 
 lemma N_open (a b : ℤ) (h : b ≠ 0): IsOpen (N a b) := by 
   simp [IsOpen, TopologicalSpace.IsOpen, N]
   apply Or.inr
-  exact λ a' ↦ (by use b; exact ⟨h, λ a'' ↦ by use a' + a''; ring_nf⟩)
+  exact fun a' => (by use b; exact ⟨h, fun a'' => by use a' + a''; ring_nf⟩)
 
 lemma A (O : Set ℤ) (h₁ : IsOpen O) (h₂ : O ≠ ∅) : O.Infinite := by
   simp [IsOpen, TopologicalSpace.IsOpen, h₂] at h₁
@@ -81,7 +81,7 @@ lemma B (a : ℤ) (b : ℕ) (h : b > 0) : IsClosed (N a b) := by
     have N_covers : Ub ∪ N a b = Set.univ := by
       apply Set.Subset.antisymm_iff.mpr
       constructor
-      · exact λ _ _ ↦ trivial
+      · exact fun _ _ => trivial
       · intro n _
         simp [el_N_of_dvd, Ub]
         let i := (n - a) % (b : ℤ)
@@ -100,14 +100,14 @@ lemma B (a : ℤ) (b : ℕ) (h : b > 0) : IsClosed (N a b) := by
   rw [N_eq_Ubc]
   apply isClosed_compl_iff.mpr
   apply isOpen_iUnion
-  exact λ i ↦ N_open (a + i) b (Int.natCast_ne_zero_iff_pos.mpr h)
+  exact fun i => N_open (a + i) b (Int.natCast_ne_zero_iff_pos.mpr h)
 
 theorem infinitude_primes : { p : ℕ | Nat.Prime p }.Infinite := by
   have Z_as_U : {1, -1}ᶜ = (⋃ p ∈ {p : ℕ | Nat.Prime p}, N 0 p) := by
     apply Set.ext; intro n
 
     constructor <;> intro n_el
-    · obtain ⟨p, p_prime, p_dvd_n⟩ := Nat.exists_prime_and_dvd (λ c ↦ n_el (Int.natAbs_eq_iff.mp c))
+    · obtain ⟨p, p_prime, p_dvd_n⟩ := Nat.exists_prime_and_dvd (fun c => n_el (Int.natAbs_eq_iff.mp c))
       have n_in_Np : n ∈ N 0 p := by simp [el_N_of_dvd]; exact Int.ofNat_dvd_left.mpr p_dvd_n
       simp; exact ⟨p, p_prime, n_in_Np⟩
 

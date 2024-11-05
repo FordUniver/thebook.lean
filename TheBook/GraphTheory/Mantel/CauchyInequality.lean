@@ -38,7 +38,7 @@ theorem mantel (h: G.CliqueFree 3) : #E ≤ (n^2 / 4) := by
     exact h {k, j, i} ⟨by aesop (add safe G.adj_symm), by simp [hij.ne', hik.ne', hjk.ne']⟩
 
   -- We need to define the sum of the degrees of the vertices of an edge ...
-  let sum_deg (e : Sym2 α) : ℕ := Sym2.lift ⟨λ x y ↦ d(x) + d(y), by simp [Nat.add_comm]⟩ e
+  let sum_deg (e : Sym2 α) : ℕ := Sym2.lift ⟨fun x y => d(x) + d(y), by simp [Nat.add_comm]⟩ e
 
   -- ... and establish a variant of adj_degree_bnd ...
   have adj_degree_bnd' (e : Sym2 α) (he: e ∈ E) : sum_deg e ≤ n := by
@@ -47,10 +47,10 @@ theorem mantel (h: G.CliqueFree 3) : #E ≤ (n^2 / 4) := by
   -- ... and the identity for the sum of the squares of the degrees ...
   have sum_sum_deg_eq_sum_deg_sq : ∑ e ∈ E, sum_deg e = ∑ v ∈ V, d(v)^2 := by
     calc  ∑ e ∈ E, sum_deg e
-      _ = ∑ e ∈ E, ∑ v ∈ e, d(v)                  := Finset.sum_congr rfl (λ e he ↦ by induction e with | _ v w => simp at he; simp [sum_deg, he.ne])
+      _ = ∑ e ∈ E, ∑ v ∈ e, d(v)                  := Finset.sum_congr rfl (fun e he => by induction e with | _ v w => simp at he; simp [sum_deg, he.ne])
       _ = ∑ e ∈ E, ∑ v ∈ {v' ∈ V | v' ∈ e}, d(v)  := Finset.sum_congr rfl (by intro e _; exact congrFun (congrArg Finset.sum (by ext; simp)) _)
       _ = ∑ v ∈ V, ∑ _ ∈ {e ∈ E | v ∈ e}, d(v)    := Finset.sum_sum_bipartiteAbove_eq_sum_sum_bipartiteBelow _ _
-      _ = ∑ v ∈ V, ∑ _ ∈ I(v), d(v)               := Finset.sum_congr rfl (λ v ↦ by simp [G.incidenceFinset_eq_filter v])
+      _ = ∑ v ∈ V, ∑ _ ∈ I(v), d(v)               := Finset.sum_congr rfl (fun v => by simp [G.incidenceFinset_eq_filter v])
       _ = ∑ v ∈ V, d(v)^2                         := by simp [Nat.pow_two]
 
   -- We now slightly modify the main argument to avoid division by a potentially zero n ...
@@ -59,9 +59,9 @@ theorem mantel (h: G.CliqueFree 3) : #E ≤ (n^2 / 4) := by
     _ = (∑ _ ∈ E, n) * n                     := by rw [Finset.mul_sum]; simp
     _ ≥ (∑ e ∈ E, sum_deg e) * n             := Nat.mul_le_mul_right n (Finset.sum_le_sum adj_degree_bnd')
     _ = (∑ v ∈ V, d(v)^2) * (∑ v ∈ V, 1^2)   := by simp [sum_sum_deg_eq_sum_deg_sq]
-    _ ≥ (∑ v ∈ V, d(v) * 1)^2                := (Finset.sum_mul_sq_le_sq_mul_sq V (λ v ↦ d(v)) 1)
-    _ = (2 * #E)^2                := by simp [G.sum_degrees_eq_twice_card_edges]
-    _ = 4 * #E^2                  := by ring
+    _ ≥ (∑ v ∈ V, d(v) * 1)^2                := (Finset.sum_mul_sq_le_sq_mul_sq V (fun v => d(v)) 1)
+    _ = (2 * #E)^2                           := by simp [G.sum_degrees_eq_twice_card_edges]
+    _ = 4 * #E^2                             := by ring
 
   -- .. and clean up the inequality.
   rw [Nat.pow_two (#E)] at this

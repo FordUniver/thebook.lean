@@ -44,7 +44,7 @@ lemma count_edges_by_B {A : Finset α} (indA : G.IsIndependentSet A) : #E ≤ �
      _ = ∑ e ∈ E, ∑ i ∈ {i ∈ (V \ A) | i ∈ e}, 1   := by simp
      _ = ∑ i ∈ V \ A, ∑ e ∈ {e ∈ E | i ∈ e}, 1     := Finset.sum_sum_bipartiteAbove_eq_sum_sum_bipartiteBelow _ _
      _ = ∑ i ∈ V \ A, #{e ∈ E | i ∈ e}             := by simp
-     _ = ∑ i ∈ V \ A, d(i)                         := Finset.sum_congr (by rfl) (λ i _ ↦ n_adj_edges_eq_deg i)
+     _ = ∑ i ∈ V \ A, d(i)                         := Finset.sum_congr (by rfl) (fun i _ => n_adj_edges_eq_deg i)
 
 -- The inequality of the arithmetic and geometric mean.
 lemma am_gm (a b : ℕ) : 4 * a * b ≤ (a + b)^2 := by

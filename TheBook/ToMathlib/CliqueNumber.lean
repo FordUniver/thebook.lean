@@ -23,7 +23,7 @@ structure IsMaximumClique (G : SimpleGraph α) (s : Finset α) : Prop where
 
 theorem isMaximumClique_iff {s : Finset α} :
     G.IsMaximumClique s ↔ G.IsClique s ∧ ∀ t : Finset α, G.IsClique t → #t ≤ #s :=
-  ⟨fun h ↦ ⟨h.1, h.2⟩, fun h ↦ ⟨h.1, h.2⟩⟩
+  ⟨fun h => ⟨h.1, h.2⟩, fun h => ⟨h.1, h.2⟩⟩
 
 /-- A maximal clique in a graph `G` is a clique that cannot be extended by adding more vertices. -/
 structure IsMaximalClique (G : SimpleGraph α) (s : Finset α) : Prop where
@@ -32,7 +32,7 @@ structure IsMaximalClique (G : SimpleGraph α) (s : Finset α) : Prop where
 
 theorem isMaximalClique_iff {s : Finset α} :
     G.IsMaximalClique s ↔ G.IsClique s ∧ ∀ t : Finset α, G.IsClique t → s ⊆ t → t = s :=
-  ⟨fun h ↦ ⟨h.1, h.2⟩, fun h ↦ ⟨h.1, h.2⟩⟩
+  ⟨fun h => ⟨h.1, h.2⟩, fun h => ⟨h.1, h.2⟩⟩
 
 lemma maximal_of_maximum (s : Finset α) (M : G.IsMaximumClique s) : G.IsMaximalClique s :=
   { clique := M.clique,

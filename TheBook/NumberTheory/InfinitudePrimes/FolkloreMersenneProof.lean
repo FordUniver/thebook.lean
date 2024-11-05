@@ -9,7 +9,7 @@ namespace FolkloreMersenneInfinitudePrimes
 lemma mersenne_prime_dvd_gt (p q : ℕ) [p_prime: Fact (Nat.Prime p)] [q_prime : Fact (Nat.Prime q)] (h : q ∣ 2^p - 1) : p < q := by
 
   -- so we have 2^p ≡ 1 (mod q)
-  have two_pow_p_eq_one_mod_q : 2^p ≡ 1 [MOD q] := ((λ x ↦ (Nat.modEq_iff_dvd' x).mpr) (Nat.one_le_two_pow) h).symm
+  have two_pow_p_eq_one_mod_q : 2^p ≡ 1 [MOD q] := ((fun x => (Nat.modEq_iff_dvd' x).mpr) (Nat.one_le_two_pow) h).symm
 
   -- Since p is prime, this means that the element 2 has order p in the multiplicative group Zq \ {0} of the field Zq 
   have two_pow_p_eq_one := ((ZMod.eq_iff_modEq_nat q).mpr two_pow_p_eq_one_mod_q)
