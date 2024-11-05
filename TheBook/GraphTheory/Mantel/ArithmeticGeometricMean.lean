@@ -29,24 +29,24 @@ lemma nbhd_ind_of_triangle_free (h: G.CliqueFree 3): G.IsIndependentSet N(i) := 
 -- We count the edges of G by counting the endvertices in B.
 lemma count_edges_by_B {A : Finset α} (indA : G.IsIndependentSet A) : #E ≤ ∑ i ∈ V \ A, d(i) := by
 
-   -- The number of edges adjacent to i is the degree of i. -- TODO duh?
-   have n_adj_edges_eq_deg (i : α) : #{e ∈ E | i ∈ e} = d(i) := by
-     rw [Eq.symm (SimpleGraph.card_incidenceFinset_eq_degree G i)]
-     rw [SimpleGraph.incidenceFinset_eq_filter]
+  -- The number of edges adjacent to i is the degree of i. -- TODO duh?
+  have n_adj_edges_eq_deg (i : α) : #{e ∈ E | i ∈ e} = d(i) := by
+    rw [(SimpleGraph.card_incidenceFinset_eq_degree G i).symm]
+    rw [SimpleGraph.incidenceFinset_eq_filter]
+    
+  -- every edge is adjacent to at least one vertex in V \ A
+  have one_geq_n_adj_verts : ∀ e ∈ G.edgeFinset, 1 ≤ #{ i ∈ (V \ A) | i ∈ e } := by
+    simp only [Finset.one_le_card, SimpleGraph.mem_edgeFinset]
+    exact G.compl_independentSet_meets_every_edge indA
 
-   -- every edge is adjacent to at least one vertex in V \ A
-   have one_geq_n_adj_verts : ∀ e ∈ G.edgeFinset, 1 ≤ #{ i ∈ (V \ A) | i ∈ e } := by
-     simp only [Finset.one_le_card, SimpleGraph.mem_edgeFinset]
-     exact G.compl_independentSet_meets_every_edge indA
-
-   calc
-     #E = ∑ e ∈ E, 1                                := by simp
-      _ ≤ ∑ e ∈ E, #{ i ∈ (V \ A) | i ∈ e }         := Finset.sum_le_sum one_geq_n_adj_verts
-      _ = ∑ e ∈ E, ∑ i ∈ {i ∈ (V \ A) | i ∈ e}, 1   := by simp
-      _ = ∑ i ∈ V \ A, ∑ e ∈ {e ∈ E | i ∈ e}, 1     := Finset.sum_sum_bipartiteAbove_eq_sum_sum_bipartiteBelow _ _
-      _ = ∑ i ∈ V \ A, #{e ∈ E | i ∈ e}             := by simp
-      _ = ∑ i ∈ V \ A, d(i)                         := Finset.sum_congr
-                                                         (by rfl) (λ i _ ↦ n_adj_edges_eq_deg i)
+  calc
+    #E = ∑ e ∈ E, 1                                := by simp
+     _ ≤ ∑ e ∈ E, #{ i ∈ (V \ A) | i ∈ e }         := Finset.sum_le_sum one_geq_n_adj_verts
+     _ = ∑ e ∈ E, ∑ i ∈ {i ∈ (V \ A) | i ∈ e}, 1   := by simp
+     _ = ∑ i ∈ V \ A, ∑ e ∈ {e ∈ E | i ∈ e}, 1     := Finset.sum_sum_bipartiteAbove_eq_sum_sum_bipartiteBelow _ _
+     _ = ∑ i ∈ V \ A, #{e ∈ E | i ∈ e}             := by simp
+     _ = ∑ i ∈ V \ A, d(i)                         := Finset.sum_congr
+                                                        (by rfl) (λ i _ ↦ n_adj_edges_eq_deg i)
 
 -- The inequality of the arithmetic and geometric mean.
 lemma am_gm (a b : ℕ) : 4 * a * b ≤ (a + b)^2 := by
