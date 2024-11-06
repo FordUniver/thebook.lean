@@ -1,5 +1,6 @@
 import Mathlib.Data.Fintype.Parity
 import Mathlib.Data.Nat.Prime.Basic
+import Mathlib.Data.Nat.GCD.Basic
 import Mathlib.Data.Set.Finite
 import Mathlib.Algebra.BigOperators.Fin
 import Mathlib.Data.Nat.GCD.Basic
@@ -71,7 +72,7 @@ lemma F_coprime (k n : ℕ) (k_ne_n: k ≠ n) : Nat.Coprime (F k) (F n) := by
 
 /-- Proof of the infinitude of primes --/
 theorem infinitude_of_primes : ∃ P : ℕ → ℕ, Injective P ∧ ∀ k, (P k).Prime := by
-  choose P P_prime P_dvd_fermat using fun n ↦ Nat.exists_prime_and_dvd (ne_of_gt (F_ge_two n))
+  choose P P_prime P_dvd_fermat using fun n => Nat.exists_prime_and_dvd (ne_of_gt (F_ge_two n))
   have P_inj : Injective P := by
     intros m n Pm_eq_Pn
     have Pm_dvd_gcd   : P m ∣ Nat.gcd (F m) (F n) :=

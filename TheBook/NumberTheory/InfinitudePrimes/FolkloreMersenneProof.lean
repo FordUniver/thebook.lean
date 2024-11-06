@@ -1,9 +1,11 @@
-import Mathlib.Data.Nat.Prime.Basic
+import Mathlib.Data.Nat.Prime.Defs
+import Mathlib.Data.Nat.Prime.Factorial
 import Mathlib.Data.Set.Finite
 import Mathlib.Data.ZMod.Basic
 import Mathlib.FieldTheory.Finite.Basic
 
 namespace FolkloreMersenneInfinitudePrimes
+
 
 -- Let q be a prime dividing 2^p − 1
 lemma mersenne_prime_dvd_gt (p q : ℕ) [p_prime: Fact (Nat.Prime p)] [q_prime : Fact (Nat.Prime q)]
