@@ -60,6 +60,6 @@ theorem mantel (h: G.CliqueFree 3) (maxA : G.IsMaximumIndependentSet A) : #E ≤
                                   exact card_le_card (subset_univ A)
    _ = n^2                  := by simp only [card_univ]
 
-  exact (Nat.le_div_iff_mul_le2' Nat.ofNat_pos).mpr four_times_card_E_bd
+  exact (Nat.le_div_iff_mul_le_comm Nat.ofNat_pos).mpr four_times_card_E_bd
 
 end AMGMMantelTheorem
