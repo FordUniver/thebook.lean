@@ -1,6 +1,7 @@
 import TheBook.ToMathlib.EdgeFinset
 import TheBook.ToMathlib.IndependentSet
 import TheBook.ToMathlib.CliqueNumber
+import TheBook.ToMathlib.Nat_le
 
 import TheBook.NumberTheory.InfinitudePrimes.Statement
 import TheBook.NumberTheory.InfinitudePrimes.EuclidProof
