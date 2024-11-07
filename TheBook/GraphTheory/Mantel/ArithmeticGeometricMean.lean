@@ -44,7 +44,9 @@ lemma count_edges_by_B {A : Finset α} (indA : G.IsIndependentSet A) : #E ≤ �
                                                            G.incidenceFinset_eq_filter]
 
 -- Mantel's Theorem
-theorem mantel (h: G.CliqueFree 3) (maxA : G.IsMaximumIndependentSet A) : #E ≤ n^2 / 4 := by
+theorem mantel (h: G.CliqueFree 3) : #E ≤ n^2 / 4 := by
+
+  let ⟨A, maxA⟩  := G.maximumIndependentSet_exists
 
   have card_E_bound := calc #E
    _ ≤ ∑ i ∈ V \ A, d(i)      := count_edges_by_B G maxA.independentSet
