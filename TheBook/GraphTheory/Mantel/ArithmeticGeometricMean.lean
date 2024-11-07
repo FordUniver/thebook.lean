@@ -66,8 +66,7 @@ theorem mantel (h: G.CliqueFree 3) : #E ≤ n^2 / 4 := by
   have card_E_bound := calc
     #E ≤ ∑ i ∈ B, d(i)      := by exact count_edges_by_B
      _ ≤ ∑ _ ∈ B, α         := sum_le_sum fun _ _ => degree_leq_cardA _
-     _ = α * (∑ _ ∈ B, 1)   := by simp [Nat.mul_comm]
-     _ = α * β              := by simp [hB]
+     _ = α * β              := by simp [Nat.mul_comm, hB]
 
   have four_times_card_E_bd := calc 
     4 * #E ≤ 4 * α * β        := by linarith
