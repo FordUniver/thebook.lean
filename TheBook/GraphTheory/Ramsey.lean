@@ -106,7 +106,7 @@ theorem ram1 : (m n : ℕ) →
     let ⟨mN, ⟨mNramsey, mNbound⟩⟩ := ram1 m (n + 1)
 
     -- have : ramseyProperty N (m + 1) n := by
-    have construct monoc : ∀ C : EdgeColoring N, ∃ c, (red c C ∨ blue c C) ∧ (#c ≤ N) := by
+    have : ∀ C : EdgeColoring N, ∃ c, (red c C ∨ blue c C) ∧ (#c ≤ N) := by
       intro C
       let v : Fin N := sorry -- how to say "any v"
 
@@ -185,12 +185,92 @@ theorem ram1 : (m n : ℕ) →
       · have : (R (m + 1) n) ≤ B.card := sorry -- symmetric to above...
         sorry
 
-    have : ramseyProperty N (m + 1) (n + 1) := by intro C
-
-
+    have : ramseyProperty N (m + 1) (n + 1) := sorry
     refine Exists.intro N (And.intro this ?_)
 
 
+
+
+-- theorem ram1 (m n : ℕ) :
+--     ∃ N, ramseyProperty N m n ∧
+--     (R m n) ≤ (R (m - 1) n) + (R m (n - 1)) := by
+--   induction' m with m ih
+--   · _
+--   · let ⟨mN, ⟨mNramsey, _⟩⟩ := ih
+--     let N := (R m (n + 1)) + (R (m + 1) n)
+--     have : ramseyProperty N (m + 1) (n + 1) := by
+--       intro C
+--       let v : Fin N := sorry -- how to say "any v"
+
+--       let A := C.neighborFinset v
+--       let B := Cᶜ.neighborFinset v
+
+--       -- this is probably in mathlib somewhere?
+--       have : A.card + B.card = N - 1 := by
+--         have union : (A ∪ B).card = N - 1 := by
+--           have := C.card_neighborSet_union_compl_neighborSet v
+--           simp_all only [Set.toFinset_card, Fintype.card_fin, Set.toFinset_union, N, A, B]
+--           exact this
+
+--         have : (A ∪ B).card = A.card + B.card := by
+--             have : Disjoint (A) (B) := by
+--               have := C.compl_neighborSet_disjoint v
+--               simp_all only [A, B]
+--               sorry
+--             have := card_union_of_disjoint this
+--             simp_all only [card_neighborFinset_eq_degree, N, A, B]
+
+--         simp_all [card_union_of_disjoint]
+
+--       by_cases RleqA : (R m (n + 1)) ≤ #A
+--       · -- A also has the Ramsey property: There exists a subset of A that is all red or blue.
+--         have : {N | ramseyProperty N m (n + 1)}.Nonempty := by
+--           have := ram1 m (n+1)
+--           sorry
+--         let ⟨Aa, p⟩ := (clear #A RleqA (Rramsey this)) (inducedColoring A C) -- sorry is in ih somewhere
+
+--         cases p with
+--         | inl h => -- idk how to lift Aa to Fin N
+--                   let AN : Finset (Fin N) := {lift a | a ∈ Aa} -- { a | a ∈ Aa} how!
+--                   have lift_set_mem : ∀ w, w ∈ AN → ∃ ww , ww ∈ Aa ∧ lift ww = w := sorry
+
+--                   have ANred : ∀ w, w ∈ AN → C.red w v := by
+--                     intro w winAN
+--                     obtain ⟨ww, ⟨wwAa, cw⟩⟩ := lift_set_mem w winAN
+--                     sorry
+
+--                   let c := insert v AN
+
+--                   have : c.toSet.Pairwise C.red := by
+--                     intro u uinc w winc unw
+--                     by_cases ueqv : u = v -- can i have nicer nested cases please
+--                     · subst ueqv
+--                       by_cases weqv : w = v
+--                       · by_contra adjvw
+--                         subst weqv
+--                         exact unw rfl
+--                       · sorry -- same as below...
+--                     · have uinAN : u ∈ AN := Finset.mem_of_mem_insert_of_ne uinc ueqv
+--                       by_cases weqv : w = v
+--                       · subst weqv
+--                         exact ANred u uinAN
+--                       · have winAN : w ∈ AN := Finset.mem_of_mem_insert_of_ne winc weqv
+--                         obtain ⟨ foo, _ ⟩ := h
+--                         obtain ⟨ ww , ⟨wwAa, cw⟩ ⟩ := lift_set_mem w winAN
+--                         obtain ⟨ uu , ⟨uuAa, cu⟩ ⟩ := lift_set_mem u uinAN
+--                         rw [← cw, ← cu] at unw
+--                         have := foo wwAa uuAa ((lift_neq ww uu).mpr unw.symm)
+--                         have := (induceColor C A ww uu).mp this
+--                         rw [cw, cu] at this
+--                         exact fun a => ueqv (id (Eq.symm cu))
+--                   exact Exists.intro c (Or.inl ⟨this , _ ⟩)
+--         | inr h => sorry -- same as above
+
+
+--       · have : (R m (n - 1)) ≤ B.card := sorry -- symmetric to above...
+--         sorry
+
+--     exact Exists.intro N (And.intro this _)
 
 
 
