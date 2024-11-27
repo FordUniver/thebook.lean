@@ -3,10 +3,12 @@ import Mathlib.Combinatorics.Enumerative.DoubleCounting
 import Mathlib.Combinatorics.SimpleGraph.Basic
 import Mathlib.Combinatorics.SimpleGraph.Finite
 import Mathlib.Combinatorics.SimpleGraph.Clique
+import Mathlib.Combinatorics.SimpleGraph.Maps
 import Mathlib.Combinatorics.SimpleGraph.DegreeSum
 import Mathlib.Algebra.Order.BigOperators.Ring.Finset
 import TheBook.ToMathlib.EdgeFinset
 import Aesop
+
 
 namespace CauchyMantelTheorem
 
@@ -19,27 +21,42 @@ local notation "I(" v ")" => G.incidenceFinset v
 local notation "d(" v ")" => G.degree v
 local notation "n" => Fintype.card α
 
-open Finset
+open Finset SimpleGraph
 
-def completeBipartiteGraph (s t : ℕ) : SimpleGraph (Fin s ⊕ Fin t) :=
-{ Adj := fun x y =>
-    match x, y with
-    | Sum.inl _, Sum.inl _ => false
-    | Sum.inr _, Sum.inr _ => false
-    | _, _                 => true,
-  symm := by aesop_graph
-  loopless := fun x h =>
-    match x, h with
-    | Sum.inl _, h => by simp_all
-    | Sum.inr _, h => by simp_all  }
 
-lemma completeBipartiteGraph_triangle_free (k₁ k₂ : ℕ) : (completeBipartiteGraph k₁ k₂).CliqueFree 3 := by
+#check completeBipartiteGraph
+#check SimpleGraph.completeMultipartiteGraph
+#check SimpleGraph.cliqueFree_completeMultipartiteGraph
+
+lemma completeBipartiteGraph_equiv_completeMultipartiteGraph (β γ : Type u) :
+  Nonempty (completeBipartiteGraph β γ ≃g SimpleGraph.completeMultipartiteGraph (fun b => cond b β γ)) := by
+  let φ : β ⊕ γ → Σ b : Bool, cond b β γ := λ v => match v with
+    | Sum.inl b => ⟨true, b⟩
+    | Sum.inr c => ⟨false, c⟩
+
+  have φ_inj : Function.Injective φ := by
+    rintro (b₁ | c₁) (b₂ | c₂) h <;> injection h with h₁ h₂ <;> aesop
+
+  have φ_surj : Function.Surjective φ := by
+    rintro ⟨b, a⟩; cases b <;> simp_all
+
+  have φ_bij : Function.Bijective φ := ⟨φ_inj, φ_surj⟩
+
+  have φ_adj (x y : β ⊕ γ) :
+    (completeBipartiteGraph β γ).Adj x y ↔
+    (SimpleGraph.completeMultipartiteGraph (fun b => cond b β γ)).Adj (φ x) (φ y) := by
+    cases x <;> cases y <;> simp [completeBipartiteGraph, SimpleGraph.completeMultipartiteGraph]
+    
+  exact Nonempty.intro ⟨Equiv.ofBijective φ φ_bij, by simp [φ_adj]⟩
+
+lemma cliqueFree_completeBipartiteGraph {β γ : Type u} {k : ℕ} (h: k ≥ 3) : (completeBipartiteGraph β γ).CliqueFree k := by
+  have φ := completeBipartiteGraph_equiv_completeMultipartiteGraph β γ
+  have hCliqueFree := cliqueFree_completeMultipartiteGraph (fun b => cond b β γ) h
+  
   sorry
 
-lemma completeBipartiteGraph_order (k₁ k₂ : ℕ) : #(completeBipartiteGraph k₁ k₂).edgeFinset = k1 * k2 := by
-  sorry
 
-theorem mantel_maximal_iff : G.CliqueFree 3 ∧ #E = n^2 / 4 ↔ Nonempty (G ≃g completeBipartiteGraph (n / 2) ((n + 1) / 2)) := by
+theorem mantel_maximal_iff : G.CliqueFree 3 ∧ #E = n^2 / 4 ↔ Nonempty (G ≃g completeBipartiteGraph (Fin (n / 2)) (Fin ((n + 1) / 2))) := by
   constructor
   · intro ⟨h, hE⟩
     -- if we have equality then in the above chain of inequalities we have
