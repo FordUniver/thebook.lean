@@ -173,7 +173,8 @@ lemma ramsey_iff (N m n : ℕ) : (ramseyProp N m n) ↔
   rw [this]
   simp [isNIndependentSet_iff_isNClique_of_complement]
   simp [← isNIndependentSet_iff_isNClique_of_complement]
-  simp [Or.comm]
+  symm
+
 
 ----------------------------------------------------------------------------------------------------
 -- ramsey number
@@ -296,50 +297,26 @@ theorem rammm1 : (m n : ℕ) → 2 ≤ m → 2 ≤ n →
   induction' m, n, ml1, nl1 using le_induction2 with m mr n nr m n mg2 ng2 mr nr
   · exact Exists.intro m ⟨ramseySymm.mp mem , @base m ⟨not_eq_zero_of_lt mr⟩⟩
   · exact Exists.intro n ⟨mem , by simp only [add_comm, RSymm] at base; exact @base n ⟨not_eq_zero_of_lt nr⟩⟩
-  · let ⟨mN, ⟨mNramsey, mNbound⟩⟩ := mr
-    let ⟨nN, ⟨nNramsey, nNbound⟩⟩ := nr
+  · obtain ⟨mN, ⟨mNramsey, mNbound⟩⟩ := mr
+    obtain ⟨nN, ⟨nNramsey, nNbound⟩⟩ := nr
+    let N := R m (n + 1) + R (m + 1) n
+    use N
+
+    have nz : 0 < N := by sorry
+    have v : Fin N := by sorry
 
     simp_all only [Nat.add_one_sub_one]
 
-
-    have (N : ℕ) (v : Fin N) (nz : 0 < N) (Neq : N = R m (n + 1) + R (m + 1) n) :
-        ramseyProp N (m + 1) (n + 1) := by
+    have : ramseyProp N (m + 1) (n + 1) := by
       intro C
 
       let B := C.neighborFinset v
       let A := Cᶜ.neighborFinset v
-      have Beq : B = C.neighborFinset v := by ext a : 1; simp_all only [B, mem_neighborFinset] -- what is it i don't understand about let statements
+
+      have a_card_or_b_card : R (m-1) n ≤ #A ∨ R m (n-1) ≤ #B := by sorry
 
       wlog RleqA : (R m (n + 1)) ≤ #A with h -- this is so cool
-      · have bge : R n (m + 1) ≤ #B := by
-          push_neg at RleqA
-          unfold_let A B at *
-
-          have : NeZero N := NeZero.of_pos nz
-          have := calc (R m (n + 1)) + (R n (m + 1)) = N := by rw [@RSymm n (m + 1), ← Neq]
-                  _ = #(C.neighborFinset v) + #(Cᶜ.neighborFinset v) + 1 := neighbor_card_sum C
-                  _ < #(C.neighborFinset v) + R m (n + 1) + 1 := by sorry --simp [RleqA]
-                  _ = R m (n + 1) + #(C.neighborFinset v) + 1 := by simp [add_comm]
-          exact Nat.le_of_lt_succ (Nat.lt_of_add_lt_add_left this)
-
-        rw [@RSymm (m + 1) n, @RSymm (m + 1) (n - 1), @RSymm m n, add_comm (R n m)] at mNbound
-        rw [@RSymm m (n + 1), @RSymm (m - 1) (n + 1), @RSymm m n, add_comm _ (R n m)] at nNbound
-        rw [@RSymm m (n + 1), @RSymm (m + 1) n, add_comm] at Neq
-
-        apply ramseySymm.mp at nNramsey
-        apply ramseySymm.mp at mNramsey
-        -- wtf
-        have bgee : R n (m + 1) ≤ #(@neighborFinset (Fin N) Cᶜᶜ v (@neighborSetFintype (Fin N) Cᶜᶜ (Fin.fintype N) (fun a b => @Compl.adjDecidable (Fin N) Cᶜ (fun a b => Finite.adjDecidable Cᶜ a b) (instDecidableEqFin N) a b) v)) := sorry
-
-        let ⟨s, rs⟩ := h 1 1 n m nN mN base ng2 mg2 ⟨nN, ⟨nNramsey, trivial⟩⟩
-                                              ⟨mN, ⟨mNramsey, trivial⟩⟩
-                                              nNramsey nNbound mNramsey mNbound N v nz Neq Cᶜ
-                                              (by ext a : 1; simp_all only [B, mem_neighborFinset])
-                                              bgee
-
-        simp_rw [red_compl, blue_compl] at rs
-        exact ⟨s, Or.symm rs⟩
-
+      · sorry
       · -- A also has the Ramsey property: There exists a subset of A that is all red or blue.
         -- using the induction hypothesis!
         let ⟨Aa, p⟩ := (clear #A RleqA (Rramsey (Set.nonempty_of_mem nNramsey))) (inducedColoring A C)
@@ -384,22 +361,17 @@ theorem rammm1 : (m n : ℕ) → 2 ≤ m → 2 ≤ n →
 
           have vnmemAN : v ∉ AN := sorry
           have : #c = m+1 := by calc #c
-                                      _ = #AN + 1 := card_insert_of_not_mem vnmemAN
-                                      _ = #(embed_finset cardAleN Aa) + 1 := rfl
-                                      _ = #Aa + 1  := by simp[embed_card]
-                                      _ = m + 1 := by simp[Aacard]
+            _ = #AN + 1 := card_insert_of_not_mem vnmemAN
+            _ = #(embed_finset cardAleN Aa) + 1 := rfl
+            _ = #Aa + 1  := by simp[embed_card]
+            _ = m + 1 := by simp[Aacard]
 
           exact Exists.intro c (Or.inl ⟨cred, this⟩)
 
 
-    let N := R m (n + 1) + R (m + 1) n
-    have nz : NeZero N := sorry
+    exact ⟨this, Nat.sInf_le this⟩
 
-    have NRam := this N (0 : Fin N) (pos_of_neZero N) rfl
-    simp only [Nat.add_one_sub_one, exists_and_right]
-
-    exact And.intro ⟨N, NRam⟩ (Nat.sInf_le NRam)
-
+    
 ----------------------------------------------------------------------------------------------------
 
 
