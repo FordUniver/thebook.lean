@@ -1,6 +1,7 @@
 import Mathlib.Combinatorics.SimpleGraph.Clique
 import Mathlib.Data.Finset.Pairwise
 import Mathlib.Data.Finset.Card
+import Mathlib.Data.Finset.Sort
 import Mathlib.Data.Nat.Lattice
 import Mathlib.Combinatorics.SimpleGraph.Maps
 import TheBook.ToMathlib.IndependentSet
@@ -28,35 +29,6 @@ lemma neighbor_card_sum [nz : NeZero N] (G : SimpleGraph (Fin N)) :
   rw [Fintype.card_fin]
   simp[Nat.sub_one_add_one nz.ne]
 
-
-----------------------------------------------------------------------------------------------------
--- converting between finsets of fin A and fin N with A ≤ N
-
-section EmbedFinset
-
-variable {A N : ℕ} (h : A ≤ N) (Aa: Finset (Fin A))
-
-def embed_finset : Finset (Fin N) := map (castLEEmb h) Aa
-
-lemma embed_card : #(embed_finset h Aa) = #Aa := by rw[embed_finset, card_map]
-
-lemma embed_neq : ∀ a b : Fin A, a ≠ b ↔ (castLEEmb h a) ≠ (castLEEmb h b) := by
-  intros; simp_all only [ne_eq, EmbeddingLike.apply_eq_iff_eq]
-
-lemma embed_mem : ∀ w, w ∈ embed_finset h Aa → ∃ ww , ww ∈ Aa ∧ w = castLEEmb h ww := by
-  intros w a
-  simp_all only [embed_finset, mem_map, castLEEmb_apply, castLE_rfl, id_eq]
-  obtain ⟨w_1, ⟨_, right⟩⟩ := a
-  subst right
-  simp_all only [castLE_inj, exists_eq_right']
-
-lemma embed_mem' : b ∈ Aa → castLE h b ∈ embed_finset h Aa := by
-  intro binA
-  simp only [embed_finset, mem_map, castLEEmb_apply, castLE_inj, exists_eq_right]
-  exact binA
-
-end EmbedFinset
-
 ----------------------------------------------------------------------------------------------------
 -- edge colorings
 
@@ -77,75 +49,72 @@ def blue (s : Finset (Fin N)) (C : EdgeColoring N) := (s.toSet).Pairwise C.blue
 ----------------------------------------------------------------------------------------------------
 -- edge colorings induced by vertex subsets
 
--- abbrev SimpleGraph.selfSubgraph (G : SimpleGraph V) := SimpleGraph.toSubgraph G (fun ⦃_ _⦄ a => a)
+abbrev SimpleGraph.selfSubgraph (G : SimpleGraph V) := SimpleGraph.toSubgraph G (fun ⦃_ _⦄ a => a)
 
--- -- def embed (A : Finset (Fin N)) (_: a ∈ A) : Fin N := (castLEEmb (Nat.le_refl N)).toFun a
+structure inducedSubgraph (A : Finset (Fin N)) (C : EdgeColoring N) where
+  graph : EdgeColoring #A
+  colorEmbed : (Fin #A) ↪ A
+  adjEmbed : ∀ v w, graph.blue v w ↔ C.blue (colorEmbed v) (colorEmbed w)
 
---  -- TODO these should be induced subgraphs but idk how
--- def inducedColoring (A : Finset (Fin N)) (C : EdgeColoring N) (h : #A ≤ N) :
---     ∃ I : EdgeColoring #A, (∀ v w, (I.red v w) ↔ (C.red (castLEEmb h v) (castLEEmb h w))) := by
---   have sI := SimpleGraph.Subgraph.induce C.selfSubgraph A
---   have : sI.verts = A := by sorry --simp [Subgraph.induce]
---   have : #(sI.verts) = #A := by sorry --simp [Subgraph.induce]
---   subst this
---   refine ⟨sI.coe, ?_⟩
+-- problem with using subgraph: C.induce A is a SimpleGraph A, but to apply ramsey we need a SimpleGraph (Fin #A)
+-- so either we rewrite everything for some type MyFin N that's any finite type with N elements, or we tediously
+-- translate the SimpleGraph A into a SimpleGraph #A at which point we might just as well use our own subgraph...
+-- noncomputable def inducedColoring2 (A : Finset (Fin N)) (C : EdgeColoring N) : inducedSubgraph A C := by
+--   let Alist := A.toList
+--   have alist_len := length_toList A
+--   have {a} : a ∈ Alist → a ∈ A := fun am => mem_toList.mp am
+--   let colorEmbed : (Fin #A) ↪ A := {
+--     toFun := fun a => ⟨Alist.get ((congrArg Fin alist_len.symm).mp a),
+--                        this sorry⟩
+--     inj' := sorry
+--   }
+--   let subgraph := C.selfSubgraph.induce A
+--   exact {
+--     graph := subgraph.coe
+--     colorEmbed := colorEmbed
+--     adjEmbed := fun v w => by simp_all only [graph]
+--   }
 
+noncomputable def inducedColoring (A : Finset (Fin N)) (C : EdgeColoring N) : inducedSubgraph A C := by
+  let Alist := A.toList -- can we avoid this? i don't like choice
+  have alist_len := length_toList A
+  have {a} : a ∈ Alist → a ∈ A := fun am => mem_toList.mp am
 
- -- TODO these should be induced subgraphs but idk how
-def inducedColoring (A : Finset (Fin N)) (G : EdgeColoring N) : EdgeColoring #A := by
-  have h : #A ≤ N := card_finset_fin_le A
-  exact {
-    Adj := fun v w => G.Adj (castLEEmb h v) (castLEEmb h w),
-    symm := by rw[Adj]; exact fun ⦃x y⦄ a => adj_symm G a,
-    loopless := by rw[Adj]
-                   simp_all only [castLEEmb_apply]
-                   exact fun v => id (G.loopless (castLEEmb h v))
+  let colorEmbed : (Fin #A) ↪ A := {
+    toFun := fun a => by
+      let a' := (congrArg Fin alist_len.symm).mp a
+      exact ⟨Alist.get a', this (Alist.get_mem a' a'.isLt)⟩
+    inj' := fun a b c => by
+      simp_all only [eq_mp_eq_cast, Subtype.mk.injEq]
+      have := (List.Nodup.get_inj_iff A.nodup_toList).mp c
+      simp_all only [_root_.cast_inj]
   }
 
-lemma induceColor {N : ℕ} (C : EdgeColoring N) (A : Finset (Fin N)) (h : #A ≤ N):
-    ∀ v w, (inducedColoring A C).red v w ↔ C.red (castLEEmb h v) (castLEEmb h w) := by
-  intro v w
-  simp_all only [castLEEmb_apply]
+  exact {
+    graph := {
+      Adj := fun v w => C.Adj (colorEmbed v) (colorEmbed w),
+      symm := by rw[Adj]; exact fun ⦃x y⦄ a => adj_symm C a,
+      loopless := by rw[Adj, Irreflexive]; intro a; exact SimpleGraph.irrefl C
+    }
+    colorEmbed := colorEmbed
+    adjEmbed := by simp only [implies_true]
+  }
+
+lemma induceColor {N : ℕ} (C : EdgeColoring N) (A : Finset (Fin N)) : let C' := (inducedColoring A C);
+    ∀ v w, C'.graph.red v w ↔ C.red (C'.colorEmbed v) (C'.colorEmbed w) := by
+  intro v _ _
+  simp_all only [v]
   rfl
 
-lemma induceColorb {N : ℕ} (C : EdgeColoring N) (A : Finset (Fin N)) (h : #A ≤ N) (v w : Fin #A):
-    (inducedColoring A C).blue v w ↔ C.blue (castLEEmb h v) (castLEEmb h w) := by
-  simp_all only [castLEEmb_apply]
+lemma induceColorb {N : ℕ} (C : EdgeColoring N) (A : Finset (Fin N)) (v w : Fin #A) : let C' := (inducedColoring A C);
+    (inducedColoring A C).graph.blue v w ↔ C.blue (C'.colorEmbed v) (C'.colorEmbed w) := by
   rfl
 
-lemma induce_blue {C : EdgeColoring N} {A : Finset (Fin N)} {h : #A ≤ N} {Aa : Finset (Fin #A)} :
-    blue Aa (inducedColoring A C) ↔ blue (embed_finset h Aa) C := by
-    apply Iff.intro
-    · rw [blue, Set.Pairwise] at *
-      intro a b c d e f
-      simp_all only [mem_coe, ne_eq, castLEEmb_apply]
-      obtain ⟨x, ⟨xm, xl⟩⟩ := embed_mem h Aa b c
-      obtain ⟨y, ⟨ym, yl⟩⟩ := embed_mem h Aa d e
-      subst xl yl
-      exact a xm ym ((embed_neq h x y).mpr f)
+lemma neEmbed {N : ℕ} (C : EdgeColoring N) (A : Finset (Fin N)) : let C' := (inducedColoring A C);
+   ∀ v w, (C'.colorEmbed v) ≠ (C'.colorEmbed w) ↔ v ≠ w := by
+  intros
+  simp_all only [ne_eq, EmbeddingLike.apply_eq_iff_eq]
 
-    · rw [blue, Set.Pairwise] at *
-      intro a b c d e f
-      rw [induceColorb]
-      simp_all only [mem_coe, ne_eq, castLEEmb_apply]
-      exact a (embed_mem' h Aa c) (embed_mem' h Aa e) (by simp[embed_neq, f])
-
-lemma induce_red {C : EdgeColoring N} {A : Finset (Fin N)} {h : #A ≤ N} {Aa : Finset (Fin #A)} :
-    red Aa (inducedColoring A C) ↔ red (embed_finset h Aa) C := by
-    apply Iff.intro
-    · rw [red, Set.Pairwise] at *
-      intro a b c d e f
-      simp_all only [mem_coe, ne_eq, castLEEmb_apply]
-      obtain ⟨x, ⟨xm, xl⟩⟩ := embed_mem h Aa b c
-      obtain ⟨y, ⟨ym, yl⟩⟩ := embed_mem h Aa d e
-      subst xl yl
-      exact a xm ym ((embed_neq h x y).mpr f)
-
-    · rw [red, Set.Pairwise] at *
-      intro a b c d e f
-      rw [induceColor]
-      simp_all only [mem_coe, ne_eq, castLEEmb_apply]
-      exact a (embed_mem' h Aa c) (embed_mem' h Aa e) (by simp[embed_neq, f])
 
 ----------------------------------------------------------------------------------------------------
 -- ramsey property
@@ -156,10 +125,10 @@ def ramseyProp (N m n : ℕ) :=
 lemma clear (s : ℕ) (Nles : N ≤ s) : ramseyProp N m n → ramseyProp s m n := by
   intros Nleqs C
   rw [ramseyProp] at *
-  have eq := embed_card Nles (univ : Finset (Fin N))
-  simp at eq
-  let i := (inducedColoring (embed_finset Nles (univ : Finset (Fin N))) C)
-  rw [eq] at i
+  -- have eq := embed_card Nles (univ : Finset (Fin N))
+  -- simp at eq
+  -- let i := (inducedColoring (sorry Nles (univ : Finset (Fin N))) C)
+  -- rw [eq] at i
   sorry
 
 lemma ramsey_iff (N m n : ℕ) : (ramseyProp N m n) ↔
@@ -183,6 +152,22 @@ noncomputable def R (m n : ℕ) : ℕ := sInf { N | ramseyProp N m n}
 @[simp] lemma RSymm {m n : ℕ} : R m n = R n m := by simp[R]
 
 lemma Rramsey (nen : {N | ramseyProp N m n}.Nonempty) : ramseyProp (R m n) m n := Nat.sInf_mem nen
+
+lemma Rpos (m n : ℕ) (mpos : 0 < m) (npos : 0 < n) (nen : {N | ramseyProp N m n}.Nonempty) :
+    0 < R m n := by
+  simp_rw [R]
+  by_contra R0
+  push_neg at R0
+  apply eq_zero_of_le_zero at R0
+  have : ramseyProp 0 m n := by have := sInf_mem nen; rw [← R0]; exact this
+  rw[ramseyProp] at this
+  have := this ⊥
+  obtain ⟨s, p⟩ := this
+  have : #s = 0 := eq_zero_of_le_zero (card_finset_fin_le s)
+  simp_rw [this] at p
+  match p with
+  | Or.inl ⟨_, p⟩ => exact mpos.ne p
+  | Or.inr ⟨_, p⟩ => exact npos.ne p
 
 ----------------------------------------------------------------------------------------------------
 -- base case proofs
@@ -342,20 +327,50 @@ theorem rammm1 : (m n : ℕ) → 2 ≤ m → 2 ≤ n →
 
       · -- A also has the Ramsey property: There exists a subset of A that is all red or blue.
         -- using the induction hypothesis!
-        let ⟨Aa, p⟩ := (clear #A RleqA (Rramsey (Set.nonempty_of_mem nNramsey))) (inducedColoring A C)
+        let Ca := (inducedColoring A C)
+        let ⟨Aa, p⟩ := (clear #A RleqA (Rramsey (Set.nonempty_of_mem nNramsey))) Ca.graph
 
         -- all vertices in A have a red edge with v
         have Avred : ∀ u ∈ A, C.red v u := by aesop
 
         -- idk how to embed Aa to Fin N
         have cardAleN : #A ≤ N := card_finset_fin_le A
-        let AN : Finset (Fin N) := embed_finset cardAleN Aa
 
-        wlog allRed : red Aa (inducedColoring A C) ∧ #Aa = m
+        let ANa : Finset A := (map Ca.colorEmbed Aa)
+        let AN : Finset (Fin N) := map {
+          toFun := fun a => a.1
+          inj' := Subtype.val_injective
+        } ANa
+
+        have aEmbed : ∀ x ∈ AN, ∃ xa ∈ Aa, x = Ca.colorEmbed xa := by
+          intro x a
+          simp_all only [mem_map, exists_exists_and_eq_and, AN, ANa]
+          obtain ⟨w_2, ⟨left, right⟩⟩ := a
+          subst right
+          use w_2
+          constructor
+          · exact left
+          · exact rfl
+
+        have ANsubsA : AN ⊆ A := by
+          intro _ xAN
+          simp_all [AN, A]
+          exact xAN.1
+
+        wlog allRed : red Aa Ca.graph ∧ #Aa = m
         · simp[allRed] at p
-          refine ⟨AN, Or.inr ⟨induce_blue.mp p.1 ,?_ ⟩⟩
-          · have : #Aa = #AN := (embed_card cardAleN Aa).symm
-            rw[this] at p
+          refine ⟨AN, Or.inr ⟨?_, ?_⟩⟩
+          · rw [blue, Set.Pairwise]
+            rw [blue, Set.Pairwise] at p
+            intros x xAN y yAN xny
+            obtain ⟨xaaa, ⟨xaa, xa⟩⟩ := aEmbed x xAN
+            obtain ⟨yaaa, ⟨yaa, ya⟩⟩ := aEmbed y yAN
+            rw [xa, ya]
+            rw [xa, ya] at xny
+            simp [← Ca.adjEmbed]
+            exact p.1 xaa yaa ((neEmbed C A xaaa yaaa).mp (fun a => xny (congrArg Subtype.val a)))
+          · have : #Aa = #AN := by simp [AN, ANa]
+            rw [this] at p
             exact p.2
         · obtain ⟨ Aared, Aacard ⟩ := allRed
 
@@ -371,29 +386,34 @@ theorem rammm1 : (m n : ℕ) → 2 ≤ m → 2 ≤ n →
             · have uinAN : u ∈ AN := Finset.mem_of_mem_insert_of_ne uinc ueqv
               by_cases weqv : v = w
               · -- all edges containing v are red
-                subst weqv; have : u ∈ A := sorry; exact fun a => Avred u this (adj_symm C a)
+                subst weqv
+                have : u ∈ A := ANsubsA uinAN
+                exact fun a => Avred u this (adj_symm C a)
               · have winAN : w ∈ AN := Finset.mem_of_mem_insert_of_ne winc (fun a => weqv (symm a))
                 unfold_let AN at winAN
-                obtain ⟨ww, ⟨wwAa, cw⟩⟩ := embed_mem cardAleN Aa w winAN
-                obtain ⟨uu, ⟨uuAa, cu⟩⟩ := embed_mem cardAleN Aa u uinAN
-                rw [cw, cu] at unw
-                have := Aared wwAa uuAa ((embed_neq cardAleN ww uu).mpr unw.symm)
-                have := (induceColor C A cardAleN ww uu).mp this
+                obtain ⟨ww, ⟨wwAa, cw⟩⟩ := aEmbed w winAN
+                obtain ⟨uu, ⟨uuAa, cu⟩⟩ := aEmbed u uinAN
+                simp_rw [cw, cu, Ca] at unw
+                have := Aared wwAa uuAa ((neEmbed C A ww uu).mp
+                  (fun a => unw (congrArg Subtype.val a.symm)))
+                have cr : ∀ v w, Ca.graph.red v w ↔ C.red (Ca.colorEmbed v) (Ca.colorEmbed w) := by
+                    intros
+                    rfl
+                have := (cr ww uu).mp this
                 rw [← cw, ← cu] at this
                 exact fun a => this (adj_symm C a)
 
-          have vnmemAN : v ∉ AN := sorry
-          have : #c = m+1 := by calc #c
-                                      _ = #AN + 1 := card_insert_of_not_mem vnmemAN
-                                      _ = #(embed_finset cardAleN Aa) + 1 := rfl
-                                      _ = #Aa + 1  := by simp[embed_card]
-                                      _ = m + 1 := by simp[Aacard]
+          have vnmemAN : v ∉ AN := fun a => (not_mem_neighborFinset_self Cᶜ v) (ANsubsA a)
+          have : #c = m + 1 := by simp_all only [card_insert_of_not_mem vnmemAN, card_map, AN, ANa, Aacard]
 
           exact Exists.intro c (Or.inl ⟨cred, this⟩)
 
 
     let N := R m (n + 1) + R (m + 1) n
-    have nz : NeZero N := sorry
+    have mNpos : 0 < R (m + 1) n := Rpos (m+1) n (zero_lt_succ m) (zero_lt_of_lt ng2) (Set.nonempty_def.mpr ⟨mN, mNramsey⟩)
+    have nNpos : 0 < R m (n + 1) := Rpos m (n+1) (zero_lt_of_lt mg2) (zero_lt_succ n) (Set.nonempty_def.mpr ⟨nN, nNramsey⟩)
+
+    have nz : NeZero N := { out := by unfold N; exact not_eq_zero_of_lt (add_pos nNpos mNpos) }
 
     have NRam := this N (0 : Fin N) (pos_of_neZero N) rfl
     simp only [Nat.add_one_sub_one, exists_and_right]
