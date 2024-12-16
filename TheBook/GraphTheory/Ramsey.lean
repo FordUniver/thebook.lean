@@ -367,33 +367,16 @@ theorem chooseRbound (m n : ℕ) (m1 : 2 ≤ m) (n1 : 2 ≤ n) : R m n ≤ choos
 -- what other people call the ramsey number
 noncomputable abbrev Rr (k : ℕ) := R k k
 
-lemma powRbound {k} (k1 : 2 ≤ k) : Rr k ≤ 2 ^ (2 * k - 3) := by
-  have c : (k - 1) = (k - 2 + 1) := by rw [Nat.sub_eq_iff_eq_add (one_le_of_lt k1), add_assoc]; simp; rw [Nat.sub_add_cancel k1]
-  have m : 3 ≤ 2 * k := calc 3 ≤ 2 + 2 := le_add_left 3 1
-                           _ ≤ 2 + k := add_le_add_left k1 2
-                           _ ≤ k + k := add_le_add_right k1 k
-                           _ = 2 * k := Eq.symm (two_mul k)
-  have a : 0 < 2 * k - 2 := zero_lt_sub_of_lt m
-  have b : (2 * k - 2 - 1) = (2 * k - 3) := by simp_all only [tsub_pos_iff_lt, ofNat_pos, lt_mul_iff_one_lt_right]; rfl
-
-  have f : 2 * k - 1 = 1 + (2 * k - 3 + 1) := by rw[add_comm 1, Nat.sub_eq_iff_eq_add (one_le_of_lt m)]
-                                                 simp [add_assoc]; rw[Nat.sub_add_cancel m]
-
-  have d : k - 2 ≠ k - 1 := by intro; simp_all only [self_eq_add_right, one_ne_zero]
-  have e : {k - 2, k - 1} ⊆ range (2 * k - 3 + 1) := by
-    rw [insert_subset_iff, singleton_subset_iff]
-    have : k - 1 < 2 * k - 3 + 1 := by
-      rw [Nat.sub_lt_iff_lt_add (one_le_of_lt k1), ← f, two_mul, Nat.add_sub_assoc (one_le_of_lt k1)]
-      exact (Nat.lt_add_of_pos_right (zero_lt_sub_of_lt k1))
+lemma powRbound : Rr (k + 2) ≤ 2 ^ (2 * k + 1) := by
+  have : {k, k + 1} ⊆ range (2 * k + 1 + 1) := by
+    rw [insert_subset_iff, singleton_subset_iff, two_mul]
     simp; constructor
-    · calc k - 2 ≤ k - 1 := by exact sub_le_succ_sub k 2
-               _ < 2 * k - 3 + 1 := by exact this
-    · exact this
+    · rw [add_assoc]; rw [add_assoc]; exact Nat.lt_add_of_pos_right (zero_lt_succ (k + 1))
+    · rw [add_assoc]; exact Nat.lt_add_of_pos_right (zero_lt_succ k)
 
-  calc R k k ≤ choose (k + k - 2) (k - 1)                                          := by exact chooseRbound k k k1 k1
-           _ = choose (2 * k - 2) (k - 2 + 1)                                      := by rw [two_mul, ← c]
-           _ = (2 * k - 2 - 1).choose (k - 2) + (2 * k - 2 - 1).choose (k - 2 + 1) := Nat.choose_succ_right (2 * k - 2) (k - 2) (zero_lt_sub_of_lt m)
-           _ = (2 * k - 3).choose (k - 2) + (2 * k - 3).choose (k - 1)             := by rw [b, c]
-           _ = ∑ m ∈ {k - 2, k - 1}, (2 * k - 3).choose m                          := (Finset.sum_pair d).symm
-           _ ≤ ∑ m ∈ range ((2 * k - 3) + 1), (2 * k - 3).choose m                 := sum_le_sum_of_subset e
-           _ = 2 ^ (2 * k - 3)                                                     := Nat.sum_range_choose _
+  calc R (k+2) (k+2) ≤ (k + 2 + (k + 2) - 2).choose (k + 2 - 1)          := by exact chooseRbound (k+2) (k+2) (Nat.le_add_left 2 k) (Nat.le_add_left 2 k)
+           _ = choose (2 * (k + 2) - 2) (k + 1)                          := by simp_all only [Nat.add_one_sub_one, ← two_mul]
+           _ = (2 * k + 2 - 1).choose k + (2 * k + 2 - 1).choose (k + 1) := Nat.choose_succ_right (2 * k + 2) k (zero_lt_succ (2 * k + 1))
+           _ = ∑ m ∈ {k, k + 1}, (2 * k + 1).choose m                    := (Finset.sum_pair (ne_add_one k)).symm
+           _ ≤ ∑ m ∈ range ((2 * k + 1) + 1), (2 * k + 1).choose m       := sum_le_sum_of_subset this
+           _ = 2 ^ (2 * k + 1)                                           := Nat.sum_range_choose _
