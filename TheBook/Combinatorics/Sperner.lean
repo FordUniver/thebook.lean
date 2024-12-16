@@ -135,13 +135,15 @@ def chain_extension_filter_function (𝒜 : Finset (Finset α)) (e : Finset α) 
 instance instDecidablePredChainExtension (e : Finset α) :
     DecidablePred (chain_extension_filter_function 𝒜 e) := by sorry
 
-lemma chain_extension (hn : Fintype.card α = n) {i j : Finset.range (n + 1)} (iltj : i < j) (chain𝒜 : IsChain (· ⊂ ·) (𝒜 : Set (Finset α)))
+lemma chain_extension (hn : Fintype.card α = n) {i j : Finset.range (n + 1)} (ilej_succ_succ : (i : ℕ) + 2 ≤ ↑j) (chain𝒜 : IsChain (· ⊂ ·) (𝒜 : Set (Finset α)))
     (hi : (𝒜 # i) = {layer_i}) (hj : (𝒜 # j) = {layer_j}) (emptylayer : ∀ l ∈ (Finset.range (n + 1)), i < l → l < j → #(𝒜 # l) = 0):
     Finset.filter (chain_extension_filter_function 𝒜 layer_i) (Finset.univ : Finset α) = layer_j \ layer_i := by
   have layer_j_mem : layer_j ∈ 𝒜 := by
         apply (slice_subset : 𝒜 # j ⊆ 𝒜)
         rw [hj]
         exact Finset.mem_singleton.mpr rfl
+
+  have iltj : i < j := Nat.lt_of_succ_lt ilej_succ_succ
 
   have layer_i_mem : layer_i ∈ 𝒜 := by
         apply (slice_subset : 𝒜 # i ⊆ 𝒜)
@@ -264,7 +266,7 @@ lemma chain_extension (hn : Fintype.card α = n) {i j : Finset.range (n + 1)} (i
       | inr e₁_not_new => sorry
     · --rw [←he_new]
       intro e_new_mem_𝒜
-      sorry
+      #check ilej_succ_succ
 
 
 lemma one_elt_max_chain_layer (hn : Fintype.card α = n) (maxchain𝒜 : IsMaxChain (· ⊂ ·) (𝒜 : Set (Finset α))) (j : Finset.range (n + 1)) : #(𝒜 # j) = 1 := by
