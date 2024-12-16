@@ -1,6 +1,7 @@
 import Mathlib.Combinatorics.SimpleGraph.Clique
 import TheBook.ToMathlib.IndependentSet
 import Mathlib.Tactic.Linarith
+import Mathlib.Data.Nat.Choose.Sum
 
 open SimpleGraph Finset Fintype Nat
 
@@ -51,28 +52,33 @@ noncomputable def embedFintype (α β : Type*) [Fintype α] [Fintype β] [Decida
     (h : Fintype.card α ≤ Fintype.card β) :
     α ↪ β := Trunc.out (Function.Embedding.truncOfCardLE h)
 
-lemma induce_blue {C : SimpleGraph V} {A : Finset V} {Aa : Finset A}:
-    blue Aa (inducedColoring C A).coe ↔ blue (map embedFinset Aa) C := by
+lemma induce_blue {C : SimpleGraph V} {A : Finset V} {Aᵥ : Finset A}:
+    blue Aᵥ (inducedColoring C A).coe ↔ blue (map embedFinset Aᵥ) C := by
   simp_rw [blue, Set.Pairwise, inducedColoring]
   simp only [ne_eq, Subgraph.coe_adj, Subgraph.induce_adj, Subtype.coe_prop, true_and,
     Subtype.forall, Subtype.mk.injEq, coe_map, Set.mem_image, forall_exists_index, and_imp]
   apply Iff.intro
-  · intro Cadj a b binA bAa eba x y yinA yAa exy bny
+  · intro Cadj a b binA bAᵥ eba x y yinA yAᵥ exy bny
     subst eba exy
-    exact Cadj (embedFinset ⟨b, binA⟩) binA bAa (embedFinset ⟨y, yinA⟩) yinA yAa bny
-  · intro Cadj a ainA aAa b binA bAa anb
-    exact Cadj a ainA aAa rfl b binA bAa rfl anb
+    exact Cadj (embedFinset ⟨b, binA⟩) binA bAᵥ (embedFinset ⟨y, yinA⟩) yinA yAᵥ bny
+  · intro Cadj a ainA aAᵥ b binA bAᵥ anb
+    exact Cadj a ainA aAᵥ rfl b binA bAᵥ rfl anb
 
 ----------------------------------------------------------------------------------------------------
 -- ramsey property
 
 -- TODO the type signatures are verbose. can i somehow define a type that's in all the classes i want
 -- but still have inference work?
+-- this should do it:
+-- class MeFinClass (type : Type*) (N : outParam Nat) extends Fintype type where
+--   [toDecidableEq : DecidableEq type]
+--   [fin : Fintype type]
+--   card : Fintype.card type = N
 def ramseyProp (N m n : ℕ) := ∀ (V : Type) [Fintype V] [DecidableEq V] (_ : Fintype.card V = N),
     ∀ (C : SimpleGraph V) [DecidableRel C.Adj], ∃ s, (red s C ∧ s.card = m) ∨ (blue s C ∧ s.card = n)
 
 lemma clear (N s : ℕ) (h : N ≤ s) : ramseyProp N m n → ramseyProp s m n := by
-  intros ramN W finW decW Wcard C decC
+  intros ramN W _ _ Wcard C _
   rw [ramseyProp] at *
   rw [← Wcard, ← Fintype.card_fin N] at h
   let A : Finset W := Finset.map (embedFintype (Fin N) W h) Finset.univ
@@ -95,7 +101,7 @@ lemma clear (N s : ℕ) (h : N ≤ s) : ramseyProp N m n → ramseyProp s m n :=
 lemma ramsey_iff (N m n : ℕ) : (ramseyProp N m n) ↔
     ∀ (V : Type) [Fintype V] [DecidableEq V] (_: Fintype.card V = N) (C : SimpleGraph V) [DecidableRel C.Adj],
     ∃ (s : Finset V), (C.IsNIndependentSet m s) ∨ (C.IsNClique n s) := by
-  simp_rw [isNClique_iff, isNIndependentSet_iff, ramseyProp, red, blue]
+  simp_rw [isNClique_iff, isNIndependentSet_iff, isClique_iff, isIndependentSet_iff, ramseyProp, red, blue]
 
 @[simp] lemma ramseySymm : (ramseyProp N m n) ↔ (ramseyProp N n m) := by
   have (V : Type) [dV : DecidableEq V] (p : SimpleGraph V → Prop) :
@@ -139,7 +145,7 @@ lemma Rpos (m n : ℕ) (mpos : 0 < m) (npos : 0 < n) (nen : {N | ramseyProp N m 
 -- base case proofs
 
 lemma ramsey2 : ramseyProp m m 2 := by
-    intro V finV decV cardV C decC
+    intro V finV decV cardV C _
     let all : Finset V := univ
     by_cases allRed : red all C
     · have : all.card = m := by simp only [card_univ, cardV, all]
@@ -229,7 +235,7 @@ theorem recRbound : (m n : ℕ) → 2 ≤ m → 2 ≤ n →
   · let ⟨mN, ⟨mNramsey, mNbound⟩⟩ := mr
     let ⟨nN, ⟨nNramsey, nNbound⟩⟩ := nr
 
-    simp_all only [Nat.add_one_sub_one]
+    simp_all only [Nat.add_one_sub_one, and_true]
 
     set N := R m (n + 1) + R (m + 1) n with Neq
 
@@ -243,6 +249,7 @@ theorem recRbound : (m n : ℕ) → 2 ≤ m → 2 ≤ n →
       have nenV : Nonempty V := card_pos_iff.mp (by rw [cardV]; exact zero_lt_of_ne_zero nz)
       let v : V := nenV.some
 
+      -- all vertices joined to v with a red edge
       let A := Cᶜ.neighborFinset v
 
       wlog RleqA : R m (n + 1) ≤ Cᶜ.degree v with h
@@ -256,12 +263,13 @@ theorem recRbound : (m n : ℕ) → 2 ≤ m → 2 ≤ n →
                   _ = R m (n + 1) + Cᶜᶜ.degree v + 1 := by congr!; simp [compl_compl] -- compl implicitly changes adjDecidable instance so we need congr
           convert le_of_lt_succ (lt_of_add_lt_add_left this) -- we need convert to arrive at the desired adjDecidable instance
 
-        simp only [forall_const, Nonempty.forall, and_true] at h
+        simp only [forall_const, Nonempty.forall] at h
 
         rw [Neq] at *
         repeat rw [@RSymm m, @RSymm (m + 1)] at *
 
         -- TODO this is a large thing. can i use wlog hypothesis without so much noise?
+        -- this case is symmetric if we consider the complement graph.
         obtain ⟨s, rs⟩ := @h n m nN mN base ng2 mg2 ⟨nN, ramseySymm.mp nNramsey⟩ ⟨mN, ramseySymm.mp mNramsey⟩
                                 (ramseySymm.mp nNramsey)
                                 (by rw [@RSymm (m - 1), add_comm _ (R n m)] at nNbound; assumption)
@@ -271,100 +279,121 @@ theorem recRbound : (m n : ℕ) → 2 ≤ m → 2 ≤ n →
                                 _ _ (by rw [add_comm] at cardV; assumption) Cᶜ (Classical.decRel Cᶜ.Adj) v bge
 
         simp_rw [red_compl, blue_compl] at rs
-        exact ⟨s , rs.symm⟩
+        exact ⟨s, rs.symm⟩
 
-      · let cardA_le_N : #A ≤ N := le_of_le_of_eq (card_le_univ A) cardV
-
-        let ramA := clear (R m (n + 1)) #A RleqA (Rramsey (Set.nonempty_of_mem nNramsey)) A (card_coe A)
-        let ⟨Aa, p⟩ := @ramA (inducedColoring C A).coe (Classical.decRel (inducedColoring C A).coe.Adj)
-
-        -- all vertices in A have a red edge with v
+      · -- all vertices in A have a red edge with v
         have Avred : ∀ {u}, u ∈ A → ¬ C.Adj v u := by
           intro u a
           simp_all only [mem_neighborFinset, compl_adj, not_false_eq_true, A, v]
 
-        let AaN : Finset V := (Finset.map embedFinset Aa)
+        -- A has cardinality ≥ R m (n + 1), so it also has the ramsey property according to the induction hypothesis.
+        -- we name its monochromatic subset Aᵥ
+        let ramA := clear (R m (n + 1)) #A RleqA (Rramsey (Set.nonempty_of_mem nNramsey)) A (card_coe A)
+        let ⟨Aᵥ, monochrom⟩ := @ramA (inducedColoring C A).coe (Classical.decRel (inducedColoring C A).coe.Adj)
 
-        wlog allRed : red Aa (inducedColoring C A).coe ∧ #Aa = m
-        · simp [allRed] at p
-          rw [(card_map embedFinset).symm] at p
-          refine ⟨AaN, Or.inr ⟨induce_blue.mp p.1, p.2⟩⟩
-        · obtain ⟨ Aared, Aacard ⟩ := allRed
-          let c := insert v AaN
-          have inA : ∀ {x}, (v ≠ x) → (x ∈ c) → x ∈ A := by
-            intro _ xnv xinc
-            simp [c, xnv.symm, AaN, A] at xinc
-            simp_all only [mem_neighborFinset, false_or, mem_insert, A]
-            obtain ⟨_, ⟨⟨left, right⟩, ⟨_, embx⟩⟩⟩ := xinc
-            subst embx
-            exact ⟨left, right⟩
+        -- Aᵥ is a subset of the induced graph's vertices A, so it's a Finset { x // x ∈ A }
+        -- we need to embed it into V to talk about corresponding vertices in the big graph C
+        let AᵥV : Finset V := (Finset.map embedFinset Aᵥ)
 
+        have AVsubA : AᵥV ⊆ A := by
+          intro _ memAV
+          simp_all [AᵥV, A, embedFinset]
+          exact memAV.1
+
+        cases' monochrom with allRed allBlue
+        · -- the candidate set: Aᵥ together with v
+          let c := insert v AᵥV
+
+          have inA {x : V} (xnv : v ≠ x) (xinc : x ∈ c) : x ∈ A := by
+            cases' mem_insert.mp xinc with xeqv xinAV
+            · exact (xnv xeqv.symm).elim
+            · exact AVsubA xinAV
+
+          -- it indeed describes an all-red subgraph:
           have cred : red c C := by
+            -- we show pairwise redness of some u, w ∈ c
             intro u uinc w winc unw
 
+            -- we need to handle the case that some edge partners are v
             by_cases uvw : (u = v) ∨ (w = v)
-            ·
-              cases' uvw with eq eq
+            · cases' uvw with eq eq
               all_goals subst eq
               · exact Avred (inA (ne_of_eq_of_ne rfl unw) winc)
               · exact fun a => (Avred (inA (ne_of_eq_of_ne rfl unw.symm) uinc)) a.symm
-            · push_neg at uvw
-              obtain ⟨ww, ⟨wwAa, cw⟩⟩ := mem_map.mp (Finset.mem_of_mem_insert_of_ne winc uvw.right)
-              obtain ⟨uu, ⟨uuAa, cu⟩⟩ := mem_map.mp (Finset.mem_of_mem_insert_of_ne uinc uvw.left)
+            · -- the interesting case: two members of c that are not v have a red edge
+              -- we project them to A
+              push_neg at uvw
+              obtain ⟨wₐ, ⟨wₐinAᵥ, cw⟩⟩ := mem_map.mp (Finset.mem_of_mem_insert_of_ne winc uvw.right)
+              obtain ⟨uₐ, ⟨uₐinAᵥ, cu⟩⟩ := mem_map.mp (Finset.mem_of_mem_insert_of_ne uinc uvw.left)
               rw [← cw, ← cu] at unw ⊢
 
-              have : ¬(inducedColoring C A).coe.Adj ww uu :=
-                Aared wwAa uuAa (by intro a; subst a cu; exact unw rfl)
+              -- the projections of the vertices are red in the induced coloring
+              have : ¬(inducedColoring C A).coe.Adj wₐ uₐ :=
+                allRed.1 wₐinAᵥ uₐinAᵥ (by intro a; subst a cu; exact unw rfl)
 
               simp only [Subgraph.coe_adj, Subgraph.induce_adj, Subtype.coe_prop, true_and] at this
               exact fun a => this (adj_symm C a)
 
           refine Exists.intro c (Or.inl ⟨cred, ?_⟩)
 
-          have ANsubsA : AaN ⊆ A := by
-            intro _ xAN
-            simp_all [AaN, A, embedFinset]
-            exact xAN.1
-          have vnmemAaN : v ∉ AaN := fun a => (not_mem_neighborFinset_self Cᶜ v) (ANsubsA a)
-
-          simp_all only [not_false_eq_true, card_insert_of_not_mem, card_map, c, AaN]
+          have : v ∉ AᵥV := fun a => (not_mem_neighborFinset_self Cᶜ v) (AVsubA a)
+          simp_all only [not_false_eq_true, card_insert_of_not_mem, card_map, c, AᵥV]
+        · -- if Aᵥ is all blue, we're done.
+          rw [(card_map embedFinset).symm] at allBlue
+          refine ⟨AᵥV, Or.inr ⟨induce_blue.mp allBlue.1, allBlue.2⟩⟩
 
     exact ⟨N, ⟨ramseyN, Nat.sInf_le ramseyN⟩⟩
 
--- ----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
 
+theorem chooseRbound (m n : ℕ) (m1 : 2 ≤ m) (n1 : 2 ≤ n) : R m n ≤ choose (m + n - 2) (m - 1) := by
+  induction' m, n, m1, n1 using le_induction2 with m mr n nr m n mg2 ng2 mr nr
+  · simp [R2]
+  · simp [R2]
+    have := choose_succ_left n n (zero_lt_of_lt nr)
+    simp at this
+    exact Nat.le_of_eq this
+  · let ⟨_, ⟨_, lee⟩⟩ := recRbound (m+1) (n+1) (le_add_right_of_le mg2) (le_add_right_of_le ng2)
+    have : m + (n + 1) - 2 + 1 = m + 1 + (n + 1) - 2 := by rw [add_comm, add_comm m 1, add_assoc,
+                                                               ← Nat.add_sub_assoc (le_add_right_of_le mg2)]
 
--- lemma foo {P : ℕ → Prop} (n : ℕ) : (_ : ∀ n, P n) → (_ : 0 < n) → P (n - 1) := by
---   intro x x_1
---   simp_all only
+    calc R (m + 1) (n + 1) ≤ R m (n + 1) + R n (m + 1)                                     := by simp at lee; exact lee
+                         _ ≤ R m (n + 1)  + choose (m + 1 + n - 2) (m + 1 - 1)             := by simp; simp [RSymm] at mr; exact mr
+                         _ ≤ choose (m + (n + 1) - 2) (m - 1) + choose (m + 1 + n - 2) m   := by simp[nr]
+                         _ = choose (m + (n + 1) - 2) (m - 1) + choose (m + (n + 1) - 2) m := by simp[add_assoc, add_comm n 1]
+                         _ = choose (m + (n + 1) - 2 + 1) m                                := (choose_succ_left (m+(n+1)-2) m (zero_lt_of_lt mg2)).symm
+                         _ = choose (m + 1 + (n + 1) - 2) (m + 1 - 1)                      := by simp only [this, add_tsub_cancel_right]
 
--- lemma reeeec (nr : 0 < n) : choose m (n - 1) + choose m n = choose (m + 1) n := by
---   have := (choose_succ_succ' m (n - 1)).symm
---   simp only[sub_add_cancel (zero_lt_of_lt nr)] at this
---   exact this
+-- what other people call the ramsey number
+noncomputable abbrev Rr (k : ℕ) := R k k
 
--- theorem ram2 : (m n : ℕ) → (m1 : 2 ≤ m) → (n1 : 2 ≤ n) → R m n ≤ choose (m + n - 2) (m - 1) := by
---   intro m n ml1 nl1
---   induction' m, n, ml1, nl1 using le_induction2 with m mr n nr m n mg2 ng2 mr nr
---   · simp[R2]
---   · simp[R2];
---     have := foo n (fun m => choose_succ_self_right m) (zero_lt_of_lt nr);
---     simp only[sub_add_cancel (zero_lt_of_lt nr)] at this
---     simp_all only [le_refl]
+lemma powRbound {k} (k1 : 2 ≤ k) : Rr k ≤ 2 ^ (2 * k - 3) := by
+  have c : (k - 1) = (k - 2 + 1) := by rw [Nat.sub_eq_iff_eq_add (one_le_of_lt k1), add_assoc]; simp; rw [Nat.sub_add_cancel k1]
+  have m : 3 ≤ 2 * k := calc 3 ≤ 2 + 2 := le_add_left 3 1
+                           _ ≤ 2 + k := add_le_add_left k1 2
+                           _ ≤ k + k := add_le_add_right k1 k
+                           _ = 2 * k := Eq.symm (two_mul k)
+  have a : 0 < 2 * k - 2 := zero_lt_sub_of_lt m
+  have b : (2 * k - 2 - 1) = (2 * k - 3) := by simp_all only [tsub_pos_iff_lt, ofNat_pos, lt_mul_iff_one_lt_right]; rfl
 
---   · let ⟨_, ⟨_, lee⟩⟩ := rammm1 (m+1) (n+1) (le_add_right_of_le mg2) (le_add_right_of_le ng2)
+  have f : 2 * k - 1 = 1 + (2 * k - 3 + 1) := by rw[add_comm 1, Nat.sub_eq_iff_eq_add (one_le_of_lt m)]
+                                                 simp [add_assoc]; rw[Nat.sub_add_cancel m]
 
---     have h1: m + 1 + n - 2 = m + (n + 1) - 2 := by sorry
---     have h2: (m + (n + 1) - 2 + 1) = (m + 1 + (n + 1) - 2)  := sorry
+  have d : k - 2 ≠ k - 1 := by intro; simp_all only [self_eq_add_right, one_ne_zero]
+  have e : {k - 2, k - 1} ⊆ range (2 * k - 3 + 1) := by
+    rw [insert_subset_iff, singleton_subset_iff]
+    have : k - 1 < 2 * k - 3 + 1 := by
+      rw [Nat.sub_lt_iff_lt_add (one_le_of_lt k1), ← f, two_mul, Nat.add_sub_assoc (one_le_of_lt k1)]
+      exact (Nat.lt_add_of_pos_right (zero_lt_sub_of_lt k1))
+    simp; constructor
+    · calc k - 2 ≤ k - 1 := by exact sub_le_succ_sub k 2
+               _ < 2 * k - 3 + 1 := by exact this
+    · exact this
 
---     calc R (m + 1) (n + 1) ≤ R m (n + 1) + R n (m + 1) := by simp at lee; exact lee
---                          _ ≤ R m (n + 1)  + choose (m + 1 + n - 2) (m + 1 - 1) := by simp; simp [RSymm] at mr; exact mr
---                          _ ≤ choose (m + (n + 1) - 2) (m - 1) + choose (m + 1 + n - 2) m := by simp[nr]
---                          _ = choose (m + (n + 1) - 2) (m - 1) + choose (m + (n + 1) - 2) m := by simp[h1]
---                          _ = choose (m + (n + 1) - 2 + 1) m := @reeeec m (m + (n + 1) - 2) (zero_lt_of_lt mg2)
---                          _ = choose (m + 1 + (n + 1) - 2) (m + 1 - 1) := by simp_all only [h2, add_tsub_cancel_right]
-
-
--- noncomputable abbrev Rr (k : ℕ) := R k k
-
--- theorem ram3 {k} (_ : 2 ≤ k) : 2 ^ (k / 2) ≤ Rr k := sorry
+  calc R k k ≤ choose (k + k - 2) (k - 1)                                          := by exact chooseRbound k k k1 k1
+           _ = choose (2 * k - 2) (k - 2 + 1)                                      := by rw [two_mul, ← c]
+           _ = (2 * k - 2 - 1).choose (k - 2) + (2 * k - 2 - 1).choose (k - 2 + 1) := Nat.choose_succ_right (2 * k - 2) (k - 2) (zero_lt_sub_of_lt m)
+           _ = (2 * k - 3).choose (k - 2) + (2 * k - 3).choose (k - 1)             := by rw [b, c]
+           _ = ∑ m ∈ {k - 2, k - 1}, (2 * k - 3).choose m                          := (Finset.sum_pair d).symm
+           _ ≤ ∑ m ∈ range ((2 * k - 3) + 1), (2 * k - 3).choose m                 := sum_le_sum_of_subset e
+           _ = 2 ^ (2 * k - 3)                                                     := Nat.sum_range_choose _
