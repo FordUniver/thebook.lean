@@ -20,7 +20,6 @@ import Mathlib.Combinatorics.Enumerative.DoubleCounting
 import Mathlib.Combinatorics.Derangements.Finite
 import Mathlib.Logic.Equiv.Defs
 import Mathlib.Data.Set.Basic
-import FormalBook.Chapter_28
 
 /-!
 # Three famous lemmas on finite sets
@@ -120,7 +119,7 @@ lemma permutation_to_edge_cardinality {n : ℕ} (π : Equiv.Perm (Fin n)) : ∀ 
 def permutation_to_chain {n : ℕ} (π : Equiv.Perm (Fin n)) : Finset (Finset (Fin n)) :=
   Finset.image (fun (j : Fin (n + 1)) => permutation_to_edge j π) (Finset.univ : Finset (Fin (n + 1)))
 
-lemma subset_from_permutation_injective {n : ℕ} {π : Equiv.Perm (Fin n)} : Injective (fun (k : Fin (n + 1)) => permutation_to_edge k π) := by
+lemma permutation_to_edge_injective {n : ℕ} {π : Equiv.Perm (Fin n)} : Injective (fun (k : Fin (n + 1)) => permutation_to_edge k π) := by
   rw [Injective]
   intro a₁ a₂ h
   have : a₁.val = a₂.val := by
@@ -159,7 +158,7 @@ def permutation_to_top_down_chain (n : ℕ) (π : Equiv.Perm (Fin n)) : TopDownC
     rw [permutation_to_chain]
     rw [Finset.card_image_of_injective]
     · simp
-    · exact subset_from_permutation_injective
+    · exact permutation_to_edge_injective
 }
 
 /-
