@@ -65,7 +65,7 @@ lemma SuperChain.equivalence_subset_relations {ℬ : Finset (Finset α)} : (Supe
 
 /-- In a chain with respect to the subset order there can not be two sets of same cardinality -/
 lemma IsChain.unique_of_cardinality_chain (chain𝒞 : IsChain (· ⊂ ·) 𝒞) {a b : Finset α}
-    (amem : a ∈ 𝒞) (bmem : b ∈ 𝒞) (hcard : a.card = b.card) : a = b := by
+    (amem : a ∈ 𝒞) (bmem : b ∈ 𝒞) (hcard : #a = #b) : a = b := by
   by_contra aneb
   cases chain𝒞 amem bmem aneb with
   | inl h =>
@@ -106,19 +106,19 @@ lemma layer_singleton_of_nonempty (chain𝒜 : IsChain (· ⊂ ·) (𝒜 : Set (
   exact ⟨e, he, unique⟩
 
 lemma IsChain.ssubset_of_lt_cardinality (chain𝒞 : IsChain (· ⊂ ·) 𝒞) {e₁ e₂ : Finset α} (e₁mem : e₁ ∈ 𝒞) (e₂mem : e₂ ∈ 𝒞)
-    (hcard : e₁.card < e₂.card) : e₁ ⊂ e₂ := by
+    (hcard : #e₁ < #e₂) : e₁ ⊂ e₂ := by
   have e₁nee₂ : e₁ ≠ e₂ := by
     intro ass
-    have : e₁.card = e₂.card := by rw [ass]
+    have : #e₁ = #e₂ := by rw [ass]
     linarith
   cases chain𝒞 e₁mem e₂mem e₁nee₂ with
   | inl h => exact Finset.ssubset_iff_subset_ne.mpr ⟨h.left, e₁nee₂⟩
   | inr h =>
-    have : e₂.card < e₁.card := Finset.card_strictMono h
+    have : #e₂ < #e₁ := Finset.card_strictMono h
     linarith
 
 lemma IsChain.subset_of_le_cardinality (chain𝒞 : IsChain (· ⊂ ·) 𝒞) {e₁ e₂ : Finset α} (e₁mem : e₁ ∈ 𝒞) (e₂mem : e₂ ∈ 𝒞)
-    (hcard : e₁.card ≤ e₂.card) : e₁ ⊆ e₂ := by
+    (hcard : #e₁ ≤ #e₂) : e₁ ⊆ e₂ := by
   cases Nat.eq_or_lt_of_le hcard with
   | inr hcard_lt =>
     exact (IsChain.ssubset_of_lt_cardinality chain𝒞 e₁mem e₂mem hcard_lt).left
@@ -150,11 +150,11 @@ lemma chain_extension (hn : Fintype.card α = n) {i j : Finset.range (n + 1)} (i
         rw [hi]
         exact Finset.mem_singleton.mpr rfl
 
-  have layer_i_card : layer_i.card = i := by
+  have layer_i_card : #layer_i = i := by
     have := Finset.mem_singleton_self layer_i
     simp [←hi, slice] at this
     exact this.right
-  have layer_j_card : layer_j.card = j := by
+  have layer_j_card : #layer_j = j := by
     have := Finset.mem_singleton_self layer_j
     simp [←hj, slice] at this
     exact this.right
@@ -163,15 +163,14 @@ lemma chain_extension (hn : Fintype.card α = n) {i j : Finset.range (n + 1)} (i
   let e_new := insert x layer_i
   have he_new : e_new = insert x layer_i := rfl
 
-  have e_new_card_le_layer_j_card: e_new.card ≤ layer_j.card := by
-
+  have e_new_card_lt_layer_j_card: #e_new < #layer_j := by
     rw [layer_j_card]
     have : #e_new ≤ #layer_i + 1 := by
       rw [he_new]
       exact Finset.card_insert_le x layer_i
     rw [layer_i_card] at this
-    apply Nat.le_trans this
-    exact Nat.succ_le_of_lt iltj
+    apply Nat.lt_of_le_of_lt this
+    exact Nat.succ_le_of_lt ilej_succ_succ
 
   constructor
   · intro hx
@@ -189,7 +188,7 @@ lemma chain_extension (hn : Fintype.card α = n) {i j : Finset.range (n + 1)} (i
         simp
         right
         exact layer_j_mem
-      have e_new_sub_layer_j := IsChain.subset_of_le_cardinality hx.left e_new_mem layer_j_mem_insert e_new_card_le_layer_j_card
+      have e_new_sub_layer_j := IsChain.subset_of_le_cardinality hx.left e_new_mem layer_j_mem_insert (Nat.le_of_lt e_new_card_lt_layer_j_card)
       rw [he_new] at e_new_sub_layer_j
       exact e_new_sub_layer_j (mem_insert_self x layer_i)
     · intro x_mem_layer_i
@@ -199,6 +198,60 @@ lemma chain_extension (hn : Fintype.card α = n) {i j : Finset.range (n + 1)} (i
   · intro hx
     simp at hx
     simp [chain_extension_filter_function]
+
+    have case_helper {e₁ e₂ : Finset α} (e₁neqe₂ : e₁ ≠ e₂) (e₂_not_new : e₂ ∈ 𝒜) (e₁_new : e₁ = e_new) : e₁ ⊂ e₂ ∨ e₂ ⊂ e₁ := by
+      have := chain𝒜 layer_i_mem e₂_not_new
+      by_cases h : layer_i = e₂
+      · right
+        rw [←h, e₁_new, he_new]
+        apply Finset.ssubset_iff_subset_ne.mpr
+        constructor
+        · simp
+        · exact (Finset.insert_ne_self.mpr hx.right).symm
+      · cases chain𝒜 e₂_not_new layer_i_mem (fun q => h q.symm) with
+        | inl e₂_sub_layer_i =>
+          right
+          simp at e₂_sub_layer_i
+          rw [e₁_new, he_new]
+          refine Finset.ssubset_of_ssubset_of_subset e₂_sub_layer_i _
+          exact Finset.ssubset_iff_subset_ne.mpr ⟨Finset.subset_insert x layer_i, (Finset.insert_ne_self.mpr hx.right).symm⟩
+        | inr layer_i_sub_e₂ =>
+          simp at layer_i_sub_e₂
+          left
+          by_contra e₂_sub_e₁
+
+          have e₁_sub_e₂ : e₁ ⊆ e₂ := by
+            rw [e₁_new, he_new]
+            have layer_j_card_le_e₂_card : #layer_j ≤ #e₂ := by
+              rw [layer_j_card]
+              by_contra!
+              have e₂_card_gt_i : #e₂ > ↑i := by
+                rw [←layer_i_card]
+                exact Finset.card_strictMono layer_i_sub_e₂
+              have e₂_card_lt_n_succ : #e₂ < n + 1 := by
+                apply Nat.lt_succ_of_le
+                rw [←hn]
+                apply Finset.card_le_univ
+              have e₂_empty_layer := emptylayer #e₂ (by simp; exact e₂_card_lt_n_succ) e₂_card_gt_i this
+              simp at e₂_empty_layer
+              have : e₂ ∈ 𝒜 # #e₂ := by simpa [slice]
+              simp [e₂_empty_layer] at this
+
+            have layer_j_sub_e₂ := IsChain.subset_of_le_cardinality chain𝒜 layer_j_mem e₂_not_new layer_j_card_le_e₂_card
+
+            apply Finset.insert_subset
+            · exact layer_j_sub_e₂ hx.left
+            · have : #layer_i ≤ #e₂ := by
+                rw [layer_i_card]
+                rw [layer_j_card] at layer_j_card_le_e₂_card
+                exact Nat.le_trans (Nat.le_of_lt iltj) layer_j_card_le_e₂_card
+
+              exact IsChain.subset_of_le_cardinality chain𝒜 layer_i_mem e₂_not_new this
+
+          have : ¬(e₁ ⊆ e₂ ∧ e₁ ≠ e₂) := fun q => e₂_sub_e₁ (Finset.ssubset_iff_subset_ne.mpr q)
+          simp at this
+          exact e₁neqe₂ (this e₁_sub_e₂)
+
     constructor
     · intro e₁ e₁mem e₂ e₂mem e₁neqe₂
       simp [←he_new] at e₁mem e₂mem
@@ -211,62 +264,29 @@ lemma chain_extension (hn : Fintype.card α = n) {i j : Finset.range (n + 1)} (i
           left
           exact Finset.ssubset_iff_subset_ne.mpr ⟨Finset.subset_of_eq e₁_new, e₁neqe₂⟩
         | inr e₂_not_new =>
-          have := chain𝒜 layer_i_mem e₂_not_new
-          by_cases h : layer_i = e₂
-          · right
-            rw [←h, e₁_new, he_new]
-            apply Finset.ssubset_iff_subset_ne.mpr
-            constructor
-            · simp
-            · exact (Finset.insert_ne_self.mpr hx.right).symm
-          · cases chain𝒜 e₂_not_new layer_i_mem (fun q => h q.symm) with
-            | inl e₂_sub_layer_i =>
-              right
-              simp at e₂_sub_layer_i
-              rw [e₁_new, he_new]
-              refine Finset.ssubset_of_ssubset_of_subset e₂_sub_layer_i _
-              exact Finset.ssubset_iff_subset_ne.mpr ⟨Finset.subset_insert x layer_i, (Finset.insert_ne_self.mpr hx.right).symm⟩
-            | inr layer_i_sub_e₂ =>
-              simp at layer_i_sub_e₂
-              left
-              by_contra e₂_sub_e₁
+          exact case_helper e₁neqe₂ e₂_not_new e₁_new
+      | inr e₁_not_new =>
+        cases e₂mem with
+        | inl e₂_new =>
+          apply Or.symm
+          exact case_helper e₁neqe₂.symm e₁_not_new e₂_new
+        | inr e₂_not_new =>
+          exact chain𝒜 e₁_not_new e₂_not_new e₁neqe₂
 
-              have e₁_sub_e₂ : e₁ ⊆ e₂ := by
-                rw [e₁_new, he_new]
-                have layer_j_card_le_e₂_card : #layer_j ≤ #e₂ := by
-                  rw [layer_j_card]
-                  by_contra!
-                  have e₂_card_gt_i : #e₂ > ↑i := by
-                    rw [←layer_i_card]
-                    exact Finset.card_strictMono layer_i_sub_e₂
-                  have e₂_card_lt_n_succ : #e₂ < n + 1 := by
-                    apply Nat.lt_succ_of_le
-                    rw [←hn]
-                    apply Finset.card_le_univ
-                  have e₂_empty_layer := emptylayer #e₂ (by simp; exact e₂_card_lt_n_succ) e₂_card_gt_i this
-                  simp at e₂_empty_layer
-                  have : e₂ ∈ 𝒜 # #e₂ := by simpa [slice]
-                  simp [e₂_empty_layer] at this
+    · intro e_new_mem_𝒜
+      have e_new_card_gt_layer_i : #e_new > i := by simp [Finset.card_insert_of_not_mem hx.right, layer_i_card]
 
-                have layer_j_sub_e₂ := IsChain.subset_of_le_cardinality chain𝒜 layer_j_mem e₂_not_new layer_j_card_le_e₂_card
+      rw [layer_j_card] at e_new_card_lt_layer_j_card
+      have : #(𝒜 # #e_new) = 0 := by
+        refine' emptylayer #e_new _ e_new_card_gt_layer_i e_new_card_lt_layer_j_card
+        · simp
+          exact Nat.lt_trans e_new_card_lt_layer_j_card (mem_range.mp j.property)
+      have : (𝒜 # #e_new).Nonempty := by
+        have : e_new ∈ 𝒜 # #e_new := by simpa [slice]
+        exact nonempty_of_mem this
+      have : #(𝒜 # #e_new) > 0 := Finset.card_pos.mpr this
+      linarith
 
-                apply Finset.insert_subset
-                · exact layer_j_sub_e₂ hx.left
-                · have : #layer_i ≤ #e₂ := by
-                    rw [layer_i_card]
-                    rw [layer_j_card] at layer_j_card_le_e₂_card
-                    exact Nat.le_trans (Nat.le_of_lt iltj) layer_j_card_le_e₂_card
-
-                  exact IsChain.subset_of_le_cardinality chain𝒜 layer_i_mem e₂_not_new this
-
-              have : ¬(e₁ ⊆ e₂ ∧ e₁ ≠ e₂) := fun q => e₂_sub_e₁ (Finset.ssubset_iff_subset_ne.mpr q)
-              simp at this
-              exact e₁neqe₂ (this e₁_sub_e₂)
-
-      | inr e₁_not_new => sorry
-    · --rw [←he_new]
-      intro e_new_mem_𝒜
-      #check ilej_succ_succ
 
 
 lemma one_elt_max_chain_layer (hn : Fintype.card α = n) (maxchain𝒜 : IsMaxChain (· ⊂ ·) (𝒜 : Set (Finset α))) (j : Finset.range (n + 1)) : #(𝒜 # j) = 1 := by
@@ -380,21 +400,21 @@ lemma one_elt_max_chain_layer (hn : Fintype.card α = n) (maxchain𝒜 : IsMaxCh
       chain_extension hn (Nat.lt_trans h_s_bottom.left h_s_top.left) maxchain𝒜.left bottom_singleton top_singleton emptylayer
     simp at chain_extension_candidates_eq
 
-    have e_bottom_mem_card : e_bottom ∈ 𝒜 ∧ e_bottom.card = s_bottom := by
+    have e_bottom_mem_card : e_bottom ∈ 𝒜 ∧ #e_bottom = s_bottom := by
       have := Finset.mem_singleton_self e_bottom
       rw [←bottom_singleton] at this
       simp [slice] at this
       exact this
 
-    have e_top_mem_card : e_top ∈ 𝒜 ∧ e_top.card = s_top := by
+    have e_top_mem_card : e_top ∈ 𝒜 ∧ #e_top = s_top := by
       have := Finset.mem_singleton_self e_top
       rw [←top_singleton] at this
       simp [slice] at this
       exact this
 
-    have chain_extension_candidates_ne_empty : chain_extension_candidates.card > 0 := by
+    have chain_extension_candidates_ne_empty : #chain_extension_candidates > 0 := by
       rw [chain_extension_candidates_eq]
-      have card_bottom_lt_card_top : e_bottom.card < e_top.card := by
+      have card_bottom_lt_card_top : #e_bottom < #e_top := by
         rw [e_top_mem_card.right, e_bottom_mem_card.right]
         exact Nat.lt_trans h_s_bottom.left h_s_top.left
       have bottom_subset_top : e_bottom ⊂ e_top :=
@@ -419,7 +439,7 @@ lemma card_maxChainThrough {ℬ : Finset (Finset α)} (hn : Fintype.card α = n)
     _ = n + 1 := by rw [←(Finset.card_eq_sum_ones (Iic (Fintype.card α)))]; simp [hn]
 
 lemma count_maxChainsThrough {c : ℕ → ℕ} (monc : Monotone c) (hcn : c m = n)
-    (ℬ : Finset (Finset α)) (cardℬ : ℬ.card = m) (chainℬ : IsChain (· ⊂ ·) (ℬ : Set (Finset α)))  (cardsℬ : Finset.image Finset.card ℬ = Finset.image c (Finset.range m)) :
+    (ℬ : Finset (Finset α)) (cardℬ : #ℬ = m) (chainℬ : IsChain (· ⊂ ·) (ℬ : Set (Finset α)))  (cardsℬ : Finset.image Finset.card ℬ = Finset.image c (Finset.range m)) :
       Fintype.card (ℬ.MaxChainThrough) = ∏ j : Fin m, (c (j + 1) - c j)! := by
   induction n - m generalizing n m ℬ with
   | zero => sorry
