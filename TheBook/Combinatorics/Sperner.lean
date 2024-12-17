@@ -213,8 +213,8 @@ lemma chain_extension (hn : Fintype.card α = n) {i j : Finset.range (n + 1)} (i
           right
           simp at e₂_sub_layer_i
           rw [e₁_new, he_new]
-          refine Finset.ssubset_of_ssubset_of_subset e₂_sub_layer_i _
-          exact Finset.ssubset_iff_subset_ne.mpr ⟨Finset.subset_insert x layer_i, (Finset.insert_ne_self.mpr hx.right).symm⟩
+          refine' Finset.ssubset_of_ssubset_of_subset e₂_sub_layer_i _
+          apply Finset.subset_insert
         | inr layer_i_sub_e₂ =>
           simp at layer_i_sub_e₂
           left
@@ -286,8 +286,6 @@ lemma chain_extension (hn : Fintype.card α = n) {i j : Finset.range (n + 1)} (i
         exact nonempty_of_mem this
       have : #(𝒜 # #e_new) > 0 := Finset.card_pos.mpr this
       linarith
-
-
 
 lemma one_elt_max_chain_layer (hn : Fintype.card α = n) (maxchain𝒜 : IsMaxChain (· ⊂ ·) (𝒜 : Set (Finset α))) (j : Finset.range (n + 1)) : #(𝒜 # j) = 1 := by
   by_contra! ass
@@ -396,8 +394,11 @@ lemma one_elt_max_chain_layer (hn : Fintype.card α = n) (maxchain𝒜 : IsMaxCh
 
     let chain_extension_candidates := Finset.filter (chain_extension_filter_function 𝒜 e_bottom) (Finset.univ : Finset α)
 
-    have chain_extension_candidates_eq : chain_extension_candidates = e_top \ e_bottom :=
-      chain_extension hn (Nat.lt_trans h_s_bottom.left h_s_top.left) maxchain𝒜.left bottom_singleton top_singleton emptylayer
+    have chain_extension_candidates_eq : chain_extension_candidates = e_top \ e_bottom := by
+      refine' chain_extension hn _ maxchain𝒜.left bottom_singleton top_singleton emptylayer
+      apply Nat.succ_le_of_lt
+      have : (s_bottom : ℕ) + 1 ≤ ↑j := Nat.succ_le_of_lt h_s_bottom.left
+      exact Nat.lt_of_le_of_lt this h_s_top.left
     simp at chain_extension_candidates_eq
 
     have e_bottom_mem_card : e_bottom ∈ 𝒜 ∧ #e_bottom = s_bottom := by
