@@ -3,10 +3,14 @@ import TheBook.ToMathlib.IndependentSet
 import TheBook.ToMathlib.CliqueNumber
 import TheBook.ToMathlib.Nat_le
 
+import TheBook.Fundamentals.Induction
+
 import TheBook.NumberTheory.InfinitudePrimes.Statement
 import TheBook.NumberTheory.InfinitudePrimes.EuclidProof
 import TheBook.NumberTheory.InfinitudePrimes.GoldbachProof
 import TheBook.NumberTheory.InfinitudePrimes.FolkloreMersenneProof
 import TheBook.NumberTheory.InfinitudePrimes.FurstenbergProof
 
+import TheBook.GraphTheory.Handshaking
 import TheBook.GraphTheory.Mantel.CauchyInequality
+import TheBook.GraphTheory.Mantel.ArithmeticGeometricMean

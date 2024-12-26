@@ -20,8 +20,6 @@ local notation "d(" v ")" => G.degree v
 
 open Finset SimpleGraph
 
-#check card_sdiff
-
 -- Mantel's Theorem
 theorem mantel (h: G.CliqueFree 3) : #E ≤ n^2 / 4 := by
 
