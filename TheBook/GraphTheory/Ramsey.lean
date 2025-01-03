@@ -5,10 +5,6 @@ import Mathlib.Data.Nat.Choose.Sum
 
 open SimpleGraph Finset Fintype Nat
 
--- mathlib?
-lemma Nat.sInf_le_sInf {A B : Set ℕ} (nea : A.Nonempty) (subs : A ⊆ B) : sInf B ≤ sInf A := by
-  by_contra infle
-  exact infle (Nat.sInf_le (Set.mem_of_subset_of_mem subs (sInf_mem nea)))
 
 -- this is probably in mathlib somewhere?
 lemma neighbor_card_sum [Fintype V] [Nonempty V] [DecidableEq V] (G : SimpleGraph V) [DecidableRel G.Adj] :
@@ -58,9 +54,9 @@ lemma induce_blue {C : SimpleGraph V} {A : Finset V} {Aᵥ : Finset A}:
   simp only [ne_eq, Subgraph.coe_adj, Subgraph.induce_adj, Subtype.coe_prop, true_and,
     Subtype.forall, Subtype.mk.injEq, coe_map, Set.mem_image, forall_exists_index, and_imp]
   apply Iff.intro
-  · intro Cadj a b binA bAᵥ eba x y yinA yAᵥ exy bny
+  · intro Cadj a b binA bAᵥ eba x y yinA yAᵥ exy bₙy
     subst eba exy
-    exact Cadj (embedFinset ⟨b, binA⟩) binA bAᵥ (embedFinset ⟨y, yinA⟩) yinA yAᵥ bny
+    exact Cadj (embedFinset ⟨b, binA⟩) binA bAᵥ (embedFinset ⟨y, yinA⟩) yinA yAᵥ bₙy
   · intro Cadj a ainA aAᵥ b binA bAᵥ anb
     exact Cadj a ainA aAᵥ rfl b binA bAᵥ rfl anb
 
@@ -86,17 +82,15 @@ lemma clear (N s : ℕ) (h : N ≤ s) : ramseyProp N m n → ramseyProp s m n :=
   have : A.card = N := by simp only [embedFintype, card_map, card_univ, Fintype.card_fin, A]
   have := ramN A (by simp [this, Fintype.card_coe])
   obtain ⟨s, red_or_blue⟩ :=  @this C'.coe (Classical.decRel C'.coe.Adj)
-  rcases red_or_blue with ⟨scolor, scard⟩ | ⟨scolor, scard⟩
-  all_goals use (Finset.map embedFinset s)
+  rcases red_or_blue with ⟨scolor, scard⟩ | ⟨scolor, scard⟩ <;> use (Finset.map embedFinset s)
   all_goals simp [scard, red, blue, Set.Pairwise] at scolor ⊢
   left; swap; right
-  all_goals intros w winW winA insw embw v vinW vinA insv embv vnw
-  all_goals have := scolor winW winA insw vinW vinA insv (by subst embv embw; simpa)
-  all_goals subst embv embw
-  · exact C'.adj_sub this
-  · unfold C' at this
-    simp [C'.induce_adj] at this
-    exact this winA vinA
+  all_goals {
+    intros w _ winA insw embw v _ vinA insv embv _
+    have := scolor _ _ insw _ _ insv (by subst embv embw; simpa)
+    subst embv embw
+    first | exact C'.adj_sub this | unfold C' at this; simp [C'.induce_adj] at this; exact this winA vinA
+  }
 
 lemma ramsey_iff (N m n : ℕ) : (ramseyProp N m n) ↔
     ∀ (V : Type) [Fintype V] [DecidableEq V] (_: Fintype.card V = N) (C : SimpleGraph V) [DecidableRel C.Adj],
@@ -188,39 +182,35 @@ lemma R1 {m : ℕ} [nz : NeZero m] : R m 1 = 1 := by
 
 ----------------------------------------------------------------------------------------------------
 -- my induction principle
--- we recurse on a binary predicate `P : (m n : ℕ) → bm ≤ m → bn ≤ n → Prop`
--- with fixed lower bounds `bm` on `m` and `bn` on `n`
--- we have two base cases `∀ n, P bm n` and `∀ m, P m bn`
+-- we recurse on a binary predicate `P : (m n : ℕ) → bₘ ≤ m → bₙ ≤ n → Prop`
+-- with fixed lower bounds `bₘ` on `m` and `bₙ` on `n`
+-- we have two base cases `∀ n, P bₘ n` and `∀ m, P m bₙ`
 -- the inductive step goes from `P (m+1) n` and ` P m (n+1)` to `P (m + 1) (n + 1)`
-
-lemma le_induction2 {bm bn : ℕ} {P : ∀ m n, bm ≤ m → bn ≤ n → Prop}
-    (basem : ∀ n hbn,       P bm n bm.le_refl hbn)
-    (basen : ∀ m hbm,       P m bn hbm bn.le_refl)
-    (succ  : ∀ m n hbm hbn, P (m + 1) n (le_succ_of_le hbm) hbn →
-                            P m (n + 1) hbm (le_succ_of_le hbn) →
-                            P (m + 1) (n + 1) (le_succ_of_le hbm) (le_succ_of_le hbn)) :
-    ∀ m n hbm hbn, P m n hbm hbn
-  | 0, _, b, _        => eq_zero_of_le_zero b ▸ (basem _ _)
-  | _, 0, _, b        => eq_zero_of_le_zero b ▸ (basen _ _)
-  | m + 1, n + 1, hbm, hbn =>
-    (le_succ_iff.1 hbm).by_cases
-      (fun h : bm ≤ m ↦ (le_succ_iff.1 hbn).by_cases
-        (fun hh : bn ≤ n ↦ by
-          have rem := le_induction2 basem basen succ (m+1) n hbm hh
-          have ren := le_induction2 basem basen succ m (n+1) h hbn
-          exact (succ m n h hh rem ren)
-        )
-        (fun hh : bn = n + 1 ↦ hh ▸ (basen _ _)))
-      (fun h : bm = m + 1 ↦ h ▸ (basem _ _))
+lemma two_le_orth_induction {P : ∀ m n, 2 ≤ m → 2 ≤ n → Prop}
+    (baseₙ : ∀ m leₘ,       P m 2 leₘ (le_refl 2))
+    (baseₘ : ∀ n leₙ,       P 2 n (le_refl 2) leₙ)
+    (succ  : ∀ m n leₘ leₙ, P (m + 1) n (le_succ_of_le leₘ) leₙ →
+                            P m (n + 1) leₘ (le_succ_of_le leₙ) →
+                            P (m + 1) (n + 1) (le_succ_of_le leₘ) (le_succ_of_le leₙ)) :
+    ∀ m n leₘ leₙ, P m n leₘ leₙ
+    | 0, _, le₀, _                   => (two_ne_zero (eq_zero_of_le_zero le₀)).elim
+    | _, 0, _, le₀                   => (two_ne_zero (eq_zero_of_le_zero le₀)).elim
+    | m + 1, n + 1, le_sucₘ, le_sucₙ => by
+        cases' le_sucₘ with _ leₘ
+        · exact (baseₘ _ _)
+        · cases' le_sucₙ with _ leₙ
+          · exact (baseₙ _ _)
+          · have Pₘ := two_le_orth_induction baseₙ baseₘ succ (m + 1) n (le_succ_of_le leₘ) leₙ
+            have Pₙ := two_le_orth_induction baseₙ baseₘ succ m (n + 1) leₘ (le_succ_of_le leₙ)
+            exact (succ m n _ _ Pₘ Pₙ)
 
 ----------------------------------------------------------------------------------------------------
 -- the thing
 -- le_induction because the inequality does not hold for `m/n = 0`:
 -- `R(0,m) = 0`, `R(1,m) = 1` but `R(1,1) = 1 > 0 = 0+0 = R(0,1)+R(1,0)`
 
-theorem recRbound : (m n : ℕ) → 2 ≤ m → 2 ≤ n →
-    ∃ N, ramseyProp N m n ∧
-    (R m n) ≤ R (m - 1) n + R m (n - 1) := by
+theorem recRbound (m n : ℕ) (leₘ : 2 ≤ m) (leₙ : 2 ≤ n) :
+    ∃ N, ramseyProp N m n ∧ (R m n) ≤ R (m - 1) n + R m (n - 1) := by
 
   have base (m : ℕ) [NeZero m] : R 2 m ≤ R (2 - 1) m + R 2 (m - 1) := by
     simp [R2, R1]
@@ -228,20 +218,19 @@ theorem recRbound : (m n : ℕ) → 2 ≤ m → 2 ≤ n →
     | 0 => exact le_add_left 0 1
     | m + 1 => simp [Nat.add_one_sub_one, add_comm]
 
-  intro m n ml1 nl1
-  induction' m, n, ml1, nl1 using le_induction2 with m mr n nr m n mg2 ng2 mr nr
-  · exact Exists.intro m ⟨ramseySymm.mp ramsey2, @base m ⟨not_eq_zero_of_lt mr⟩⟩
-  · exact Exists.intro n ⟨ramsey2, by simp only [add_comm, RSymm] at base; exact @base n ⟨not_eq_zero_of_lt nr⟩⟩
-  · let ⟨mN, ⟨mNramsey, mNbound⟩⟩ := mr
-    let ⟨nN, ⟨nNramsey, nNbound⟩⟩ := nr
+  induction' m, n, leₘ, leₙ using two_le_orth_induction with m leₘ n leₙ m n leₘ leₙ rₘ rₙ
+  · exact Exists.intro m ⟨ramsey2, by simp only [add_comm, RSymm] at base; exact @base m ⟨not_eq_zero_of_lt leₘ⟩⟩
+  · exact Exists.intro n ⟨ramseySymm.mp ramsey2, @base n ⟨not_eq_zero_of_lt leₙ⟩⟩
+  · let ⟨mN, ⟨mNramsey, mNbound⟩⟩ := rₘ
+    let ⟨nN, ⟨nNramsey, nNbound⟩⟩ := rₙ
 
     simp_all only [Nat.add_one_sub_one, and_true]
 
     set N := R m (n + 1) + R (m + 1) n with Neq
 
     have nz : N ≠ 0 := not_eq_zero_of_lt (add_pos
-                        (Rpos m (n+1) (zero_lt_of_lt mg2) (zero_lt_succ n) (Set.nonempty_def.mpr ⟨nN, nNramsey⟩))
-                        (Rpos (m+1) n (zero_lt_succ m) (zero_lt_of_lt ng2) (Set.nonempty_def.mpr ⟨mN, mNramsey⟩)))
+                        (Rpos m (n+1) (zero_lt_of_lt leₘ) (zero_lt_succ n) (Set.nonempty_def.mpr ⟨nN, nNramsey⟩))
+                        (Rpos (m+1) n (zero_lt_succ m) (zero_lt_of_lt leₙ) (Set.nonempty_def.mpr ⟨mN, mNramsey⟩)))
 
     have ramseyN : ramseyProp N (m + 1) (n + 1) := by
       intro V _ _ cardV C _
@@ -270,7 +259,7 @@ theorem recRbound : (m n : ℕ) → 2 ≤ m → 2 ≤ n →
 
         -- TODO this is a large thing. can i use wlog hypothesis without so much noise?
         -- this case is symmetric if we consider the complement graph.
-        obtain ⟨s, rs⟩ := @h n m nN mN base ng2 mg2 ⟨nN, ramseySymm.mp nNramsey⟩ ⟨mN, ramseySymm.mp mNramsey⟩
+        obtain ⟨s, rs⟩ := @h n m nN mN base leₙ leₘ ⟨nN, ramseySymm.mp nNramsey⟩ ⟨mN, ramseySymm.mp mNramsey⟩
                                 (ramseySymm.mp nNramsey)
                                 (by rw [@RSymm (m - 1), add_comm _ (R n m)] at nNbound; assumption)
                                 (ramseySymm.mp mNramsey)
@@ -347,12 +336,12 @@ theorem recRbound : (m n : ℕ) → 2 ≤ m → 2 ≤ n →
 ----------------------------------------------------------------------------------------------------
 
 theorem chooseRbound (m n : ℕ) (m1 : 2 ≤ m) (n1 : 2 ≤ n) : R m n ≤ choose (m + n - 2) (m - 1) := by
-  induction' m, n, m1, n1 using le_induction2 with m mr n nr m n mg2 ng2 mr nr
+  induction' m, n, m1, n1 using two_le_orth_induction with m mr n nr m n mg2 ng2 mr nr
   · simp [R2]
-  · simp [R2]
-    have := choose_succ_left n n (zero_lt_of_lt nr)
+    have := choose_succ_left m m (zero_lt_of_lt mr)
     simp at this
     exact Nat.le_of_eq this
+  · simp [R2]
   · let ⟨_, ⟨_, lee⟩⟩ := recRbound (m+1) (n+1) (le_add_right_of_le mg2) (le_add_right_of_le ng2)
     have : m + (n + 1) - 2 + 1 = m + 1 + (n + 1) - 2 := by rw [add_comm, add_comm m 1, add_assoc,
                                                                ← Nat.add_sub_assoc (le_add_right_of_le mg2)]
