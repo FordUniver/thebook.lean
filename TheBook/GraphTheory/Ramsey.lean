@@ -16,10 +16,11 @@ lemma neighbor_card_sum [Fintype V] [Nonempty V] [DecidableEq V] (G : SimpleGrap
   exact (sub_one_add_one Fintype.card_ne_zero).symm
 
 ----------------------------------------------------------------------------------------------------
--- edge colorings
-
--- abbrev SimpleGraph.red (C : SimpleGraph V) (v w : V) := ¬ C.Adj v w
--- abbrev SimpleGraph.blue (C : SimpleGraph V) (v w : V) := C.Adj v w
+-- Edge colorings
+-- Because we are lucky, we only talk about two-colorings of the complete graph here.
+-- Those can be represented as graphs on the vertex set, where we consider the edge `(v, w)`
+-- to be colored red if they are nonadjacent in the representing graph, and to be colored
+-- blue if they are adjacent.
 
 def red (s : Finset V) (C : SimpleGraph V) := (s.toSet).Pairwise (fun v w => ¬ C.Adj v w)
 def blue (s : Finset V) (C : SimpleGraph V) := (s.toSet).Pairwise C.Adj
@@ -78,21 +79,21 @@ lemma induce_blue {C : SimpleGraph V} {A : Finset V} {Aₘ : Finset A}:
 -- because our edge colors in `K_N` are defined as presence/absence of an edge in a graph on
 -- `N` vertices. The book property reads as:
 --
--- "...no matter how we color the edges of `K_N` red and blue, there is always a
--- complete subgraph on `m` vertices with all edges colored red or a complete
--- subgraph on `n` vertices with all edges colored blue."
+--    "...no matter how we color the edges of `K_N` red and blue, there is always a
+--    complete subgraph on `m` vertices with all edges colored red or a complete
+--    subgraph on `n` vertices with all edges colored blue."
 --
 -- Which using our definition of colorings translates to:
 --
--- "...no matter which graph on `N` vertices we chose, there is always a
--- set of `m` vertices that are all non-adjacent (i.e. red edges) or a set of
--- `n` vertices that are all adjacent (i.e. blue edges)."
+--    "...no matter which graph on `N` vertices we chose, there is always a
+--    set of `m` vertices that are all non-adjacent (i.e. red edges) or a set of
+--    `n` vertices that are all adjacent (i.e. blue edges)."
 def ramseyProp (N m n : ℕ) := ∀ (V : Type) [Fintype V] [DecidableEq V] (_ : Fintype.card V = N),
     ∀ (C : SimpleGraph V) [DecidableRel C.Adj], ∃ s, (red s C ∧ s.card = m) ∨ (blue s C ∧ s.card = n)
 
-
 -- The book reads:
--- "It is clear that if `K_N` has property `(m, n)`, then so does every `K_s` with `s ≥ N`."
+--    "It is clear that if `K_N` has property `(m, n)`,
+--     then so does every `K_s` with `s ≥ N`."
 lemma clear (N s : ℕ) (h : N ≤ s) : ramseyProp N m n → ramseyProp s m n := by
   intros ramN W _ _ Wcard C _
   rw [ramseyProp] at *
@@ -147,8 +148,9 @@ lemma ramsey_iff (N m n : ℕ) : (ramseyProp N m n) ↔
 ----------------------------------------------------------------------------------------------------
 -- Ramsey Number
 
--- Straight from the book: "...we ask for the smallest number `N` (if it exists) with this property
--- — and this is the Ramsey number `R(m, n)`."
+-- Straight from the book:
+--    "...we ask for the smallest number `N` (if it exists) with this property
+--    — and this is the Ramsey number `R(m, n)`."
 -- Note that `sInf ∅ = 0`, so our lean definition does not include "existence" like the paper version.
 -- We need to keep that in mind when using our `R`.
 noncomputable def R (m n : ℕ) : ℕ := sInf { N | ramseyProp N m n}
@@ -168,6 +170,168 @@ lemma Rpos (m n : ℕ) (mpos : 0 < m) (npos : 0 < n) (nen : {N | ramseyProp N m 
   match p with
   | Or.inl ⟨_, p⟩ => exact mpos.ne p
   | Or.inr ⟨_, p⟩ => exact npos.ne p
+
+----------------------------------------------------------------------------------------------------
+-- the thing
+
+--     "Now, suppose R(m −1, n) and R(m, n −1) exist.
+--     We then prove that R(m, n) exists and that
+--     R(m, n) ≤R(m −1, n) + R(m, n −1)."
+-- We need to prove for positive `m, n`, since the inequality does not hold for `m, n = 0`:
+-- `R(0,m) = 0`, `R(1,m) = 1` but `R(1,1) = 1 > 0 = 0 + 0 = R(0,1) + R(1,0)`
+-- We shift everything by 1 compared to the book so we won't have to deal with subtraction on ℕ.
+-- We don't show the actual inequality because that follows directly from the definition of the infimum.
+-- instead we only show existence by providing a representative
+theorem recRbound (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
+    (rₘ : ∃ N, ramseyProp N (m + 1) n)
+    (rₙ : ∃ N, ramseyProp N m (n + 1)) :
+    ramseyProp (R m (n + 1) + R (m + 1) n) (m + 1) (n + 1) := by
+  -- "Suppose `N = R(m − 1, n) + R(m, n − 1)`...", but shift by 1
+  set N := R m (n + 1) + R (m + 1) n with Neq
+
+  -- "...and consider an arbitrary red-blue coloring of K_N."
+  intro V _ _ cardV C _
+
+  -- We need to ensure we're not talking about the empty graph here, so we can pick a vertex.
+  have nenV : Nonempty V := by
+    rw [← card_pos_iff, cardV]
+    exact add_pos (Rpos m (n+1) posₘ (zero_lt_succ n) rₙ) (Rpos (m+1) n (zero_lt_succ m) posₙ rₘ)
+
+  -- " For a vertex `v`, let `A` be the set of vertices joined to `v`
+  --   by a red edge, and `B` the vertices joined by a blue edge."
+  let v : V := nenV.some
+  let A := Cᶜ.neighborFinset v
+  let B := C.neighborFinset v
+
+  -- "We find that either `|A| ≥ R(m − 1, n)` or `|B| ≥ R(m, n − 1)`." (shift by 1, again)
+  wlog RleA : R m (n + 1) ≤ #A with h
+  · -- The case `|B| ≥ R m (n - 1)` is indeed analogous, but this is a bit involved to prove.
+    have RleB : R n (m + 1) ≤ #B := by
+      have := calc R m (n + 1) + R n (m + 1)
+              _ = #B + #A + 1 := by rw [@RSymm n, ← Neq, ← cardV]; exact neighbor_card_sum C
+              _ < #B + R m (n + 1) + 1 := by simp [lt_of_not_le RleA]
+              _ = R m (n + 1) + #B  + 1 := by simp [add_comm]
+      exact le_of_lt_succ (lt_of_add_lt_add_left this)
+
+    -- We reduce this case to symmetry, so we apply the appropriate rewrites.
+    have ex m n := Exists.imp (fun N => (@ramseySymm N m n).mp)
+    apply ex at rₘ; apply ex at rₙ
+    rw [Neq, @RSymm m, @RSymm (m + 1), add_comm] at cardV
+
+    -- TODO there is some trouble with inferring the complete type here.
+    have : #B = Cᶜᶜ.degree v := by simp [B]; congr!; exact (compl_compl C).symm
+    rw [this] at RleB
+
+    -- This case is symmetric if we consider the complement graph. We obtain a monochromatic
+    -- vertex subset of the complement graph and show that it's monochromatic with the other color
+    -- in `C`.
+    -- `h` is the wlog hypothesis
+    simp only [forall_const, Nonempty.forall] at h
+    obtain ⟨s, rs⟩ := h n m posₙ posₘ rₙ rₘ V cardV Cᶜ v RleB
+
+    simp_rw [red_compl, blue_compl] at rs
+    exact ⟨s, rs.symm⟩
+
+  · --"Suppose `|A| ≥ R(m − 1, n)`." (shifted by 1)
+    have Avred : ∀ {u}, u ∈ A → ¬ C.Adj v u := by
+      intro u a
+      simp_all only [mem_neighborFinset, compl_adj, not_false_eq_true, A, v]
+
+    --    "Then by the definition of `R(m − 1, n)`, there either exists in `A` a
+    --     subset `A_R` of size `m − 1` all of whose edges are colored red which together
+    --     with `v` yields a red `K_m`, or there is a subset `A_B` of size n with all edges
+    --     colored blue."
+
+    -- `|A| ≥ R m (n + 1)`, so the coloring it induces also has the Ramsey property according to
+    -- the induction hypothesis.
+    let ramA := clear (R m (n + 1)) #A RleA (sInf_mem rₙ) A (card_coe A)
+
+    -- Hence, there exists a monochromatic subset of `A`. We call it `Aₘ`.
+    let ⟨Aₘ, monochrom⟩ := @ramA (inducedColoring C A).coe (Classical.decRel (inducedColoring C A).coe.Adj)
+
+    -- `Aₘ` is a subset of the induced graph's vertices `A`, so it's a Finset `{ x // x ∈ A }`.
+    -- We need to embed it into `V` to talk about corresponding vertices in the big graph `C`
+    let AₘV : Finset V := (Finset.map embedFinset Aₘ)
+
+    have AVsubA : AₘV ⊆ A := by
+      intro _ memAV
+      simp_all [AₘV, A, embedFinset]
+      exact memAV.1
+
+    -- We consider the two cases:
+    -- `AₘV` has size `m` with all edges colored red, which together with `v` yields a red `K_(m+1)`
+    -- `AₘV` has size `n + 1` with all edges colored blue
+    cases' monochrom with allRed allBlue
+    · -- case one: `Aₘ` is all red and of size `m`.
+      -- the candidate set: `AₘV` together with `v`
+      let Aᵥ := insert v AₘV
+
+      have inA {x : V} (xnv : v ≠ x) (xinc : x ∈ Aᵥ) : x ∈ A := by
+        cases' mem_insert.mp xinc with xeqv xinAV
+        · exact (xnv xeqv.symm).elim
+        · exact AVsubA xinAV
+
+      -- It indeed describes an all-red subgraph of `C`:
+      have cred : red Aᵥ C := by
+        -- We show pairwise redness of some `u, w ∈ Aᵥ`.
+        intro u uinc w winc unw
+
+        -- We need to handle the case that `u` or `w` happen to be `v`.
+        by_cases uvw : (u = v) ∨ (w = v)
+        · -- if one of the vertices is `v`, the edge is red by the definition of `A`.
+          cases' uvw with eq eq
+          all_goals subst eq
+          · exact Avred (inA (ne_of_eq_of_ne rfl unw) winc)
+          · exact fun a => (Avred (inA (ne_of_eq_of_ne rfl unw.symm) uinc)) a.symm
+        · -- the interesting case: two members of `Aᵥ` that are not `v` have a red edge
+          -- we project them to `A`
+          push_neg at uvw
+          obtain ⟨wₐ, ⟨wₐinAₘ, cw⟩⟩ := mem_map.mp (Finset.mem_of_mem_insert_of_ne winc uvw.right)
+          obtain ⟨uₐ, ⟨uₐinAₘ, cu⟩⟩ := mem_map.mp (Finset.mem_of_mem_insert_of_ne uinc uvw.left)
+          rw [← cw, ← cu] at unw ⊢
+
+          -- the projections of the vertices are red in the induced coloring
+          have : ¬(inducedColoring C A).coe.Adj wₐ uₐ :=
+            allRed.1 wₐinAₘ uₐinAₘ (by intro a; subst a cu; exact unw rfl)
+
+          simp only [Subgraph.coe_adj, Subgraph.induce_adj, Subtype.coe_prop, true_and] at this
+          exact fun a => this (adj_symm C a)
+
+      -- It remains to show the size of `Aᵥ` is `m+1`.
+      refine Exists.intro Aᵥ (Or.inl ⟨cred, ?_⟩)
+
+      have : v ∉ AₘV := fun a => (not_mem_neighborFinset_self Cᶜ v) (AVsubA a)
+      simp_all only [not_false_eq_true, card_insert_of_not_mem, card_map, Aᵥ, AₘV]
+
+    · -- if `Aₘ` is all blue and of size `n + 1`, we're done.
+      rw [(card_map embedFinset).symm] at allBlue
+      refine ⟨AₘV, Or.inr ⟨induce_blue.mp allBlue.1, allBlue.2⟩⟩
+
+
+----------------------------------------------------------------------------------------------------
+-- my induction principle
+-- we recurse on a binary predicate `P : (m n : ℕ) → 2 ≤ m → 2 ≤ n → Prop`
+-- with fixed lower bounds `2` on `m` and `2` on `n`
+-- we have two base cases `∀ n, P 2 n` and `∀ m, P m 2`
+-- the inductive step goes from `P (m+1) n` and ` P m (n+1)` to `P (m + 1) (n + 1)`
+lemma two_le_orth_induction {P : ∀ m n, 2 ≤ m → 2 ≤ n → Prop}
+    (baseₙ : ∀ m leₘ,       P m 2 leₘ (AtLeastTwo.prop))
+    (baseₘ : ∀ n leₙ,       P 2 n (AtLeastTwo.prop) leₙ)
+    (succ  : ∀ m n leₘ leₙ, P (m + 1) n (le_succ_of_le leₘ) leₙ →
+                            P m (n + 1) leₘ (le_succ_of_le leₙ) →
+                            P (m + 1) (n + 1) (le_succ_of_le leₘ) (le_succ_of_le leₙ)) :
+    ∀ m n leₘ leₙ, P m n leₘ leₙ
+    | 0, _, le₀, _                   => (two_ne_zero (eq_zero_of_le_zero le₀)).elim
+    | _, 0, _, le₀                   => (two_ne_zero (eq_zero_of_le_zero le₀)).elim
+    | m + 1, n + 1, le_sucₘ, le_sucₙ => by
+        cases' le_sucₘ with _ leₘ
+        · exact (baseₘ _ _)
+        · cases' le_sucₙ with _ leₙ
+          · exact (baseₙ _ _)
+          · have Pₘ := two_le_orth_induction baseₙ baseₘ succ (m + 1) n (le_succ_of_le leₘ) leₙ
+            have Pₙ := two_le_orth_induction baseₙ baseₘ succ m (n + 1) leₘ (le_succ_of_le leₙ)
+            exact (succ m n _ _ Pₘ Pₙ)
+
 
 ----------------------------------------------------------------------------------------------------
 -- Base case proofs
@@ -195,9 +359,18 @@ lemma ramsey2 : ramseyProp m m 2 := by
       have pairblue : blue s C := by simp_all [blue, s]
       exact Exists.intro s (Or.symm (Or.inl (And.intro pairblue (card_pair (Adj.ne vwblue)))))
 
+-- That suffices as a base case for the existence proof.
+theorem ramseyExists {m n : ℕ} (leₘ : 2 ≤ m) (leₙ : 2 ≤ n) : (∃ N, ramseyProp N m n) := by
+  induction' m, n, leₘ, leₙ using two_le_orth_induction with m _ n _ m n leₘ leₙ rₘ rₙ
+  · exact ⟨m, ramsey2⟩
+  · simp; exact ⟨n, ramsey2⟩
+  · have := recRbound m n (zero_lt_of_lt leₘ) (zero_lt_of_lt leₙ) rₘ rₙ
+    exact Exists.intro (R m (n + 1) + R (m + 1) n) this
+
+
 -- The base case follows by proving `m` is minimal.
 lemma R2 : R m 2 = m := by
-  have m_leq_N (N : ℕ) (ram : ramseyProp N m 2) : m ≤ N := by
+  have m_le_N (N : ℕ) (ram : ramseyProp N m 2) : m ≤ N := by
     obtain ⟨s, h⟩ := ram (Fin N) (Fintype.card_fin N) ⊥
     have : ¬ (blue s ⊥ ∧ #s = 2) := by
       push_neg
@@ -207,228 +380,33 @@ lemma R2 : R m 2 = m := by
     simp[this, red] at h
     rw [← h.2]
     exact (card_finset_fin_le s)
-  exact le_antisymm (Nat.sInf_le ramsey2) (le_csInf ⟨m, ramsey2⟩ m_leq_N)
-
--- We do the same for `1`.
-lemma ramsey1 {m : ℕ} [nz : NeZero N] : ramseyProp N m 1 := by
-  intro V _ _ cardV C _
-  have nenV : Nonempty V := card_pos_iff.mp (by subst cardV; exact pos_of_neZero (Fintype.card V))
-  refine ⟨{nenV.some}, Or.inr ?_⟩
-  simp_all [card_singleton, and_true, blue]
-
-lemma R1 {m : ℕ} [nz : NeZero m] : R m 1 = 1 := by
-  refine le_antisymm (Nat.sInf_le ramsey1) ?_
-  by_contra h
-  simp [R] at h
-  cases h with
-  | inl ram0m1 => obtain ⟨_, sl⟩ := ram0m1 (Fin 0) rfl ⊥
-                  simp [eq_empty_of_isEmpty] at sl
-                  exact nz.out.symm sl.2
-  | inr h_2 => exact (Set.mem_empty_iff_false m).mp (by rw [← h_2]; exact ramsey1)
-
-----------------------------------------------------------------------------------------------------
--- my induction principle
--- we recurse on a binary predicate `P : (m n : ℕ) → bₘ ≤ m → bₙ ≤ n → Prop`
--- with fixed lower bounds `bₘ` on `m` and `bₙ` on `n`
--- we have two base cases `∀ n, P bₘ n` and `∀ m, P m bₙ`
--- the inductive step goes from `P (m+1) n` and ` P m (n+1)` to `P (m + 1) (n + 1)`
-lemma two_le_orth_induction {P : ∀ m n, 2 ≤ m → 2 ≤ n → Prop}
-    (baseₙ : ∀ m leₘ,       P m 2 leₘ (le_refl 2))
-    (baseₘ : ∀ n leₙ,       P 2 n (le_refl 2) leₙ)
-    (succ  : ∀ m n leₘ leₙ, P (m + 1) n (le_succ_of_le leₘ) leₙ →
-                            P m (n + 1) leₘ (le_succ_of_le leₙ) →
-                            P (m + 1) (n + 1) (le_succ_of_le leₘ) (le_succ_of_le leₙ)) :
-    ∀ m n leₘ leₙ, P m n leₘ leₙ
-    | 0, _, le₀, _                   => (two_ne_zero (eq_zero_of_le_zero le₀)).elim
-    | _, 0, _, le₀                   => (two_ne_zero (eq_zero_of_le_zero le₀)).elim
-    | m + 1, n + 1, le_sucₘ, le_sucₙ => by
-        cases' le_sucₘ with _ leₘ
-        · exact (baseₘ _ _)
-        · cases' le_sucₙ with _ leₙ
-          · exact (baseₙ _ _)
-          · have Pₘ := two_le_orth_induction baseₙ baseₘ succ (m + 1) n (le_succ_of_le leₘ) leₙ
-            have Pₙ := two_le_orth_induction baseₙ baseₘ succ m (n + 1) leₘ (le_succ_of_le leₙ)
-            exact (succ m n _ _ Pₘ Pₙ)
-
-----------------------------------------------------------------------------------------------------
--- the thing
-
--- We need to start our induction at `1`, since the inequality does not hold for `m/n = 0`:
---  `R(0,m) = 0`, `R(1,m) = 1` but `R(1,1) = 1 > 0 = 0 + 0 = R(0,1) + R(1,0)`
-theorem recRbound (m n : ℕ) (leₘ : 2 ≤ m) (leₙ : 2 ≤ n) :
-    ∃ N, ramseyProp N m n ∧ (R m n) ≤ R (m - 1) n + R m (n - 1) := by
-
-  have base (m : ℕ) [NeZero m] : R 2 m ≤ R (2 - 1) m + R 2 (m - 1) := by
-    simp [R2, R1]
-    match m with
-    | 0 => exact le_add_left 0 1
-    | m + 1 => simp [Nat.add_one_sub_one, add_comm]
-
-  induction' m, n, leₘ, leₙ using two_le_orth_induction with m leₘ n leₙ m n leₘ leₙ rₘ rₙ
-  · exact Exists.intro m ⟨ramsey2, by simp only [add_comm, RSymm] at base; exact @base m ⟨not_eq_zero_of_lt leₘ⟩⟩
-  · exact Exists.intro n ⟨ramseySymm.mp ramsey2, @base n ⟨not_eq_zero_of_lt leₙ⟩⟩
-  · -- Induction step: we assume all the interesting `R`s exist and
-    -- `R (m + 1) n ≤ R m n + R (m + 1) (n - 1)` (variable `mNbound`)
-    -- as well as
-    -- `R m (n + 1) ≤ R (m - 1) (n + 1) + R m n` (variable `nNbound`).
-    -- and we want to infer
-    -- `R (m + 1) (n + 1) ≤ R m (n + 1) + R (m + 1) n`.
-    -- We shift everything by 1 compared to the book so we won't have to deal with subtraction on ℕ.
-    let ⟨mN, ⟨mNramsey, mNbound⟩⟩ := rₘ
-    let ⟨nN, ⟨nNramsey, nNbound⟩⟩ := rₙ
-
-    simp_all only [Nat.add_one_sub_one, and_true]
-
-    -- We name the upper bound `N`, like in the book.
-    set N := R m (n + 1) + R (m + 1) n with Neq
-
-    -- We need the positivity of `N` to ensure we're not talking about the empty graph here.
-    have nz : N ≠ 0 := not_eq_zero_of_lt (add_pos
-                        (Rpos m (n+1) (zero_lt_of_lt leₘ) (zero_lt_succ n) (Set.nonempty_def.mpr ⟨nN, nNramsey⟩))
-                        (Rpos (m+1) n (zero_lt_succ m) (zero_lt_of_lt leₙ) (Set.nonempty_def.mpr ⟨mN, mNramsey⟩)))
-
-    have ramseyN : ramseyProp N (m + 1) (n + 1) := by
-      -- We pick an arbitrary coloring `C` on vertex set `V`.
-      intro V _ _ cardV C _
-
-      -- We pick an arbitrary vertex `v`, which we can do because we know `V` is not empty.
-      have nenV : Nonempty V := card_pos_iff.mp (by rw [cardV]; exact zero_lt_of_ne_zero nz)
-      let v : V := nenV.some
-
-      -- The set of vertices joined to `v` by a red edge
-      let A := Cᶜ.neighborFinset v
-
-      -- Suppose `|A| ≥ R(m, n + 1)`.
-      wlog RleqA : R m (n + 1) ≤ Cᶜ.degree v with h
-      · -- The case `|A| < R m (n+1)` is indeed analogous, but this is a bit involved to prove.
-
-        -- TODO inference of implicit arguments does not work properly, so this is very verbose.
-        have bge : R n (m + 1) ≤ @degree _ Cᶜᶜ v
-            (@neighborSetFintype _ Cᶜᶜ _ (fun a b => @Compl.adjDecidable _ Cᶜ (Classical.decRel Cᶜ.Adj) _ a b) v) := by
-          push_neg at RleqA
-          have := calc (R m (n + 1)) + (R n (m + 1))
-                  _ = C.degree v + Cᶜ.degree v + 1 := by rw [@RSymm n, ← Neq, ← cardV]; exact neighbor_card_sum C
-                  _ < C.degree v + R m (n + 1) + 1 := by simp [RleqA]
-                  _ = R m (n + 1) + C.degree v + 1 := by simp [add_comm]
-                  _ = R m (n + 1) + Cᶜᶜ.degree v + 1 := by congr!; simp [compl_compl] -- compl implicitly changes adjDecidable instance so we need congr
-           -- we need convert to arrive at the desired adjDecidable instance
-          convert le_of_lt_succ (lt_of_add_lt_add_left this)
-
-        -- We reduce this case to symmetry, so we apply the appropriate rewrites.
-        simp only [forall_const, Nonempty.forall] at h
-        rw [Neq] at *
-        repeat rw [@RSymm m, @RSymm (m + 1)] at *
-
-        -- TODO this is a large thing. can i use wlog hypothesis without so much noise?
-        -- This case is symmetric if we consider the complement graph. We obtain a monochromatic
-        -- vertex subset of the complement graph and show that it's monochromatic with the other color
-        -- in `C`
-        obtain ⟨s, rs⟩ := @h n m nN mN base leₙ leₘ ⟨nN, ramseySymm.mp nNramsey⟩ ⟨mN, ramseySymm.mp mNramsey⟩
-                                (ramseySymm.mp nNramsey)
-                                (by rw [@RSymm (m - 1), add_comm _ (R n m)] at nNbound; assumption)
-                                (ramseySymm.mp mNramsey)
-                                (by rw [add_comm (R n m)] at mNbound; assumption)
-                                (by rw [add_comm] at nz; assumption) (by rw [add_comm] at Neq; assumption)
-                                _ _ (by rw [add_comm] at cardV; assumption) Cᶜ (Classical.decRel Cᶜ.Adj) v bge
-
-        simp_rw [red_compl, blue_compl] at rs
-        exact ⟨s, rs.symm⟩
-
-      · -- Finally, the interesting case: `|A| ≥ R(m, n + 1)`.
-        have Avred : ∀ {u}, u ∈ A → ¬ C.Adj v u := by
-          intro u a
-          simp_all only [mem_neighborFinset, compl_adj, not_false_eq_true, A, v]
-
-        -- `|A| ≥ R m (n + 1)`, so the coloring it induces also has the Ramsey property according to
-        -- the induction hypothesis.
-        have nen : {N | ramseyProp N m (n+1)}.Nonempty := Set.nonempty_of_mem nNramsey
-        let ramA := clear (R m (n + 1)) #A RleqA (sInf_mem nen) A (card_coe A)
-
-        -- Hence, there exists a monochromatic subset of `A`. We call it `Aₘ`.
-        let ⟨Aₘ, monochrom⟩ := @ramA (inducedColoring C A).coe (Classical.decRel (inducedColoring C A).coe.Adj)
-
-        -- `Aₘ` is a subset of the induced graph's vertices `A`, so it's a Finset `{ x // x ∈ A }`.
-        -- We need to embed it into `V` to talk about corresponding vertices in the big graph `C`
-        let AₘV : Finset V := (Finset.map embedFinset Aₘ)
-
-        have AVsubA : AₘV ⊆ A := by
-          intro _ memAV
-          simp_all [AₘV, A, embedFinset]
-          exact memAV.1
-
-        -- We consider two cases:
-        -- `AₘV` has size `m` with all edges colored red, which together with `v` yields a red `K_(m+1)`
-        -- `AₘV` has size `n + 1` with all edges colored blue
-        cases' monochrom with allRed allBlue
-        · -- case one: `Aₘ` is all red and of size `m`.
-          -- the candidate set: `AₘV` together with `v`
-          let Aᵥ := insert v AₘV
-
-          have inA {x : V} (xnv : v ≠ x) (xinc : x ∈ Aᵥ) : x ∈ A := by
-            cases' mem_insert.mp xinc with xeqv xinAV
-            · exact (xnv xeqv.symm).elim
-            · exact AVsubA xinAV
-
-          -- It indeed describes an all-red subgraph of `C`:
-          have cred : red Aᵥ C := by
-            -- We show pairwise redness of some `u, w ∈ Aᵥ`.
-            intro u uinc w winc unw
-
-            -- We need to handle the case that `u` or `w` happen to be `v`.
-            by_cases uvw : (u = v) ∨ (w = v)
-            · -- if one of the vertices is `v`, the edge is red by the definition of `A`.
-              cases' uvw with eq eq
-              all_goals subst eq
-              · exact Avred (inA (ne_of_eq_of_ne rfl unw) winc)
-              · exact fun a => (Avred (inA (ne_of_eq_of_ne rfl unw.symm) uinc)) a.symm
-            · -- the interesting case: two members of `Aᵥ` that are not `v` have a red edge
-              -- we project them to `A`
-              push_neg at uvw
-              obtain ⟨wₐ, ⟨wₐinAₘ, cw⟩⟩ := mem_map.mp (Finset.mem_of_mem_insert_of_ne winc uvw.right)
-              obtain ⟨uₐ, ⟨uₐinAₘ, cu⟩⟩ := mem_map.mp (Finset.mem_of_mem_insert_of_ne uinc uvw.left)
-              rw [← cw, ← cu] at unw ⊢
-
-              -- the projections of the vertices are red in the induced coloring
-              have : ¬(inducedColoring C A).coe.Adj wₐ uₐ :=
-                allRed.1 wₐinAₘ uₐinAₘ (by intro a; subst a cu; exact unw rfl)
-
-              simp only [Subgraph.coe_adj, Subgraph.induce_adj, Subtype.coe_prop, true_and] at this
-              exact fun a => this (adj_symm C a)
-
-          -- It remains to show the size of `Aᵥ` is `m+1`.
-          refine Exists.intro Aᵥ (Or.inl ⟨cred, ?_⟩)
-
-          have : v ∉ AₘV := fun a => (not_mem_neighborFinset_self Cᶜ v) (AVsubA a)
-          simp_all only [not_false_eq_true, card_insert_of_not_mem, card_map, Aᵥ, AₘV]
-
-        · -- if `Aₘ` is all blue and of size `n + 1`, we're done.
-          rw [(card_map embedFinset).symm] at allBlue
-          refine ⟨AₘV, Or.inr ⟨induce_blue.mp allBlue.1, allBlue.2⟩⟩
-
-    -- The claim follows.
-    exact ⟨N, ⟨ramseyN, Nat.sInf_le ramseyN⟩⟩
+  exact le_antisymm (Nat.sInf_le ramsey2) (le_csInf ⟨m, ramsey2⟩ m_le_N)
 
 ----------------------------------------------------------------------------------------------------
 -- The binomial bounds
 
 theorem chooseRbound (m n : ℕ) (m1 : 2 ≤ m) (n1 : 2 ≤ n) : R m n ≤ choose (m + n - 2) (m - 1) := by
   -- we use the same induction principle as before.
-  induction' m, n, m1, n1 using two_le_orth_induction with m mr n nr m n mg2 ng2 mr nr
+  induction' m, n, m1, n1 using two_le_orth_induction with m rₘ n _ m n leₘ leₙ rₘ rₙ
   · simp [R2]
-    have := choose_succ_left m m (zero_lt_of_lt mr)
+    have := Nat.le_of_eq (choose_succ_left m m (zero_lt_of_lt rₘ))
     simp at this
-    exact Nat.le_of_eq this
+    assumption
   · simp [R2]
-  · -- the arithmetic is a bit involved.
-    let ⟨_, ⟨_, lee⟩⟩ := recRbound (m+1) (n+1) (le_add_right_of_le mg2) (le_add_right_of_le ng2)
-    have : m + (n + 1) - 2 + 1 = m + 1 + (n + 1) - 2 := by rw [add_comm, add_comm m 1, add_assoc,
-                                                               ← Nat.add_sub_assoc (le_add_right_of_le mg2)]
+  · -- The actual bound from the book.
+    have bound : R (m + 1) (n + 1) ≤ R m (n + 1) + R (m + 1) n :=
+      Nat.sInf_le (recRbound m n (zero_lt_of_lt leₘ) (zero_lt_of_lt leₙ)
+                             (ramseyExists (le_add_right_of_le leₘ) leₙ)
+                             (ramseyExists leₘ (le_add_right_of_le leₙ)))
 
-    calc R (m + 1) (n + 1) ≤ R m (n + 1) + R n (m + 1)                                     := by simp at lee; exact lee
-                         _ ≤ R m (n + 1)  + choose (m + 1 + n - 2) (m + 1 - 1)             := by simp; simp [RSymm] at mr; exact mr
-                         _ ≤ choose (m + (n + 1) - 2) (m - 1) + choose (m + 1 + n - 2) m   := by simp[nr]
+    have : m + (n + 1) - 2 + 1 = m + 1 + (n + 1) - 2 := by rw [add_comm, add_comm m 1, add_assoc,
+                                                               ← Nat.add_sub_assoc (le_add_right_of_le leₘ)]
+
+    calc R (m + 1) (n + 1) ≤ R m (n + 1) + R (m + 1) n                                     := by exact bound
+                         _ ≤ R m (n + 1)  + choose (m + 1 + n - 2) (m + 1 - 1)             := by simp; simp [RSymm] at rₘ; exact rₘ
+                         _ ≤ choose (m + (n + 1) - 2) (m - 1) + choose (m + 1 + n - 2) m   := by simp[rₙ]
                          _ = choose (m + (n + 1) - 2) (m - 1) + choose (m + (n + 1) - 2) m := by simp[add_assoc, add_comm n 1]
-                         _ = choose (m + (n + 1) - 2 + 1) m                                := (choose_succ_left (m+(n+1)-2) m (zero_lt_of_lt mg2)).symm
+                         _ = choose (m + (n + 1) - 2 + 1) m                                := (choose_succ_left (m+(n+1)-2) m (zero_lt_of_lt leₘ)).symm
                          _ = choose (m + 1 + (n + 1) - 2) (m + 1 - 1)                      := by simp only [this, add_tsub_cancel_right]
 
 -- what other people call the ramsey number
@@ -441,7 +419,7 @@ lemma powRbound : Rr (k + 2) ≤ 2 ^ (2 * k + 1) := by
     · rw [add_assoc]; rw [add_assoc]; exact Nat.lt_add_of_pos_right (zero_lt_succ (k + 1))
     · rw [add_assoc]; exact Nat.lt_add_of_pos_right (zero_lt_succ k)
 
-  calc R (k+2) (k+2) ≤ (k + 2 + (k + 2) - 2).choose (k + 2 - 1)          := by exact chooseRbound (k+2) (k+2) (Nat.le_add_left 2 k) (Nat.le_add_left 2 k)
+  calc R (k+2) (k+2) ≤ (k + 2 + (k + 2) - 2).choose (k + 2 - 1)          := by exact (chooseRbound (k+2) (k+2) (le_add_left 2 k) (le_add_left 2 k))
            _ = choose (2 * (k + 2) - 2) (k + 1)                          := by simp_all only [Nat.add_one_sub_one, ← two_mul]
            _ = (2 * k + 2 - 1).choose k + (2 * k + 2 - 1).choose (k + 1) := Nat.choose_succ_right (2 * k + 2) k (zero_lt_succ (2 * k + 1))
            _ = ∑ m ∈ {k, k + 1}, (2 * k + 1).choose m                    := (Finset.sum_pair (ne_add_one k)).symm
