@@ -5,16 +5,6 @@ import Mathlib.Data.Nat.Choose.Sum
 
 open SimpleGraph Finset Fintype Nat
 
-
--- this is probably in mathlib somewhere?
-lemma neighbor_card_sum [Fintype V] [Nonempty V] [DecidableEq V] (G : SimpleGraph V) [DecidableRel G.Adj] :
-    Fintype.card V = (G.neighborFinset v).card + (Gᶜ.neighborFinset v).card + 1 := by
-  have disj : Disjoint (neighborFinset G v) (neighborFinset Gᶜ v) := by
-    simp only [neighborFinset_def, Set.disjoint_toFinset, compl_neighborSet_disjoint]
-  simp only [← card_union_of_disjoint disj]
-  simp only [neighborFinset_def, ← Set.toFinset_union, card_neighborSet_union_compl_neighborSet]
-  exact (sub_one_add_one Fintype.card_ne_zero).symm
-
 ----------------------------------------------------------------------------------------------------
 -- Edge colorings
 -- Because we are lucky, we only talk about two-colorings of the complete graph here.
@@ -207,11 +197,11 @@ theorem recRbound (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
   wlog RleA : R m (n + 1) ≤ #A with h
   · -- The case `|B| ≥ R m (n - 1)` is indeed analogous, but this is a bit involved to prove.
     have RleB : R n (m + 1) ≤ #B := by
-      have := calc R m (n + 1) + R n (m + 1)
-              _ = #B + #A + 1 := by rw [@RSymm n, ← Neq, ← cardV]; exact neighbor_card_sum C
-              _ < #B + R m (n + 1) + 1 := by simp [lt_of_not_le RleA]
-              _ = R m (n + 1) + #B  + 1 := by simp [add_comm]
-      exact le_of_lt_succ (lt_of_add_lt_add_left this)
+      have := Nat.eq_add_of_sub_eq (le_sub_one_of_lt (degree_lt_card_verts C v)) (degree_compl C v).symm
+      have := calc (R m (n + 1) + R n (m + 1)) - 1
+              _ = #A + #B := by rw [@RSymm n, ← Neq, ← cardV, card_neighborFinset_eq_degree]; exact this
+              _ < R m (n + 1) + #B := by simp [lt_of_not_le RleA]
+      exact le_of_add_le_add_left (le_of_pred_lt this)
 
     -- We reduce this case to symmetry, so we apply the appropriate rewrites.
     have ex m n := Exists.imp (fun N => (@ramseySymm N m n).mp)
