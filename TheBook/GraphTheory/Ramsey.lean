@@ -12,15 +12,20 @@ open SimpleGraph Finset Fintype Nat
 -- to be colored red if they are nonadjacent in the representing graph, and to be colored
 -- blue if they are adjacent.
 
-def red (s : Finset V) (C : SimpleGraph V) := (s.toSet).Pairwise (fun v w => ¬ C.Adj v w)
-def blue (s : Finset V) (C : SimpleGraph V) := (s.toSet).Pairwise C.Adj
+-- variable (C : SimpleGraph V)
 
-@[simp] lemma red_compl (s : Finset V) (C : SimpleGraph V) : red s Cᶜ ↔ blue s C := by
-  simp_rw [red, blue, compl_adj, Set.Pairwise]
-  simp_all only [ne_eq, not_false_eq_true, true_and, not_not]
+-- local notation "red(" s ", " t ")" => ¬ C.Adj s t
+-- local notation "blue(" s ", " t ")" => C.Adj s t
 
-@[simp] lemma blue_compl (s : Finset V) (C : SimpleGraph V) : blue s Cᶜ ↔ red s C := by
-  simp[red, blue, isIndependentSet_iff_isClique_of_complement]
+-- def red (s : Finset V) (C : SimpleGraph V) := (s.toSet).Pairwise (fun v w => red(v, w))
+-- def blue (s : Finset V) (C : SimpleGraph V) := (s.toSet).Pairwise C.Adj
+
+-- @[simp] lemma red_compl (s : Finset V) (C : SimpleGraph V) : red s Cᶜ ↔ blue s C := by
+--   simp_rw [red, blue, compl_adj, Set.Pairwise]
+--   simp_all only [ne_eq, not_false_eq_true, true_and, not_not]
+
+-- @[simp] lemma blue_compl (s : Finset V) (C : SimpleGraph V) : blue s Cᶜ ↔ red s C := by
+--   simp[red, blue, isIndependentSet_iff_isClique_of_complement]
 
 ----------------------------------------------------------------------------------------------------
 -- edge colorings induced by vertex subsets
@@ -37,14 +42,9 @@ def embedFinset : (A : Finset α) ↪ α := {
           inj' := Subtype.val_injective
         }
 
--- The natural embedding of a `Fintype` into a `Fintype` with larger cardinality
-noncomputable def embedFintype (α β : Type*) [Fintype α] [Fintype β] [DecidableEq α] [DecidableEq β]
-    (h : Fintype.card α ≤ Fintype.card β) :
-    α ↪ β := Trunc.out (Function.Embedding.truncOfCardLE h)
-
 lemma induce_blue {C : SimpleGraph V} {A : Finset V} {Aₘ : Finset A}:
-    blue Aₘ (inducedColoring C A).coe ↔ blue (map embedFinset Aₘ) C := by
-  simp_rw [blue, Set.Pairwise, inducedColoring]
+    (inducedColoring C A).coe.IsClique Aₘ.toSet ↔ C.IsClique (map embedFinset Aₘ) := by
+  simp_rw [Set.Pairwise, inducedColoring]
   simp only [ne_eq, Subgraph.coe_adj, Subgraph.induce_adj, Subtype.coe_prop, true_and,
     Subtype.forall, Subtype.mk.injEq, coe_map, Set.mem_image, forall_exists_index, and_imp]
   apply Iff.intro
@@ -79,7 +79,8 @@ lemma induce_blue {C : SimpleGraph V} {A : Finset V} {Aₘ : Finset A}:
 --    set of `m` vertices that are all non-adjacent (i.e. red edges) or a set of
 --    `n` vertices that are all adjacent (i.e. blue edges)."
 def ramseyProp (N m n : ℕ) := ∀ (V : Type) [Fintype V] [DecidableEq V] (_ : Fintype.card V = N),
-    ∀ (C : SimpleGraph V) [DecidableRel C.Adj], ∃ s, (red s C ∧ s.card = m) ∨ (blue s C ∧ s.card = n)
+    ∀ (C : SimpleGraph V) [DecidableRel C.Adj],
+    ∃ (s : Finset V), (C.IsNIndependentSet m s) ∨ (C.IsNClique n s)
 
 -- The book reads:
 --    "It is clear that if `K_N` has property `(m, n)`,
@@ -89,18 +90,18 @@ lemma clear (N s : ℕ) (h : N ≤ s) : ramseyProp N m n → ramseyProp s m n :=
   rw [ramseyProp] at *
   rw [← Wcard, ← Fintype.card_fin N] at h
 
-  -- We consider the subgraph induced by embedding `K_N` into `K_s`, choosing any embedding.
-  let A : Finset W := Finset.map (embedFintype (Fin N) W h) Finset.univ
+  -- We consider the subgraph induced by embedding `K_N` into `K_s`, choosing some embedding.
+  let A : Finset W := Finset.map (Trunc.out (Function.Embedding.truncOfCardLE h)) Finset.univ
   let C' := C.selfSubgraph.induce A.toSet
 
   -- Since `K_N` has the Ramsey property, we can find a monochromatic vertex subset in the incuded subgraph.
-  have : A.card = N := by simp only [embedFintype, card_map, card_univ, Fintype.card_fin, A]
+  have : A.card = N := by simp only [card_map, card_univ, Fintype.card_fin, A]
   have := ramN A (by simp [this, Fintype.card_coe])
   obtain ⟨s, red_or_blue⟩ :=  @this C'.coe (Classical.decRel C'.coe.Adj)
 
   -- It remains to show that that subset is also monochromatic in the supergraph.
   rcases red_or_blue with ⟨scolor, scard⟩ | ⟨scolor, scard⟩ <;> use (Finset.map embedFinset s)
-  all_goals simp [scard, red, blue, Set.Pairwise] at scolor ⊢
+  all_goals simp [scard, isNClique_iff, isNIndependentSet_iff, Set.Pairwise] at scolor ⊢
   left; swap; right
   all_goals {
     intros w _ winA insw embw v _ vinA insv embv _
@@ -113,10 +114,10 @@ lemma clear (N s : ℕ) (h : N ≤ s) : ramseyProp N m n → ramseyProp s m n :=
 
 -- The `(m, n)`-Ramsey property, using our definition, is equivalent to the existence of `m`-independent
 -- set or `n`-Clique.
-lemma ramsey_iff (N m n : ℕ) : (ramseyProp N m n) ↔
-    ∀ (V : Type) [Fintype V] [DecidableEq V] (_: Fintype.card V = N) (C : SimpleGraph V) [DecidableRel C.Adj],
-    ∃ (s : Finset V), (C.IsNIndependentSet m s) ∨ (C.IsNClique n s) := by
-  simp_rw [isNClique_iff, isNIndependentSet_iff, isClique_iff, isIndependentSet_iff, ramseyProp, red, blue]
+-- lemma ramsey_iff (N m n : ℕ) : (ramseyProp N m n) ↔
+--     ∀ (V : Type) [Fintype V] [DecidableEq V] (_: Fintype.card V = N) (C : SimpleGraph V) [DecidableRel C.Adj],
+--     ∃ (s : Finset V), (C.IsNIndependentSet m s) ∨ (C.IsNClique n s) := by
+--   simp_rw [isNClique_iff, isNIndependentSet_iff, isClique_iff, isIndependentSet_iff, ramseyProp]
 
 -- The Ramsey property is symmetric in `m` and `n`.
 @[simp] lemma ramseySymm : (ramseyProp N m n) ↔ (ramseyProp N n m) := by
@@ -124,14 +125,14 @@ lemma ramsey_iff (N m n : ℕ) : (ramseyProp N m n) ↔
     (∀ (C : SimpleGraph V) [DecidableRel C.Adj], p C) ↔ ∀ (C : SimpleGraph V) [DecidableRel C.Adj], p Cᶜ :=
     ⟨fun a C d ↦ a Cᶜ, fun a C d ↦ by rw [← compl_compl C]; exact a Cᶜ⟩
 
-  simp_rw [ramsey_iff N]
+  simp_rw [ramseyProp]
   constructor
   all_goals {
     intro h v a b c
     rw [this]
     intro C d
-    simp [isNIndependentSet_iff_isNClique_of_complement]
-    simp [← isNIndependentSet_iff_isNClique_of_complement]
+    simp_rw [← isNIndependentSet_iff_isNClique_of_complement]
+    simp_rw [isNIndependentSet_iff_isNClique_of_complement Cᶜ, compl_compl]
     exact (exists_congr (fun _ => Or.comm)).mp (h v c C)
   }
 
@@ -154,7 +155,7 @@ lemma Rpos (m n : ℕ) (mpos : 0 < m) (npos : 0 < n) (nen : {N | ramseyProp N m 
   by_contra R0; push_neg at R0
   apply eq_zero_of_le_zero at R0
   have : ramseyProp 0 m n := by have := sInf_mem nen; rw [← R0]; exact this
-  rw [ramseyProp] at this
+  simp_rw [ramseyProp, isNIndependentSet_iff, isNClique_iff] at this
   obtain ⟨s, p⟩ := this (Fin 0) rfl (⊥ : SimpleGraph (Fin 0))
   simp_rw [eq_zero_of_le_zero (card_finset_fin_le s)] at p
   match p with
@@ -219,7 +220,7 @@ theorem recRbound (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
     simp only [forall_const, Nonempty.forall] at h
     obtain ⟨s, rs⟩ := h n m posₙ posₘ rₙ rₘ V cardV Cᶜ v RleB
 
-    simp_rw [red_compl, blue_compl] at rs
+    simp_rw [← isNIndependentSet_iff_isNClique_of_complement, isNIndependentSet_iff_isNClique_of_complement Cᶜ, compl_compl] at rs
     exact ⟨s, rs.symm⟩
 
   · --"Suppose `|A| ≥ R(m − 1, n)`." (shifted by 1)
@@ -252,32 +253,34 @@ theorem recRbound (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
     -- `AₘV` has size `m` with all edges colored red, which together with `v` yields a red `K_(m+1)`
     -- `AₘV` has size `n + 1` with all edges colored blue
     cases' monochrom with allRed allBlue
-    · -- case one: `Aₘ` is all red and of size `m`.
+    · rw [isNIndependentSet_iff] at allRed
+      -- case one: `Aₘ` is all red and of size `m`.
       -- the candidate set: `AₘV` together with `v`
       let Aᵥ := insert v AₘV
 
-      have inA {x : V} (xnv : v ≠ x) (xinc : x ∈ Aᵥ) : x ∈ A := by
-        cases' mem_insert.mp xinc with xeqv xinAV
+      have inA {x : V} (xnv : v ≠ x) (xinAᵥ : x ∈ Aᵥ) : x ∈ A := by
+        cases' mem_insert.mp xinAᵥ with xeqv xinAV
         · exact (xnv xeqv.symm).elim
         · exact AVsubA xinAV
 
       -- It indeed describes an all-red subgraph of `C`:
-      have cred : red Aᵥ C := by
+      have cred : C.IsIndependentSet Aᵥ := by
+        rw [isIndependentSet_iff, Set.Pairwise]
         -- We show pairwise redness of some `u, w ∈ Aᵥ`.
-        intro u uinc w winc unw
+        intro u uinAᵥ w winAᵥ unw
 
         -- We need to handle the case that `u` or `w` happen to be `v`.
         by_cases uvw : (u = v) ∨ (w = v)
         · -- if one of the vertices is `v`, the edge is red by the definition of `A`.
           cases' uvw with eq eq
           all_goals subst eq
-          · exact Avred (inA (ne_of_eq_of_ne rfl unw) winc)
-          · exact fun a => (Avred (inA (ne_of_eq_of_ne rfl unw.symm) uinc)) a.symm
+          · exact Avred (inA (ne_of_eq_of_ne rfl unw) winAᵥ)
+          · exact fun a => (Avred (inA (ne_of_eq_of_ne rfl unw.symm) uinAᵥ)) a.symm
         · -- the interesting case: two members of `Aᵥ` that are not `v` have a red edge
           -- we project them to `A`
           push_neg at uvw
-          obtain ⟨wₐ, ⟨wₐinAₘ, cw⟩⟩ := mem_map.mp (Finset.mem_of_mem_insert_of_ne winc uvw.right)
-          obtain ⟨uₐ, ⟨uₐinAₘ, cu⟩⟩ := mem_map.mp (Finset.mem_of_mem_insert_of_ne uinc uvw.left)
+          obtain ⟨wₐ, ⟨wₐinAₘ, cw⟩⟩ := mem_map.mp (Finset.mem_of_mem_insert_of_ne winAᵥ uvw.right)
+          obtain ⟨uₐ, ⟨uₐinAₘ, cu⟩⟩ := mem_map.mp (Finset.mem_of_mem_insert_of_ne uinAᵥ uvw.left)
           rw [← cw, ← cu] at unw ⊢
 
           -- the projections of the vertices are red in the induced coloring
@@ -293,8 +296,9 @@ theorem recRbound (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
       have : v ∉ AₘV := fun a => (not_mem_neighborFinset_self Cᶜ v) (AVsubA a)
       simp_all only [not_false_eq_true, card_insert_of_not_mem, card_map, Aᵥ, AₘV]
 
+
     · -- if `Aₘ` is all blue and of size `n + 1`, we're done.
-      rw [(card_map embedFinset).symm] at allBlue
+      rw [isNClique_iff, (card_map embedFinset).symm] at allBlue
       refine ⟨AₘV, Or.inr ⟨induce_blue.mp allBlue.1, allBlue.2⟩⟩
 
 
@@ -337,17 +341,17 @@ lemma two_le_orth_induction {P : ∀ m n, 2 ≤ m → 2 ≤ n → Prop}
 lemma ramsey2 : ramseyProp m m 2 := by
     intro V finV decV cardV C _
     let all : Finset V := univ
-    by_cases allRed : red all C
+    by_cases allRed : C.IsNIndependentSet m all
     · -- All edges are red, so we're done
-      have : all.card = m := by simp only [card_univ, cardV, all]
-      exact Exists.intro all (Or.symm (Or.inr (And.intro allRed this)))
+      exact Exists.intro all (Or.symm (Or.inr allRed))
     · -- There is a blue edge
-      rw [red, Set.Pairwise] at allRed
-      push_neg at allRed
+      rw [isNIndependentSet_iff, isIndependentSet_iff, Set.Pairwise] at allRed
+      rw [not_and_or, card_univ] at allRed
+      simp [cardV] at allRed
       obtain ⟨v, ⟨_, ⟨w, ⟨_, ⟨_, vwblue⟩⟩⟩⟩⟩ := allRed
       let s : Finset V := {v, w}
-      have pairblue : blue s C := by simp_all [blue, s]
-      exact Exists.intro s (Or.symm (Or.inl (And.intro pairblue (card_pair (Adj.ne vwblue)))))
+      have pairblue : C.IsNClique 2 s := by simp_all [isNClique_iff, s]
+      exact Exists.intro s (Or.symm (Or.inl pairblue))
 
 -- That suffices as a base case for the existence proof.
 theorem ramseyExists {m n : ℕ} (leₘ : 2 ≤ m) (leₙ : 2 ≤ n) : (∃ N, ramseyProp N m n) := by
@@ -362,12 +366,12 @@ theorem ramseyExists {m n : ℕ} (leₘ : 2 ≤ m) (leₙ : 2 ≤ n) : (∃ N, r
 lemma R2 : R m 2 = m := by
   have m_le_N (N : ℕ) (ram : ramseyProp N m 2) : m ≤ N := by
     obtain ⟨s, h⟩ := ram (Fin N) (Fintype.card_fin N) ⊥
-    have : ¬ (blue s ⊥ ∧ #s = 2) := by
+    have : ¬ (IsNClique ⊥ 2 s) := by
+      rw [isNClique_bot_iff]
       push_neg
-      simp only [blue, isClique_bot_iff]
       intro si
-      exact Nat.ne_of_lt (lt_of_le_of_lt (card_le_one_iff.mpr fun {_ _} a' b' => si a' b') one_lt_two)
-    simp[this, red] at h
+      simp [one_lt_two] at si
+    simp[this] at h
     rw [← h.2]
     exact (card_finset_fin_le s)
   exact le_antisymm (Nat.sInf_le ramsey2) (le_csInf ⟨m, ramsey2⟩ m_le_N)
