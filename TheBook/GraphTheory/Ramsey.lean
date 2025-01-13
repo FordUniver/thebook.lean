@@ -1,9 +1,18 @@
 import Mathlib.Combinatorics.SimpleGraph.Clique
 import TheBook.ToMathlib.IndependentSet
+import TheBook.ToMathlib.InducedClique
 import Mathlib.Tactic.Linarith
 import Mathlib.Data.Nat.Choose.Sum
 
 open SimpleGraph Finset Fintype Nat
+
+-- TODOS
+-- 5. Change red and blue to notation?
+-- 8. Do we really need two base cases? Or is it just a matter of figuring out where to start?
+-- 10. Revisit subgraph embedding for the recursive bound
+-- 12. Possible notation: R(m,n) = R m n and G[S] = G.induce S
+-- 14. Consistent .choose (and others) instead of choose
+-- 15. To mathlib (if it doesn't already exist): n.choose (k + 1) <= 2^(n - 1)
 
 ----------------------------------------------------------------------------------------------------
 -- Edge colorings
@@ -28,34 +37,7 @@ open SimpleGraph Finset Fintype Nat
 --   simp[red, blue, isIndependentSet_iff_isClique_of_complement]
 
 ----------------------------------------------------------------------------------------------------
--- edge colorings induced by vertex subsets
-
--- The subgraph that is the entire graph
-abbrev SimpleGraph.selfSubgraph (G : SimpleGraph V) := SimpleGraph.toSubgraph G (fun ⦃_ _⦄ a => a)
-
--- The subraph induced by a vertex subset
-abbrev inducedColoring (G : SimpleGraph V) (A : Finset V) := G.selfSubgraph.induce A.toSet
-
--- The natural embedding of a `Finset α` into `α`
-def embedFinset : (A : Finset α) ↪ α := {
-          toFun := fun a : { x // x ∈ A } => a.1
-          inj' := Subtype.val_injective
-        }
-
-lemma induce_blue {C : SimpleGraph V} {A : Finset V} {Aₘ : Finset A}:
-    (inducedColoring C A).coe.IsClique Aₘ.toSet ↔ C.IsClique (map embedFinset Aₘ) := by
-  simp_rw [Set.Pairwise, inducedColoring]
-  simp only [ne_eq, Subgraph.coe_adj, Subgraph.induce_adj, Subtype.coe_prop, true_and,
-    Subtype.forall, Subtype.mk.injEq, coe_map, Set.mem_image, forall_exists_index, and_imp]
-  apply Iff.intro
-  · intro Cadj a b binA bAₘ eba x y yinA yAₘ exy bₙy
-    subst eba exy
-    exact Cadj (embedFinset ⟨b, binA⟩) binA bAₘ (embedFinset ⟨y, yinA⟩) yinA yAₘ bₙy
-  · intro Cadj a ainA aAₘ b binA bAₘ anb
-    exact Cadj a ainA aAₘ rfl b binA bAₘ rfl anb
-
-----------------------------------------------------------------------------------------------------
--- ramsey property
+-- Definitions of Ramsey property and Ramsey Number
 
 -- TODO the type signatures are verbose. can i somehow define a type that's in all the classes i want
 -- but still have inference work?
@@ -82,6 +64,25 @@ def ramseyProp (N m n : ℕ) := ∀ (V : Type) [Fintype V] [DecidableEq V] (_ : 
     ∀ (C : SimpleGraph V) [DecidableRel C.Adj],
     ∃ (s : Finset V), (C.IsNIndependentSet m s) ∨ (C.IsNClique n s)
 
+-- Straight from the book:
+--    "...we ask for the smallest number `N` (if it exists) with this property
+--    — and this is the Ramsey number `R(m, n)`."
+-- Note that `sInf ∅ = 0`, so our lean definition does not include "existence" like the paper version.
+-- We need to keep that in mind when using our `R`.
+noncomputable def R (m n : ℕ) : ℕ := sInf { N | ramseyProp N m n}
+
+----------------------------------------------------------------------------------------------------
+-- edge colorings induced by vertex subsets
+
+-- The subgraph that is the entire graph
+abbrev SimpleGraph.selfSubgraph (G : SimpleGraph V) := SimpleGraph.toSubgraph G (fun ⦃_ _⦄ a => a)
+
+-- The subraph induced by a vertex subset
+abbrev inducedColoring (G : SimpleGraph V) (A : Finset V) := G.selfSubgraph.induce A.toSet
+
+----------------------------------------------------------------------------------------------------
+-- lemmata
+
 -- The book reads:
 --    "It is clear that if `K_N` has property `(m, n)`,
 --     then so does every `K_s` with `s ≥ N`."
@@ -100,24 +101,17 @@ lemma clear (N s : ℕ) (h : N ≤ s) : ramseyProp N m n → ramseyProp s m n :=
   obtain ⟨s, red_or_blue⟩ :=  @this C'.coe (Classical.decRel C'.coe.Adj)
 
   -- It remains to show that that subset is also monochromatic in the supergraph.
-  rcases red_or_blue with ⟨scolor, scard⟩ | ⟨scolor, scard⟩ <;> use (Finset.map embedFinset s)
+  rcases red_or_blue with ⟨scolor, scard⟩ | ⟨scolor, scard⟩ <;>
+    use (Finset.map ⟨Subtype.val, Subtype.val_injective⟩ s)
   all_goals simp [scard, isNClique_iff, isNIndependentSet_iff, Set.Pairwise] at scolor ⊢
   left; swap; right
   all_goals {
-    intros w _ winA insw embw v _ vinA insv embv _
-    have := scolor _ _ insw _ _ insv (by subst embv embw; simpa)
-    subst embv embw
+    intros w winA insw v vinA insv vnw
+    have := scolor w winA insw _ _ insv vnw
     first | exact C'.adj_sub this | unfold C' at this; simp [C'.induce_adj] at this; exact this winA vinA
   }
 
 -- We prove some properties of the Ramsey property that will come in handy:
-
--- The `(m, n)`-Ramsey property, using our definition, is equivalent to the existence of `m`-independent
--- set or `n`-Clique.
--- lemma ramsey_iff (N m n : ℕ) : (ramseyProp N m n) ↔
---     ∀ (V : Type) [Fintype V] [DecidableEq V] (_: Fintype.card V = N) (C : SimpleGraph V) [DecidableRel C.Adj],
---     ∃ (s : Finset V), (C.IsNIndependentSet m s) ∨ (C.IsNClique n s) := by
---   simp_rw [isNClique_iff, isNIndependentSet_iff, isClique_iff, isIndependentSet_iff, ramseyProp]
 
 -- The Ramsey property is symmetric in `m` and `n`.
 @[simp] lemma ramseySymm : (ramseyProp N m n) ↔ (ramseyProp N n m) := by
@@ -136,19 +130,10 @@ lemma clear (N s : ℕ) (h : N ≤ s) : ramseyProp N m n → ramseyProp s m n :=
     exact (exists_congr (fun _ => Or.comm)).mp (h v c C)
   }
 
-----------------------------------------------------------------------------------------------------
--- Ramsey Number
-
--- Straight from the book:
---    "...we ask for the smallest number `N` (if it exists) with this property
---    — and this is the Ramsey number `R(m, n)`."
--- Note that `sInf ∅ = 0`, so our lean definition does not include "existence" like the paper version.
--- We need to keep that in mind when using our `R`.
-noncomputable def R (m n : ℕ) : ℕ := sInf { N | ramseyProp N m n}
-
--- Symmetry is handy
+-- The Ramsey number is also symmetric.
 @[simp] lemma RSymm {m n : ℕ} : R m n = R n m := by simp[R]
 
+-- The Ramsey number, if it exists, is positive if both `m` and `n` are positive.
 lemma Rpos (m n : ℕ) (mpos : 0 < m) (npos : 0 < n) (nen : {N | ramseyProp N m n}.Nonempty) :
     0 < R m n := by
   simp_rw [R]
@@ -242,7 +227,8 @@ theorem recRbound (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
 
     -- `Aₘ` is a subset of the induced graph's vertices `A`, so it's a Finset `{ x // x ∈ A }`.
     -- We need to embed it into `V` to talk about corresponding vertices in the big graph `C`
-    let AₘV : Finset V := (Finset.map embedFinset Aₘ)
+    let embedFinset : A ↪ V := ⟨Subtype.val, Subtype.val_injective⟩
+    set AₘV : Finset V := (Finset.map embedFinset Aₘ) with AVe
 
     have AVsubA : AₘV ⊆ A := by
       intro _ memAV
@@ -291,7 +277,7 @@ theorem recRbound (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
           exact fun a => this (adj_symm C a)
 
       -- It remains to show the size of `Aᵥ` is `m+1`.
-      refine Exists.intro Aᵥ (Or.inl ⟨cred, ?_⟩)
+      refine ⟨Aᵥ, (Or.inl ⟨cred, ?_⟩)⟩
 
       have : v ∉ AₘV := fun a => (not_mem_neighborFinset_self Cᶜ v) (AVsubA a)
       simp_all only [not_false_eq_true, card_insert_of_not_mem, card_map, Aᵥ, AₘV]
@@ -299,7 +285,12 @@ theorem recRbound (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
 
     · -- if `Aₘ` is all blue and of size `n + 1`, we're done.
       rw [isNClique_iff, (card_map embedFinset).symm] at allBlue
-      refine ⟨AₘV, Or.inr ⟨induce_blue.mp allBlue.1, allBlue.2⟩⟩
+
+      have : C.IsClique AₘV := by
+        simp [AVe, coe_map]
+        exact C.induce_isClique allBlue.1
+
+      refine ⟨AₘV, Or.inr ⟨this, allBlue.2⟩⟩
 
 
 ----------------------------------------------------------------------------------------------------
@@ -343,7 +334,7 @@ lemma ramsey2 : ramseyProp m m 2 := by
     let all : Finset V := univ
     by_cases allRed : C.IsNIndependentSet m all
     · -- All edges are red, so we're done
-      exact Exists.intro all (Or.symm (Or.inr allRed))
+      exact ⟨all, (Or.symm (Or.inr allRed))⟩
     · -- There is a blue edge
       rw [isNIndependentSet_iff, isIndependentSet_iff, Set.Pairwise] at allRed
       rw [not_and_or, card_univ] at allRed
@@ -351,7 +342,7 @@ lemma ramsey2 : ramseyProp m m 2 := by
       obtain ⟨v, ⟨_, ⟨w, ⟨_, ⟨_, vwblue⟩⟩⟩⟩⟩ := allRed
       let s : Finset V := {v, w}
       have pairblue : C.IsNClique 2 s := by simp_all [isNClique_iff, s]
-      exact Exists.intro s (Or.symm (Or.inl pairblue))
+      exact ⟨s, (Or.symm (Or.inl pairblue))⟩
 
 -- That suffices as a base case for the existence proof.
 theorem ramseyExists {m n : ℕ} (leₘ : 2 ≤ m) (leₙ : 2 ≤ n) : (∃ N, ramseyProp N m n) := by
@@ -359,7 +350,7 @@ theorem ramseyExists {m n : ℕ} (leₘ : 2 ≤ m) (leₙ : 2 ≤ n) : (∃ N, r
   · exact ⟨m, ramsey2⟩
   · simp; exact ⟨n, ramsey2⟩
   · have := recRbound m n (zero_lt_of_lt leₘ) (zero_lt_of_lt leₙ) rₘ rₙ
-    exact Exists.intro (R m (n + 1) + R (m + 1) n) this
+    exact ⟨(R m (n + 1) + R (m + 1) n), this⟩
 
 
 -- The base case follows by proving `m` is minimal.
@@ -379,7 +370,7 @@ lemma R2 : R m 2 = m := by
 ----------------------------------------------------------------------------------------------------
 -- The binomial bounds
 
-theorem chooseRbound (m n : ℕ) (m1 : 2 ≤ m) (n1 : 2 ≤ n) : R m n ≤ choose (m + n - 2) (m - 1) := by
+theorem chooseRbound (m n : ℕ) (m1 : 2 ≤ m) (n1 : 2 ≤ n) : R m n ≤ (m + n - 2).choose (m - 1) := by
   -- we use the same induction principle as before.
   induction' m, n, m1, n1 using two_le_orth_induction with m rₘ n _ m n leₘ leₙ rₘ rₙ
   · simp [R2]
@@ -397,11 +388,11 @@ theorem chooseRbound (m n : ℕ) (m1 : 2 ≤ m) (n1 : 2 ≤ n) : R m n ≤ choos
                                                                ← Nat.add_sub_assoc (le_add_right_of_le leₘ)]
 
     calc R (m + 1) (n + 1) ≤ R m (n + 1) + R (m + 1) n                                     := by exact bound
-                         _ ≤ R m (n + 1)  + choose (m + 1 + n - 2) (m + 1 - 1)             := by simp; simp [RSymm] at rₘ; exact rₘ
-                         _ ≤ choose (m + (n + 1) - 2) (m - 1) + choose (m + 1 + n - 2) m   := by simp[rₙ]
-                         _ = choose (m + (n + 1) - 2) (m - 1) + choose (m + (n + 1) - 2) m := by simp[add_assoc, add_comm n 1]
-                         _ = choose (m + (n + 1) - 2 + 1) m                                := (choose_succ_left (m+(n+1)-2) m (zero_lt_of_lt leₘ)).symm
-                         _ = choose (m + 1 + (n + 1) - 2) (m + 1 - 1)                      := by simp only [this, add_tsub_cancel_right]
+                         _ ≤ R m (n + 1)  + (m + 1 + n - 2).choose (m + 1 - 1)             := by simp; simp [RSymm] at rₘ; exact rₘ
+                         _ ≤ (m + (n + 1) - 2).choose (m - 1) + (m + 1 + n - 2).choose m   := by simp[rₙ]
+                         _ = (m + (n + 1) - 2).choose (m - 1) + (m + (n + 1) - 2).choose m := by simp[add_assoc, add_comm n 1]
+                         _ = (m + (n + 1) - 2 + 1).choose m                                := (choose_succ_left (m+(n+1)-2) m (zero_lt_of_lt leₘ)).symm
+                         _ = (m + 1 + (n + 1) - 2).choose (m + 1 - 1)                      := by simp only [this, add_tsub_cancel_right]
 
 -- what other people call the ramsey number
 noncomputable abbrev Rr (k : ℕ) := R k k
@@ -414,7 +405,7 @@ lemma powRbound : Rr (k + 2) ≤ 2 ^ (2 * k + 1) := by
     · rw [add_assoc]; exact Nat.lt_add_of_pos_right (zero_lt_succ k)
 
   calc R (k+2) (k+2) ≤ (k + 2 + (k + 2) - 2).choose (k + 2 - 1)          := by exact (chooseRbound (k+2) (k+2) (le_add_left 2 k) (le_add_left 2 k))
-           _ = choose (2 * (k + 2) - 2) (k + 1)                          := by simp_all only [Nat.add_one_sub_one, ← two_mul]
+           _ = (2 * (k + 2) - 2).choose (k + 1)                          := by simp_all only [Nat.add_one_sub_one, ← two_mul]
            _ = (2 * k + 2 - 1).choose k + (2 * k + 2 - 1).choose (k + 1) := Nat.choose_succ_right (2 * k + 2) k (zero_lt_succ (2 * k + 1))
            _ = ∑ m ∈ {k, k + 1}, (2 * k + 1).choose m                    := (Finset.sum_pair (ne_add_one k)).symm
            _ ≤ ∑ m ∈ range ((2 * k + 1) + 1), (2 * k + 1).choose m       := sum_le_sum_of_subset this
