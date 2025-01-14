@@ -12,7 +12,6 @@ open SimpleGraph Finset Fintype Nat
 -- 8. Do we really need two base cases? Or is it just a matter of figuring out where to start?
 -- 10. Revisit subgraph embedding for the recursive bound
 -- 12. Possible notation: R(m,n) = R m n and G[S] = G.induce S
--- 14. Consistent .choose (and others) instead of choose
 
 ----------------------------------------------------------------------------------------------------
 -- Edge colorings
@@ -92,13 +91,13 @@ lemma clear (N s : ℕ) (h : N ≤ s) : ramseyProp N m n → ramseyProp s m n :=
   rw [← Wcard, ← Fintype.card_fin N] at h
 
   -- We consider the subgraph induced by embedding `K_N` into `K_s`, choosing some embedding.
-  let A : Finset W := Finset.map (Trunc.out (Function.Embedding.truncOfCardLE h)) Finset.univ
+  let A : Finset W := map (Trunc.out (Function.Embedding.truncOfCardLE h)) univ
   let C' := C.selfSubgraph.induce A.toSet
 
   -- Since `K_N` has the Ramsey property, we can find a monochromatic vertex subset in the incuded subgraph.
   have : A.card = N := by simp only [card_map, card_univ, Fintype.card_fin, A]
   have := ramN A (by simp [this, Fintype.card_coe])
-  obtain ⟨s, red_or_blue⟩ :=  @this C'.coe (Classical.decRel C'.coe.Adj)
+  obtain ⟨s, red_or_blue⟩ := @this C'.coe (Classical.decRel C'.coe.Adj)
 
   -- It remains to show that that subset is also monochromatic in the supergraph.
   rcases red_or_blue with ⟨scolor, scard⟩ | ⟨scolor, scard⟩ <;>
@@ -125,8 +124,7 @@ lemma clear (N s : ℕ) (h : N ≤ s) : ramseyProp N m n → ramseyProp s m n :=
     intro h v a b c
     rw [this]
     intro C d
-    simp_rw [← isNIndependentSet_iff_isNClique_of_complement]
-    simp_rw [isNIndependentSet_iff_isNClique_of_complement Cᶜ, compl_compl]
+    simp_rw [← isNIndependentSet_iff_isNClique_of_complement, isNIndependentSet_iff_isNClique_of_complement Cᶜ, compl_compl]
     exact (exists_congr (fun _ => Or.comm)).mp (h v c C)
   }
 
@@ -272,7 +270,7 @@ theorem recRbound (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
             allRed.1 wₐinAₘ uₐinAₘ (by intro a; subst a cu; exact unw rfl)
 
           simp only [Subgraph.coe_adj, Subgraph.induce_adj, Subtype.coe_prop, true_and] at this
-          exact fun a => this (adj_symm C a)
+          exact fun a => this (C.adj_symm a)
 
       -- It remains to show the size of `Aᵥ` is `m+1`.
       refine ⟨Aᵥ, (Or.inl ⟨cred, ?_⟩)⟩
