@@ -1,6 +1,7 @@
 import Mathlib.Combinatorics.SimpleGraph.Clique
 import TheBook.ToMathlib.IndependentSet
 import TheBook.ToMathlib.InducedClique
+import TheBook.ToMathlib.ChooseBound
 import Mathlib.Tactic.Linarith
 import Mathlib.Data.Nat.Choose.Sum
 
@@ -12,7 +13,6 @@ open SimpleGraph Finset Fintype Nat
 -- 10. Revisit subgraph embedding for the recursive bound
 -- 12. Possible notation: R(m,n) = R m n and G[S] = G.induce S
 -- 14. Consistent .choose (and others) instead of choose
--- 15. To mathlib (if it doesn't already exist): n.choose (k + 1) <= 2^(n - 1)
 
 ----------------------------------------------------------------------------------------------------
 -- Edge colorings
@@ -143,9 +143,7 @@ lemma Rpos (m n : ℕ) (mpos : 0 < m) (npos : 0 < n) (nen : {N | ramseyProp N m 
   simp_rw [ramseyProp, isNIndependentSet_iff, isNClique_iff] at this
   obtain ⟨s, p⟩ := this (Fin 0) rfl (⊥ : SimpleGraph (Fin 0))
   simp_rw [eq_zero_of_le_zero (card_finset_fin_le s)] at p
-  match p with
-  | Or.inl ⟨_, p⟩ => exact mpos.ne p
-  | Or.inr ⟨_, p⟩ => exact npos.ne p
+  cases p <;> simp_all
 
 ----------------------------------------------------------------------------------------------------
 -- the thing
@@ -334,7 +332,7 @@ lemma ramsey2 : ramseyProp m m 2 := by
     let all : Finset V := univ
     by_cases allRed : C.IsNIndependentSet m all
     · -- All edges are red, so we're done
-      exact ⟨all, (Or.symm (Or.inr allRed))⟩
+      exact ⟨all, (Or.inr allRed).symm⟩
     · -- There is a blue edge
       rw [isNIndependentSet_iff, isIndependentSet_iff, Set.Pairwise] at allRed
       rw [not_and_or, card_univ] at allRed
@@ -342,7 +340,7 @@ lemma ramsey2 : ramseyProp m m 2 := by
       obtain ⟨v, ⟨_, ⟨w, ⟨_, ⟨_, vwblue⟩⟩⟩⟩⟩ := allRed
       let s : Finset V := {v, w}
       have pairblue : C.IsNClique 2 s := by simp_all [isNClique_iff, s]
-      exact ⟨s, (Or.symm (Or.inl pairblue))⟩
+      exact ⟨s, (Or.inl pairblue).symm⟩
 
 -- That suffices as a base case for the existence proof.
 theorem ramseyExists {m n : ℕ} (leₘ : 2 ≤ m) (leₙ : 2 ≤ n) : (∃ N, ramseyProp N m n) := by
@@ -398,15 +396,6 @@ theorem chooseRbound (m n : ℕ) (m1 : 2 ≤ m) (n1 : 2 ≤ n) : R m n ≤ (m + 
 noncomputable abbrev Rr (k : ℕ) := R k k
 
 lemma powRbound : Rr (k + 2) ≤ 2 ^ (2 * k + 1) := by
-  have : {k, k + 1} ⊆ range (2 * k + 1 + 1) := by
-    rw [insert_subset_iff, singleton_subset_iff, two_mul]
-    simp; constructor
-    · rw [add_assoc]; rw [add_assoc]; exact Nat.lt_add_of_pos_right (zero_lt_succ (k + 1))
-    · rw [add_assoc]; exact Nat.lt_add_of_pos_right (zero_lt_succ k)
-
-  calc R (k+2) (k+2) ≤ (k + 2 + (k + 2) - 2).choose (k + 2 - 1)          := by exact (chooseRbound (k+2) (k+2) (le_add_left 2 k) (le_add_left 2 k))
-           _ = (2 * (k + 2) - 2).choose (k + 1)                          := by simp_all only [Nat.add_one_sub_one, ← two_mul]
-           _ = (2 * k + 2 - 1).choose k + (2 * k + 2 - 1).choose (k + 1) := Nat.choose_succ_right (2 * k + 2) k (zero_lt_succ (2 * k + 1))
-           _ = ∑ m ∈ {k, k + 1}, (2 * k + 1).choose m                    := (Finset.sum_pair (ne_add_one k)).symm
-           _ ≤ ∑ m ∈ range ((2 * k + 1) + 1), (2 * k + 1).choose m       := sum_le_sum_of_subset this
-           _ = 2 ^ (2 * k + 1)                                           := Nat.sum_range_choose _
+  calc R (k+2) (k+2) ≤ (k + 2 + (k + 2) - 2).choose (k + 2 - 1) := by exact (chooseRbound (k+2) (k+2) (le_add_left 2 k) (le_add_left 2 k))
+                   _ = (2 * (k + 2) - 2).choose (k + 1)         := by simp_all only [Nat.add_one_sub_one, ← two_mul]
+                   _ ≤ 2 ^ (2 * k + 1)                          := choose_succ_le_two_pow
