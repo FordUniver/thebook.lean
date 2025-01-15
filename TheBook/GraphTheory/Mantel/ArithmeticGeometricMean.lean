@@ -2,7 +2,6 @@ import Mathlib.Combinatorics.Enumerative.DoubleCounting
 import Mathlib.Data.Finset.Pairwise
 import Mathlib.Combinatorics.SimpleGraph.Clique
 import Mathlib.Analysis.MeanInequalities -- has am-gm
-import TheBook.ToMathlib.Nat_le
 
 namespace AMGMMantelTheorem
 
@@ -69,6 +68,8 @@ theorem mantel (h: G.CliqueFree 3) : #E ≤ n^2 / 4 := by
          _ ≤ (α + β)^2        := four_mul_le_pow_two_add _ _
          _ = n^2              := by simp only [hαβ, Nat.sub_add_cancel]
 
-  exact (Nat.le_div_iff_mul_le_comm Nat.ofNat_pos).mpr four_times_card_E_bd
+  rw [Nat.mul_comm] at four_times_card_E_bd
+
+  exact (Nat.le_div_iff_mul_le (Nat.zero_lt_succ 3)).mpr four_times_card_E_bd
 
 end AMGMMantelTheorem
