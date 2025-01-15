@@ -1,5 +1,4 @@
 import Mathlib.Combinatorics.SimpleGraph.Clique
-import TheBook.ToMathlib.IndependentSet
 import TheBook.ToMathlib.InducedClique
 import TheBook.ToMathlib.ChooseBound
 import Mathlib.Tactic.Linarith
@@ -33,7 +32,7 @@ open SimpleGraph Finset Fintype Nat
 --   simp_all only [ne_eq, not_false_eq_true, true_and, not_not]
 
 -- @[simp] lemma blue_compl (s : Finset V) (C : SimpleGraph V) : blue s Cᶜ ↔ red s C := by
---   simp[red, blue, isIndependentSet_iff_isClique_of_complement]
+--   simp[red, blue, isIndepSet_iff_isClique_of_complement]
 
 ----------------------------------------------------------------------------------------------------
 -- Definitions of Ramsey property and Ramsey Number
@@ -61,7 +60,7 @@ open SimpleGraph Finset Fintype Nat
 --    `n` vertices that are all adjacent (i.e. blue edges)."
 def ramseyProp (N m n : ℕ) := ∀ (V : Type) [Fintype V] [DecidableEq V] (_ : Fintype.card V = N),
     ∀ (C : SimpleGraph V) [DecidableRel C.Adj],
-    ∃ (s : Finset V), (C.IsNIndependentSet m s) ∨ (C.IsNClique n s)
+    ∃ (s : Finset V), (C.IsNIndepSet m s) ∨ (C.IsNClique n s)
 
 -- Straight from the book:
 --    "...we ask for the smallest number `N` (if it exists) with this property
@@ -74,10 +73,10 @@ noncomputable def R (m n : ℕ) : ℕ := sInf { N | ramseyProp N m n}
 -- edge colorings induced by vertex subsets
 
 -- The subgraph that is the entire graph
-abbrev SimpleGraph.selfSubgraph (G : SimpleGraph V) := SimpleGraph.toSubgraph G (fun ⦃_ _⦄ a => a)
+abbrev SimpleGraph.selfSubgraph {V : Type*} (G : SimpleGraph V) := SimpleGraph.toSubgraph G (fun ⦃_ _⦄ a => a)
 
 -- The subraph induced by a vertex subset
-abbrev inducedColoring (G : SimpleGraph V) (A : Finset V) := G.selfSubgraph.induce A.toSet
+abbrev inducedColoring {V : Type*} (G : SimpleGraph V) (A : Finset V) := G.selfSubgraph.induce A.toSet
 
 ----------------------------------------------------------------------------------------------------
 -- lemmata
@@ -85,7 +84,7 @@ abbrev inducedColoring (G : SimpleGraph V) (A : Finset V) := G.selfSubgraph.indu
 -- The book reads:
 --    "It is clear that if `K_N` has property `(m, n)`,
 --     then so does every `K_s` with `s ≥ N`."
-lemma clear (N s : ℕ) (h : N ≤ s) : ramseyProp N m n → ramseyProp s m n := by
+lemma clear {m n : ℕ} (N s : ℕ) (h : N ≤ s) : ramseyProp N m n → ramseyProp s m n := by
   intros ramN W _ _ Wcard C _
   rw [ramseyProp] at *
   rw [← Wcard, ← Fintype.card_fin N] at h
@@ -102,7 +101,7 @@ lemma clear (N s : ℕ) (h : N ≤ s) : ramseyProp N m n → ramseyProp s m n :=
   -- It remains to show that that subset is also monochromatic in the supergraph.
   rcases red_or_blue with ⟨scolor, scard⟩ | ⟨scolor, scard⟩ <;>
     use (Finset.map ⟨Subtype.val, Subtype.val_injective⟩ s)
-  all_goals simp [scard, isNClique_iff, isNIndependentSet_iff, Set.Pairwise] at scolor ⊢
+  all_goals simp [scard, isNClique_iff, isNIndepSet_iff, Set.Pairwise] at scolor ⊢
   left; swap; right
   all_goals {
     intros w winA insw v vinA insv vnw
@@ -113,7 +112,7 @@ lemma clear (N s : ℕ) (h : N ≤ s) : ramseyProp N m n → ramseyProp s m n :=
 -- We prove some properties of the Ramsey property that will come in handy:
 
 -- The Ramsey property is symmetric in `m` and `n`.
-@[simp] lemma ramseySymm : (ramseyProp N m n) ↔ (ramseyProp N n m) := by
+@[simp] lemma ramseySymm {N m n : ℕ} : (ramseyProp N m n) ↔ (ramseyProp N n m) := by
   have (V : Type) [dV : DecidableEq V] (p : SimpleGraph V → Prop) :
     (∀ (C : SimpleGraph V) [DecidableRel C.Adj], p C) ↔ ∀ (C : SimpleGraph V) [DecidableRel C.Adj], p Cᶜ :=
     ⟨fun a C d ↦ a Cᶜ, fun a C d ↦ by rw [← compl_compl C]; exact a Cᶜ⟩
@@ -124,7 +123,7 @@ lemma clear (N s : ℕ) (h : N ≤ s) : ramseyProp N m n → ramseyProp s m n :=
     intro h v a b c
     rw [this]
     intro C d
-    simp_rw [← isNIndependentSet_iff_isNClique_of_complement, isNIndependentSet_iff_isNClique_of_complement Cᶜ, compl_compl]
+    simp_rw [isNIndepSet_compl, ← isNIndepSet_compl Cᶜ, compl_compl]
     exact (exists_congr (fun _ => Or.comm)).mp (h v c C)
   }
 
@@ -138,10 +137,11 @@ lemma Rpos (m n : ℕ) (mpos : 0 < m) (npos : 0 < n) (nen : {N | ramseyProp N m 
   by_contra R0; push_neg at R0
   apply eq_zero_of_le_zero at R0
   have : ramseyProp 0 m n := by have := sInf_mem nen; rw [← R0]; exact this
-  simp_rw [ramseyProp, isNIndependentSet_iff, isNClique_iff] at this
+  simp_rw [ramseyProp, isNIndepSet_iff, isNClique_iff] at this
   obtain ⟨s, p⟩ := this (Fin 0) rfl (⊥ : SimpleGraph (Fin 0))
   simp_rw [eq_zero_of_le_zero (card_finset_fin_le s)] at p
   cases p <;> simp_all
+
 
 ----------------------------------------------------------------------------------------------------
 -- the thing
@@ -173,11 +173,11 @@ theorem recRbound (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
   --   by a red edge, and `B` the vertices joined by a blue edge."
   let v : V := nenV.some
   let A := Cᶜ.neighborFinset v
-  let B := C.neighborFinset v
 
   -- "We find that either `|A| ≥ R(m − 1, n)` or `|B| ≥ R(m, n − 1)`." (shift by 1, again)
   wlog RleA : R m (n + 1) ≤ #A with h
   · -- The case `|B| ≥ R m (n - 1)` is indeed analogous, but this is a bit involved to prove.
+    let B := C.neighborFinset v
     have RleB : R n (m + 1) ≤ #B := by
       have := Nat.eq_add_of_sub_eq (le_sub_one_of_lt (degree_lt_card_verts C v)) (degree_compl C v).symm
       have := calc (R m (n + 1) + R n (m + 1)) - 1
@@ -201,7 +201,7 @@ theorem recRbound (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
     simp only [forall_const, Nonempty.forall] at h
     obtain ⟨s, rs⟩ := h n m posₙ posₘ rₙ rₘ V cardV Cᶜ v RleB
 
-    simp_rw [← isNIndependentSet_iff_isNClique_of_complement, isNIndependentSet_iff_isNClique_of_complement Cᶜ, compl_compl] at rs
+    simp_rw [isNIndepSet_compl, ← isNIndepSet_compl Cᶜ, compl_compl] at rs
     exact ⟨s, rs.symm⟩
 
   · --"Suppose `|A| ≥ R(m − 1, n)`." (shifted by 1)
@@ -235,7 +235,7 @@ theorem recRbound (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
     -- `AₘV` has size `m` with all edges colored red, which together with `v` yields a red `K_(m+1)`
     -- `AₘV` has size `n + 1` with all edges colored blue
     cases' monochrom with allRed allBlue
-    · rw [isNIndependentSet_iff] at allRed
+    · rw [isNIndepSet_iff] at allRed
       -- case one: `Aₘ` is all red and of size `m`.
       -- the candidate set: `AₘV` together with `v`
       let Aᵥ := insert v AₘV
@@ -246,8 +246,8 @@ theorem recRbound (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
         · exact AVsubA xinAV
 
       -- It indeed describes an all-red subgraph of `C`:
-      have cred : C.IsIndependentSet Aᵥ := by
-        rw [isIndependentSet_iff, Set.Pairwise]
+      have cred : C.IsIndepSet Aᵥ := by
+        rw [isIndepSet_iff, Set.Pairwise]
         -- We show pairwise redness of some `u, w ∈ Aᵥ`.
         intro u uinAᵥ w winAᵥ unw
 
@@ -325,14 +325,14 @@ lemma two_le_orth_induction {P : ∀ m n, 2 ≤ m → 2 ≤ n → Prop}
 -- so we also need to know the values of `R(m, 1)` and `R(1, n)`.
 
 -- We prove that `K_m` has the `(m, 2)` Ramsey property.
-lemma ramsey2 : ramseyProp m m 2 := by
+lemma ramsey2 {m : ℕ} : ramseyProp m m 2 := by
     intro V finV decV cardV C _
     let all : Finset V := univ
-    by_cases allRed : C.IsNIndependentSet m all
+    by_cases allRed : C.IsNIndepSet m all
     · -- All edges are red, so we're done
       exact ⟨all, (Or.inr allRed).symm⟩
     · -- There is a blue edge
-      rw [isNIndependentSet_iff, isIndependentSet_iff, Set.Pairwise] at allRed
+      rw [isNIndepSet_iff, isIndepSet_iff, Set.Pairwise] at allRed
       rw [not_and_or, card_univ] at allRed
       simp [cardV] at allRed
       obtain ⟨v, ⟨_, ⟨w, ⟨_, ⟨_, vwblue⟩⟩⟩⟩⟩ := allRed
@@ -350,7 +350,7 @@ theorem ramseyExists {m n : ℕ} (leₘ : 2 ≤ m) (leₙ : 2 ≤ n) : (∃ N, r
 
 
 -- The base case follows by proving `m` is minimal.
-lemma R2 : R m 2 = m := by
+lemma R2 {m : ℕ} : R m 2 = m := by
   have m_le_N (N : ℕ) (ram : ramseyProp N m 2) : m ≤ N := by
     obtain ⟨s, h⟩ := ram (Fin N) (Fintype.card_fin N) ⊥
     have : ¬ (IsNClique ⊥ 2 s) := by
@@ -393,7 +393,7 @@ theorem chooseRbound (m n : ℕ) (m1 : 2 ≤ m) (n1 : 2 ≤ n) : R m n ≤ (m + 
 -- what other people call the ramsey number
 noncomputable abbrev Rr (k : ℕ) := R k k
 
-lemma powRbound : Rr (k + 2) ≤ 2 ^ (2 * k + 1) := by
+lemma powRbound {k : ℕ} : Rr (k + 2) ≤ 2 ^ (2 * k + 1) := by
   calc R (k+2) (k+2) ≤ (k + 2 + (k + 2) - 2).choose (k + 2 - 1) := by exact (chooseRbound (k+2) (k+2) (le_add_left 2 k) (le_add_left 2 k))
                    _ = (2 * (k + 2) - 2).choose (k + 1)         := by simp_all only [Nat.add_one_sub_one, ← two_mul]
                    _ ≤ 2 ^ (2 * k + 1)                          := choose_succ_le_two_pow

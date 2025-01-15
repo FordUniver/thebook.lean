@@ -1,6 +1,5 @@
 import Mathlib.Algebra.BigOperators.Fin
 import Mathlib.Data.Nat.Prime.Basic
-import Mathlib.Data.Set.Finite
 
 open BigOperators
 

@@ -1,6 +1,5 @@
 import Mathlib.Data.Nat.Prime.Defs
 import Mathlib.Data.Nat.Prime.Factorial
-import Mathlib.Data.Set.Finite
 import Mathlib.Data.ZMod.Basic
 import Mathlib.FieldTheory.Finite.Basic
 
