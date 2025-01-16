@@ -8,17 +8,16 @@ import TheBook.ToMathlib.ChooseBound
 open SimpleGraph Finset Fintype Nat
 
 -- The subgraph that is the entire graph
-abbrev SimpleGraph.selfSubgraph {V : Type*} (G : SimpleGraph V) := SimpleGraph.toSubgraph G (fun ⦃_ _⦄ a => a)
+abbrev SimpleGraph.selfSubgraph {V : Type*} (G : SimpleGraph V) : Subgraph G :=
+  SimpleGraph.toSubgraph G (fun ⦃_ _⦄ a => a)
 
 -- The subgraph induced by a vertex subset
-notation:max G "[" A "]" => SimpleGraph.selfSubgraph.induce G (Finset.toSet A)
-
+notation:max G "[" A "]" => SimpleGraph.Subgraph.induce (SimpleGraph.selfSubgraph G) (Finset.toSet A)
 
 -- TODOS
 -- 5. Change red and blue to notation?
 -- 8. Do we really need two base cases? Or is it just a matter of figuring out where to start?
 -- 10. Revisit subgraph embedding for the recursive bound
--- 12. Possible notation: R(m,n) = R m n and G[S] = G.induce S
 
 ----------------------------------------------------------------------------------------------------
 -- Edge colorings
@@ -86,56 +85,45 @@ notation:max "R(" n ")" => R n n
 -- The book reads:
 --    "It is clear that if `K_N` has property `(m, n)`,
 --     then so does every `K_s` with `s ≥ N`."
--- TODO: move implication to assumption
-lemma ramseyProp_mono {m n : ℕ} (N s : ℕ) (h : N ≤ s) : ramseyProp N m n → ramseyProp s m n := by
-  intros ramseyProp_N W _ _ Wcard C _
+lemma ramseyProp_mono {m n : ℕ} (N s : ℕ) (h : N ≤ s) (ramseyProp_N : ramseyProp N m n) : ramseyProp s m n := by
+  intros W _ _ Wcard C _
   rw [ramseyProp] at *
   rw [← Wcard, ← Fintype.card_fin N] at h
 
-  -- We consider the subgraph induced by embedding `K_N` into `K_s`, choosing some embedding.
+  -- We consider the subgraph induced by embedding `K_N` into `K_s`.
   obtain ⟨A, A_subset, A_card⟩ := exists_subset_card_eq h
-  -- let A : Finset W := map (Trunc.out (Function.Embedding.truncOfCardLE h)) univ
 
-  let C' := C.selfSubgraph.induce A.toSet -- TODO: change to `C[A]`?
+  let C' := C[A]
 
-  -- Since `K_N` has the Ramsey property, we can find a monochromatic vertex subset in the incuded subgraph.
-  -- have : A.card = N := by simp only [card_map, card_univ, Fintype.card_fin, A]
+  -- Since `K_N` has the Ramsey property, we can find a monochromatic vertex subset `s` in the incuded subgraph.
   have := ramseyProp_N A (by simp [A_card, Fintype.card_coe])
-
   obtain ⟨s, red_or_blue⟩ := @this C'.coe (Classical.decRel C'.coe.Adj)
 
-  -- s_in_W as a subset of vertices of C
-  -- relations from s_in_W in C are same as relations from s in C
-  -- therefore s_in_W is monochromatic in C
+  -- consider s as a Finset of W (the vertices of C)
+  use map ⟨Subtype.val, Subtype.val_injective⟩ s
 
-  -- It remains to show that that subset is also monochromatic in the supergraph.
-  rcases red_or_blue with ⟨scolor, scard⟩ | ⟨scolor, scard⟩ <;>
-    use (Finset.map ⟨Subtype.val, Subtype.val_injective⟩ s)
-  all_goals simp [scard, isNClique_iff, isNIndepSet_iff, Set.Pairwise] at scolor ⊢
-  left; swap; right
-  all_goals {
-    intros w w_elem_A insw v v_elem_A insv vnw
-    have := scolor w w_elem_A insw _ _ insv vnw
-    first | exact C'.adj_sub this | unfold C' at this; simp [C'.induce_adj] at this; exact this w_elem_A v_elem_A
-  }
+  -- cliques and independent in the induced subgraph are also such in the supergraph.
+  exact Or.imp (induce_isNIndepSet C).mp (induce_isNClique C) red_or_blue
+
 
 -- We prove some properties of the Ramsey property that will come in handy:
 
 -- The Ramsey property is symmetric in `m` and `n`.
-lemma ramseyProp_symm (N m n : ℕ) (h : ramseyProp N m n) : (ramseyProp N n m) := by
+lemma ramseyProp_symm (m n N : ℕ) (h : ramseyProp N m n) : (ramseyProp N n m) := by
   intro W _ _ Wcard C _
   rw [ramseyProp] at h
   obtain ⟨s, red_or_blue⟩ := h W Wcard Cᶜ
   cases' red_or_blue with c₁ c₂
   · exact ⟨s, Or.inr ((isNIndepSet_compl C).mp c₁)⟩
-  · exact ⟨s, (Or.inr ((isNClique_compl C).mp c₂)).symm⟩ 
+  · exact ⟨s, (Or.inr ((isNClique_compl C).mp c₂)).symm⟩
 
 -- The Ramsey number is also symmetric.
-lemma R_symm {m n : ℕ} : R(m,n) = R(n,m) := by simp [R] -- TODO check again
+lemma R_symm {m n : ℕ} : R(m,n) = R(n,m) := by
+  have {N : ℕ} : (ramseyProp N m n) ↔ (ramseyProp N n m) := ⟨ramseyProp_symm m n N, ramseyProp_symm n m N⟩
+  simp [R, this]
 
 -- The Ramsey number, if it exists, is positive if both `m` and `n` are positive.
--- TODO: change .Nonempty to ∃...
-lemma R_pos (m n : ℕ) (mpos : 0 < m) (npos : 0 < n) (nen : {N | ramseyProp N m n}.Nonempty) :
+lemma R_pos (m n : ℕ) (mpos : 0 < m) (npos : 0 < n) (nen : ∃ N, ramseyProp N m n) :
     0 < R(m, n) := by
   simp_rw [R]
   by_contra R0; push_neg at R0
@@ -190,7 +178,7 @@ theorem R_bounded_recursive (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
       exact le_of_add_le_add_left (le_of_pred_lt this)
 
     -- We reduce this case to symmetry, so we apply the appropriate rewrites.
-    have ex m n := Exists.imp (fun N => ramseyProp_symm N m n)
+    have ex m n := Exists.imp (fun N => ramseyProp_symm m n N)
     apply ex at rₘ; apply ex at rₙ
     rw [Neq, @R_symm m, @R_symm (m + 1), add_comm] at cardV
 
@@ -223,7 +211,7 @@ theorem R_bounded_recursive (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
     let ramsey_inducedA := ramseyProp_mono (R(m, n + 1)) #A R_le_cardA (sInf_mem rₙ) A (card_coe A)
 
     -- Hence, there exists a monochromatic subset of `A`. We call it `Aₘ`.
-    let ⟨Aₘ, monochrom⟩ := @ramsey_inducedA (C[A]).coe (Classical.decRel (C[A]).coe.Adj)
+    let ⟨Aₘ, monochrom⟩ := @ramsey_inducedA C[A].coe (Classical.decRel C[A].coe.Adj)
 
     -- `Aₘ` is a subset of the induced graph's vertices `A`, so it's a Finset `{ x // x ∈ A }`.
     -- We need to embed it into `V` to talk about corresponding vertices in the big graph `C`
@@ -293,30 +281,6 @@ theorem R_bounded_recursive (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
       refine ⟨AₘV, Or.inr ⟨this, all_blue.2⟩⟩
 
 
-----------------------------------------------------------------------------------------------------
--- my induction principle
--- we recurse on a binary predicate `P : (m n : ℕ) → 2 ≤ m → 2 ≤ n → Prop`
--- with fixed lower bounds `2` on `m` and `2` on `n`
--- we have two base cases `∀ n, P 2 n` and `∀ m, P m 2`
--- the inductive step goes from `P (m+1) n` and ` P m (n+1)` to `P (m + 1) (n + 1)`
-lemma two_le_orth_induction {P : ∀ m n, 2 ≤ m → 2 ≤ n → Prop}
-    (baseₙ : ∀ m leₘ,       P m 2 leₘ (AtLeastTwo.prop))
-    (baseₘ : ∀ n leₙ,       P 2 n (AtLeastTwo.prop) leₙ)
-    (succ  : ∀ m n leₘ leₙ, P (m + 1) n (le_succ_of_le leₘ) leₙ →
-                            P m (n + 1) leₘ (le_succ_of_le leₙ) →
-                            P (m + 1) (n + 1) (le_succ_of_le leₘ) (le_succ_of_le leₙ)) :
-    ∀ m n leₘ leₙ, P m n leₘ leₙ
-    | 0, _, le₀, _                   => (two_ne_zero (eq_zero_of_le_zero le₀)).elim
-    | _, 0, _, le₀                   => (two_ne_zero (eq_zero_of_le_zero le₀)).elim
-    | m + 1, n + 1, le_sucₘ, le_sucₙ => by
-        cases' le_sucₘ with _ leₘ
-        · exact (baseₘ _ _)
-        · cases' le_sucₙ with _ leₙ
-          · exact (baseₙ _ _)
-          · have Pₘ := two_le_orth_induction baseₙ baseₘ succ (m + 1) n (le_succ_of_le leₘ) leₙ
-            have Pₙ := two_le_orth_induction baseₙ baseₘ succ m (n + 1) leₘ (le_succ_of_le leₙ)
-            exact (succ m n _ _ Pₘ Pₙ)
-
 
 ----------------------------------------------------------------------------------------------------
 -- Base case proofs
@@ -351,8 +315,54 @@ lemma ind_start_R_two {m : ℕ} : R(m, 2) = m := by
     exact (card_finset_fin_le s)
   exact le_antisymm (Nat.sInf_le ramseyProp_two) (le_csInf ⟨m, ramseyProp_two⟩ m_le_N)
 
--- By symmetry, we have `R(2,n) = n`. -- if not part of the induction, than maybe just its own lemma?
+-- "By symmetry, we have `R(2,n) = n`."
+-- TODO if we do symmety inside the induction, we don't need this
+lemma ind_start_two_R {m : ℕ} : R(2, m) = m := by
+  simp[R_symm]; exact ind_start_R_two
 
+----------------------------------------------------------------------------------------------------
+-- my induction principle
+-- we recurse on a binary predicate `P : (m n : ℕ) → 2 ≤ m → 2 ≤ n → Prop`
+-- with fixed lower bounds `2` on `m` and `2` on `n`
+-- we have two base cases `∀ n, P 2 n` and `∀ m, P m 2`
+-- the inductive step goes from `P (m+1) n` and ` P m (n+1)` to `P (m + 1) (n + 1)`
+lemma two_le_orth_induction {P : ∀ m n, 2 ≤ m → 2 ≤ n → Prop}
+    (baseₙ : ∀ m leₘ,       P m 2 leₘ (AtLeastTwo.prop))
+    (baseₘ : ∀ n leₙ,       P 2 n (AtLeastTwo.prop) leₙ)
+    (succ  : ∀ m n leₘ leₙ, P (m + 1) n (le_succ_of_le leₘ) leₙ →
+                            P m (n + 1) leₘ (le_succ_of_le leₙ) →
+                            P (m + 1) (n + 1) (le_succ_of_le leₘ) (le_succ_of_le leₙ)) :
+    ∀ m n leₘ leₙ, P m n leₘ leₙ
+    | 0, _, le₀, _                   => (two_ne_zero (eq_zero_of_le_zero le₀)).elim
+    | _, 0, _, le₀                   => (two_ne_zero (eq_zero_of_le_zero le₀)).elim
+    | m + 1, n + 1, le_sucₘ, le_sucₙ => by
+        cases' le_sucₘ with _ leₘ
+        · exact (baseₘ _ _)
+        · cases' le_sucₙ with _ leₙ
+          · exact (baseₙ _ _)
+          · have Pₘ := two_le_orth_induction baseₙ baseₘ succ (m + 1) n (le_succ_of_le leₘ) leₙ
+            have Pₙ := two_le_orth_induction baseₙ baseₘ succ m (n + 1) leₘ (le_succ_of_le leₙ)
+            exact (succ m n _ _ Pₘ Pₙ)
+
+-- induction principle with symmetry.
+lemma two_le_symm_orth_induction {P : ∀ m n, 2 ≤ m → 2 ≤ n → Prop}
+    (base : ∀ m leₘ,       P m 2 leₘ (AtLeastTwo.prop))
+    (symm : ∀ {m n leₘ leₙ}, P m n leₘ leₙ → P n m leₙ leₘ)
+    (succ  : ∀ m n leₘ leₙ, P (m + 1) n (le_succ_of_le leₘ) leₙ →
+                            P m (n + 1) leₘ (le_succ_of_le leₙ) →
+                            P (m + 1) (n + 1) (le_succ_of_le leₘ) (le_succ_of_le leₙ))
+    :
+    ∀ m n leₘ leₙ, P m n leₘ leₙ
+    | 0, _, le₀, _                   => (two_ne_zero (eq_zero_of_le_zero le₀)).elim
+    | _, 0, _, le₀                   => (two_ne_zero (eq_zero_of_le_zero le₀)).elim
+    | m + 1, n + 1, le_sucₘ, le_sucₙ => by
+        cases' le_sucₘ with _ leₘ
+        · exact (symm (base _ _))
+        · cases' le_sucₙ with _ leₙ
+          · exact (base _ _)
+          · have Pₘ := two_le_symm_orth_induction base symm succ  (m + 1) n (le_succ_of_le leₘ) leₙ
+            have Pₙ := two_le_symm_orth_induction base symm succ  m (n + 1) leₘ (le_succ_of_le leₙ)
+            exact (succ m n _ _ Pₘ Pₙ)
 
 
 ----------------------------------------------------------------------------------------------------
@@ -363,13 +373,13 @@ lemma ind_start_R_two {m : ℕ} : R(m, 2) = m := by
 
 -- That suffices as a base case for the existence proof.
 theorem exists_N_ramseyProp {m n : ℕ} (leₘ : 2 ≤ m) (leₙ : 2 ≤ n) : (∃ N, ramseyProp N m n) := by
-  induction' m, n, leₘ, leₙ using two_le_orth_induction with m _ n _ m n leₘ leₙ rₘ rₙ
+  induction' m, n, leₘ, leₙ using two_le_symm_orth_induction with m _ n _ _ _ rₛ m n leₘ leₙ rₘ rₙ
   · exact ⟨m, ramseyProp_two⟩
-  · simp; exact ⟨n, ramseyProp_two⟩
+  · exact Exists.imp (ramseyProp_symm _ _) rₛ
   · have := R_bounded_recursive m n (zero_lt_of_lt leₘ) (zero_lt_of_lt leₙ) rₘ rₙ
     exact ⟨R(m, n + 1) + R(m + 1, n), this⟩
 
--- Combining (1) with the starting values `R(m, 2) = m` and `R(2, n) = n`, we obtain from the 
+-- Combining (1) with the starting values `R(m, 2) = m` and `R(2, n) = n`, we obtain from the
 -- familiar recursion for binomial coefficients `R(m, n) ≤ (m + n - 2).choose (m - 1)`.
 
 theorem R_le_choose {m n : ℕ} (m1 : 2 ≤ m) (n1 : 2 ≤ n) : R(m, n) ≤ (m + n - 2).choose (m - 1) := by
@@ -377,7 +387,7 @@ theorem R_le_choose {m n : ℕ} (m1 : 2 ≤ m) (n1 : 2 ≤ n) : R(m, n) ≤ (m +
   induction' m, n, m1, n1 using two_le_orth_induction with m rₘ n _ m n leₘ leₙ ind_assump_rₘ ind_assump_rₙ
   · have := Nat.le_of_eq (choose_succ_left m m (zero_lt_of_lt rₘ))
     simp_all [ind_start_R_two]
-  · simp [ind_start_R_two]
+  · simp_all [ind_start_two_R]
   · -- The actual bound from the book.
     have Rm_ex : ∃ N, ramseyProp N m (n + 1) := exists_N_ramseyProp leₘ (le_add_right_of_le leₙ)
     have Rn_ex : ∃ N, ramseyProp N (m + 1) n := exists_N_ramseyProp (le_add_right_of_le leₘ) leₙ
@@ -387,7 +397,7 @@ theorem R_le_choose {m n : ℕ} (m1 : 2 ≤ m) (n1 : 2 ≤ n) : R(m, n) ≤ (m +
       _ ≤ R(m, n + 1) + R(m + 1, n)                                     := Nat.sInf_le N_has_ramseyProp
       _ ≤ R(m, n + 1)  + (m + 1 + n - 2).choose (m + 1 - 1)             := by simp_all [R_symm, ind_assump_rₘ] -- move to its own step?
       _ ≤ (m + (n + 1) - 2).choose (m - 1) + (m + 1 + n - 2).choose m   := by simp [ind_assump_rₙ]
-      _ = (m + (n + 1) - 2).choose (m - 1) + (m + (n + 1) - 2).choose m := by simp [add_assoc, add_comm n 1] -- simplify? 
+      _ = (m + (n + 1) - 2).choose (m - 1) + (m + (n + 1) - 2).choose m := by simp [add_assoc, add_comm n 1] -- simplify?
       _ = (m + (n + 1) - 2 + 1).choose m                                := (choose_succ_left (m+(n+1)-2) m (zero_lt_of_lt leₘ)).symm  -- simplify?
       _ = (m + 1 + (n + 1) - 2).choose m                                := by rw [add_comm, add_comm m 1, add_assoc, ← Nat.add_sub_assoc (le_add_right_of_le leₘ)]  -- simplify?
 
