@@ -19,12 +19,12 @@ simp_all [isNClique_iff]
 exact induce_isClique G cc.left
 
 theorem induce_isIndepSet_iff {F : Set α} {A : Set F} :
-      (((SimpleGraph.toSubgraph G (fun ⦃_ _⦄ a => a)).induce F).coe.IsIndepSet A) ↔
+      (((⊤ : G.Subgraph).induce F).coe.IsIndepSet A) ↔
     G.IsIndepSet (Subtype.val '' A) := by
   simp_all [Set.Pairwise]
 
 theorem induce_isNIndepSet {F : Set α} {s : Finset { x // x ∈ F }} {n : ℕ} :
-    ( ((SimpleGraph.toSubgraph G (fun ⦃_ _⦄ a => a)).induce F).coe.IsNIndepSet n ↑s) ↔
+    ( ((⊤ : G.Subgraph).induce F).coe.IsNIndepSet n ↑s) ↔
     G.IsNIndepSet n (Finset.map ⟨Subtype.val, Subtype.val_injective⟩ s) := by
   simp [isNIndepSet_iff]
   intro

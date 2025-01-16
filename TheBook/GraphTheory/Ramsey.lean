@@ -7,19 +7,12 @@ import TheBook.ToMathlib.ChooseBound
 
 open SimpleGraph Finset Fintype Nat
 
--- The subgraph that is the entire graph
-abbrev SimpleGraph.selfSubgraph {V : Type*} (G : SimpleGraph V) : Subgraph G :=
-  SimpleGraph.toSubgraph G (fun ⦃_ _⦄ a => a)
-
 -- The subgraph induced by a vertex subset
-notation:max G "[" A "]" => SimpleGraph.Subgraph.induce (SimpleGraph.selfSubgraph G) (Finset.toSet A)
+notation:max G "[" A "]" => SimpleGraph.Subgraph.induce (⊤ : SimpleGraph.Subgraph G) (Finset.toSet A)
 
 -- TODOS
 -- 5. Change red and blue to notation?
--- 8. Do we really need two base cases? Or is it just a matter of figuring out where to start?
--- 10. Revisit subgraph embedding for the recursive bound
 
-----------------------------------------------------------------------------------------------------
 -- Edge colorings
 -- Because we are lucky, we only talk about two-colorings of the complete graph here.
 -- Those can be represented as graphs on the vertex set, where we consider the edge `(v, w)`
@@ -65,8 +58,9 @@ notation:max G "[" A "]" => SimpleGraph.Subgraph.induce (SimpleGraph.selfSubgrap
 --    "...no matter which graph on `N` vertices we chose, there is always a
 --    set of `m` vertices that are all non-adjacent (i.e. red edges) or a set of
 --    `n` vertices that are all adjacent (i.e. blue edges)."
-def ramseyProp (N m n : ℕ) := ∀ (V : Type) [Fintype V] [DecidableEq V] (_ : Fintype.card V = N),
-    ∀ (C : SimpleGraph V) [DecidableRel C.Adj],
+def ramseyProp (N m n : ℕ) :=
+    ∀ (V : Type) [Fintype V] [DecidableEq V] (_ : Fintype.card V = N)
+      (C : SimpleGraph V) [DecidableRel C.Adj],
     ∃ (s : Finset V), (C.IsNIndepSet m s) ∨ (C.IsNClique n s)
 
 -- Straight from the book:
@@ -79,12 +73,7 @@ noncomputable def R (m n : ℕ) : ℕ := sInf { N | ramseyProp N m n}
 notation:max "R(" m "," n ")" => R m n
 notation:max "R(" n ")" => R n n
 
-----------------------------------------------------------------------------------------------------
--- lemmata
-
--- The book reads:
---    "It is clear that if `K_N` has property `(m, n)`,
---     then so does every `K_s` with `s ≥ N`."
+-- "It is clear that if `K_N` has property `(m, n)`, then so does every `K_s` with `s ≥ N`."
 lemma ramseyProp_mono {m n : ℕ} (N s : ℕ) (h : N ≤ s) (ramseyProp_N : ramseyProp N m n) : ramseyProp s m n := by
   intros W _ _ Wcard C _
   rw [ramseyProp] at *
@@ -92,11 +81,10 @@ lemma ramseyProp_mono {m n : ℕ} (N s : ℕ) (h : N ≤ s) (ramseyProp_N : rams
 
   -- We consider the subgraph induced by embedding `K_N` into `K_s`.
   obtain ⟨A, A_subset, A_card⟩ := exists_subset_card_eq h
-
   let C' := C[A]
 
   -- Since `K_N` has the Ramsey property, we can find a monochromatic vertex subset `s` in the incuded subgraph.
-  have := ramseyProp_N A (by simp [A_card, Fintype.card_coe])
+  have := ramseyProp_N A (by simp [A_card])
   obtain ⟨s, red_or_blue⟩ := @this C'.coe (Classical.decRel C'.coe.Adj)
 
   -- consider s as a Finset of W (the vertices of C)
@@ -104,7 +92,6 @@ lemma ramseyProp_mono {m n : ℕ} (N s : ℕ) (h : N ≤ s) (ramseyProp_N : rams
 
   -- cliques and independent in the induced subgraph are also such in the supergraph.
   exact Or.imp (induce_isNIndepSet C).mp (induce_isNClique C) red_or_blue
-
 
 -- We prove some properties of the Ramsey property that will come in handy:
 
@@ -123,12 +110,10 @@ lemma R_symm {m n : ℕ} : R(m,n) = R(n,m) := by
   simp [R, this]
 
 -- The Ramsey number, if it exists, is positive if both `m` and `n` are positive.
-lemma R_pos (m n : ℕ) (mpos : 0 < m) (npos : 0 < n) (nen : ∃ N, ramseyProp N m n) :
-    0 < R(m, n) := by
-  simp_rw [R]
+lemma R_pos (m n : ℕ) (_ : 0 < m) (_ : 0 < n) (h : ∃ N, ramseyProp N m n) : 0 < R(m, n) := by
   by_contra R0; push_neg at R0
   apply eq_zero_of_le_zero at R0
-  have : ramseyProp 0 m n := by have := sInf_mem nen; rw [← R0]; exact this
+  have : ramseyProp 0 m n := R0 ▸ (sInf_mem h)
   simp_rw [ramseyProp, isNIndepSet_iff, isNClique_iff] at this
   obtain ⟨s, p⟩ := this (Fin 0) rfl (⊥ : SimpleGraph (Fin 0))
   simp_rw [eq_zero_of_le_zero (card_finset_fin_le s)] at p
@@ -150,6 +135,7 @@ theorem R_bounded_recursive (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
     (rₘ : ∃ N, ramseyProp N (m + 1) n)
     (rₙ : ∃ N, ramseyProp N m (n + 1)) :
     ramseyProp (R(m, n + 1) + R(m + 1, n)) (m + 1) (n + 1) := by
+    
   -- "Suppose `N = R(m − 1, n) + R(m, n − 1)`...", but shift by 1
   set N := R(m, n + 1) + R(m + 1, n) with Neq
 
