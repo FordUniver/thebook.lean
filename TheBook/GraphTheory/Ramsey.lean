@@ -8,7 +8,7 @@ import TheBook.ToMathlib.ChooseBound
 open SimpleGraph Finset Fintype Nat
 
 -- The subgraph induced by a vertex subset
-notation:max G "[" A "]" => SimpleGraph.Subgraph.induce (⊤ : SimpleGraph.Subgraph G) (Finset.toSet A)
+notation:max G "[" A "]" => SimpleGraph.Subgraph.induce (⊤ : Subgraph G) (Finset.toSet A)
 
 -- TODOS
 -- 5. Change red and blue to notation?
@@ -18,21 +18,6 @@ notation:max G "[" A "]" => SimpleGraph.Subgraph.induce (⊤ : SimpleGraph.Subgr
 -- Those can be represented as graphs on the vertex set, where we consider the edge `(v, w)`
 -- to be colored red if they are nonadjacent in the representing graph, and to be colored
 -- blue if they are adjacent.
-
--- variable (C : SimpleGraph V)
-
--- local notation "red(" s ", " t ")" => ¬ C.Adj s t
--- local notation "blue(" s ", " t ")" => C.Adj s t
-
--- def red (s : Finset V) (C : SimpleGraph V) := (s.toSet).Pairwise (fun v w => red(v, w))
--- def blue (s : Finset V) (C : SimpleGraph V) := (s.toSet).Pairwise C.Adj
-
--- @[simp] lemma red_compl (s : Finset V) (C : SimpleGraph V) : red s Cᶜ ↔ blue s C := by
---   simp_rw [red, blue, compl_adj, Set.Pairwise]
---   simp_all only [ne_eq, not_false_eq_true, true_and, not_not]
-
--- @[simp] lemma blue_compl (s : Finset V) (C : SimpleGraph V) : blue s Cᶜ ↔ red s C := by
---   simp[red, blue, isIndepSet_iff_isClique_of_complement]
 
 ----------------------------------------------------------------------------------------------------
 -- Definitions of Ramsey property and Ramsey Number
@@ -135,7 +120,6 @@ theorem R_bounded_recursive (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
     (rₘ : ∃ N, ramseyProp N (m + 1) n)
     (rₙ : ∃ N, ramseyProp N m (n + 1)) :
     ramseyProp (R(m, n + 1) + R(m + 1, n)) (m + 1) (n + 1) := by
-    
   -- "Suppose `N = R(m − 1, n) + R(m, n − 1)`...", but shift by 1
   set N := R(m, n + 1) + R(m + 1, n) with Neq
 
