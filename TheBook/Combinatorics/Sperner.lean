@@ -25,32 +25,60 @@ import Mathlib.Order.Antichain
 import Mathlib.Order.Chain
 
 
-example (n : Nat) : Nat.choose n 2 = n * (n - 1) / 2 := by
-  induction' n with n ih
-  · simp
-  · rw [Nat.triangle_succ n]
-    rw [Nat.choose, ih]
-    simp [Nat.add_comm]
-
 /-!
 # Proof of the LYM inequality and some observations on chains wrt the subset order
 -/
 
 open Function Finset Nat Set BigOperators
 
-variable {α : Type*} {n m : ℕ} {𝒜 : Finset (Finset α)} {𝒞 : Set (Finset α)}
+variable {α : Type*} {n m : ℕ} {𝒜 : Finset (Finset α)}
 
 namespace Finset
 
+/-
+## Proposals for new definitions of chains in Finset namespace
+-/
+
+variable {β : Type*} (r : β → β → Prop)
+
+/-- In this file, we use `≺` as a local notation for any relation `r`. -/
+local infixl:50 " ≺ " => r
+
+def IsChain (s : Finset β) : Prop :=
+  s.toSet.Pairwise fun x y => x ≺ y ∨ y ≺ x
+
+/-- `SuperChain s t` means that `t` is a chain that strictly includes `s`. -/
+def SuperChain (s t : Finset β) : Prop :=
+  IsChain r t ∧ s ⊂ t
+
+/-- A chain `s` is a maximal chain if there does not exists a chain strictly including `s`. -/
+def IsMaxChain (s :  Finset β) : Prop :=
+  IsChain r s ∧ ∀ ⦃t⦄, IsChain r t → s ⊆ t → s = t
+
+def IsAntichain (r : α → α → Prop) (s : Finset α) : Prop :=
+  s.toSet.Pairwise rᶜ
+
+end Finset
+
+instance : Coe (IsChain (· ⊂ ·) 𝒜.toSet) (𝒜.IsChain (· ⊂ ·)) :=
+  ⟨λ h => h⟩
+
+instance : Coe (𝒜.IsChain (· ⊂ ·)) (IsChain (· ⊂ ·) 𝒜.toSet) :=
+  ⟨λ h => h⟩
+
+example (h : IsChain (· ⊂ ·) 𝒜.toSet) : 𝒜.IsChain (· ⊂ ·) := h
+example (h : 𝒜.IsChain (· ⊂ ·)) : IsChain (· ⊂ ·) 𝒜.toSet := h
+
+namespace Finset
 
 structure MaxChainThrough (ℬ : Finset (Finset α)) where
   𝒜 : Finset (Finset α)
-  isMaxChain : IsMaxChain (· ⊂ ·) (𝒜 : Set (Finset α))
+  isMaxChain : Finset.IsMaxChain (· ⊂ ·) 𝒜
   subChain : ℬ ⊆ 𝒜
 
 instance instFintypeMaxChainThrough {ℬ : Finset (Finset α)} : Fintype (MaxChainThrough ℬ) := by sorry
 
-lemma IsChain.equivalence_subset_relations : (IsChain (· ⊆ .) 𝒞) ↔ (IsChain (· ⊂ .) 𝒞) := by
+lemma IsChain.equivalence_subset_relations : (IsChain (· ⊆ .) 𝒜) ↔ (IsChain (· ⊂ .) 𝒜) := by
   constructor
   · intro h e₁ e₁mem e₂ e₂mem e₁neqe₂
     cases h e₁mem e₂mem e₁neqe₂ with
@@ -61,14 +89,14 @@ lemma IsChain.equivalence_subset_relations : (IsChain (· ⊆ .) 𝒞) ↔ (IsCh
     | inl e₁sube₂ => left; exact e₁sube₂.left
     | inr e₂sube₁ => right; exact e₂sube₁.left
 
-lemma IsMaxChain.equivalence_subset_relations : (IsMaxChain (· ⊆ .) 𝒞) ↔ (IsMaxChain (· ⊂ .) 𝒞) := by
+lemma IsMaxChain.equivalence_subset_relations : (IsMaxChain (· ⊆ .) 𝒜) ↔ (IsMaxChain (· ⊂ .) 𝒜) := by
   constructor
   · intro h
     exact ⟨IsChain.equivalence_subset_relations.mp h.left, fun t chain => h.right (IsChain.equivalence_subset_relations.mpr chain)⟩
   · intro h
     exact ⟨IsChain.equivalence_subset_relations.mpr h.left, fun t chain => h.right (IsChain.equivalence_subset_relations.mp chain)⟩
 
-lemma SuperChain.equivalence_subset_relations {ℬ : Finset (Finset α)} : (SuperChain (· ⊆ .) ℬ 𝒞) ↔ (SuperChain (· ⊂ .) ℬ 𝒞) := by
+lemma SuperChain.equivalence_subset_relations {ℬ : Finset (Finset α)} : (SuperChain (· ⊆ .) ℬ 𝒜) ↔ (SuperChain (· ⊂ .) ℬ 𝒜) := by
   constructor
   · intro h
     exact ⟨IsChain.equivalence_subset_relations.mp h.left, h.right⟩
@@ -76,10 +104,10 @@ lemma SuperChain.equivalence_subset_relations {ℬ : Finset (Finset α)} : (Supe
     exact ⟨IsChain.equivalence_subset_relations.mpr h.left, h.right⟩
 
 /-- In a chain with respect to the subset order there can not be two sets of same cardinality -/
-lemma IsChain.unique_of_cardinality_chain (chain𝒞 : IsChain (· ⊂ ·) 𝒞) {a b : Finset α}
-    (amem : a ∈ 𝒞) (bmem : b ∈ 𝒞) (hcard : #a = #b) : a = b := by
+lemma IsChain.unique_of_cardinality_chain (chain𝒜 : IsChain (· ⊂ ·) 𝒜) {a b : Finset α}
+    (amem : a ∈ 𝒜) (bmem : b ∈ 𝒜) (hcard : #a = #b) : a = b := by
   by_contra aneb
-  cases chain𝒞 amem bmem aneb with
+  cases chain𝒜 amem bmem aneb with
   | inl h =>
     have := Finset.card_strictMono h
     linarith
@@ -88,7 +116,7 @@ lemma IsChain.unique_of_cardinality_chain (chain𝒞 : IsChain (· ⊂ ·) 𝒞)
     linarith
 
 /-- In a chain with respect to the subset order there can be at most one set of a given cardinality -/
-lemma IsChain.max_one_elt_chain_layer (chain𝒜 : IsChain (· ⊂ ·) (𝒜 : Set (Finset α))) (j : Finset.range (n + 1)) : #(𝒜 # j) ≤ 1 := by
+lemma IsChain.max_one_elt_chain_layer (chain𝒜 : IsChain (· ⊂ ·) 𝒜) (j : ℕ) : #(𝒜 # j) ≤ 1 := by
   by_contra! ass
   have : (𝒜 # j) ≠ (∅ : Finset (Finset α)) := by
     intro assempty
@@ -100,7 +128,7 @@ lemma IsChain.max_one_elt_chain_layer (chain𝒜 : IsChain (· ⊂ ·) (𝒜 : S
   exact aneb (IsChain.unique_of_cardinality_chain chain𝒜 (Finset.slice_subset bmem) (Finset.slice_subset amem) cardeqab.symm)
 
 /-- If a chain intersects a layer of the boolean lattice this intersection is a singleton -/
-lemma layer_singleton_of_nonempty (chain𝒜 : IsChain (· ⊂ ·) (𝒜 : Set (Finset α))) (j : Finset.range (n + 1)) (layer_nonempty : (𝒜 # j) ≠ ∅):
+lemma layer_singleton_of_nonempty (chain𝒜 : IsChain (· ⊂ ·) 𝒜) (j : Finset.range (n + 1)) (layer_nonempty : (𝒜 # j) ≠ ∅):
     ∃! e : Finset α, 𝒜 # j = {e} := by
   have : # (𝒜 # j) = 1 := by
     cases Nat.le_one_iff_eq_zero_or_eq_one.mp (IsChain.max_one_elt_chain_layer chain𝒜 j) with
@@ -117,43 +145,46 @@ lemma layer_singleton_of_nonempty (chain𝒜 : IsChain (· ⊂ ·) (𝒜 : Set (
 
   exact ⟨e, he, unique⟩
 
-lemma IsChain.ssubset_of_lt_cardinality (chain𝒞 : IsChain (· ⊂ ·) 𝒞) {e₁ e₂ : Finset α} (e₁mem : e₁ ∈ 𝒞) (e₂mem : e₂ ∈ 𝒞)
+lemma IsChain.ssubset_of_lt_cardinality (chain𝒜 : IsChain (· ⊂ ·) 𝒜) {e₁ e₂ : Finset α} (e₁mem : e₁ ∈ 𝒜) (e₂mem : e₂ ∈ 𝒜)
     (hcard : #e₁ < #e₂) : e₁ ⊂ e₂ := by
   have e₁nee₂ : e₁ ≠ e₂ := by
     intro ass
     have : #e₁ = #e₂ := by rw [ass]
     linarith
-  cases chain𝒞 e₁mem e₂mem e₁nee₂ with
+  cases chain𝒜 e₁mem e₂mem e₁nee₂ with
   | inl h => exact Finset.ssubset_iff_subset_ne.mpr ⟨h.left, e₁nee₂⟩
   | inr h =>
     have : #e₂ < #e₁ := Finset.card_strictMono h
     linarith
 
-lemma IsChain.subset_of_le_cardinality (chain𝒞 : IsChain (· ⊂ ·) 𝒞) {e₁ e₂ : Finset α} (e₁mem : e₁ ∈ 𝒞) (e₂mem : e₂ ∈ 𝒞)
+lemma IsChain.subset_of_le_cardinality (chain𝒜 : IsChain (· ⊂ ·) 𝒜) {e₁ e₂ : Finset α} (e₁mem : e₁ ∈ 𝒜) (e₂mem : e₂ ∈ 𝒜)
     (hcard : #e₁ ≤ #e₂) : e₁ ⊆ e₂ := by
   cases Nat.eq_or_lt_of_le hcard with
   | inr hcard_lt =>
-    exact (IsChain.ssubset_of_lt_cardinality chain𝒞 e₁mem e₂mem hcard_lt).left
+    exact (IsChain.ssubset_of_lt_cardinality chain𝒜 e₁mem e₂mem hcard_lt).left
   | inl hcard_eq =>
-    exact Finset.subset_of_eq (IsChain.unique_of_cardinality_chain chain𝒞 e₁mem e₂mem hcard_eq)
+    exact Finset.subset_of_eq (IsChain.unique_of_cardinality_chain chain𝒜 e₁mem e₂mem hcard_eq)
 
 
 
-variable [Fintype α] [DecidableEq α] [DecidableEq (Set (Finset α))]
+variable [Fintype α] [DecidableEq α] [DecidableEq (Finset (Finset α))]
+
+instance : Coe (Set (Finset α)) (Finset (Finset α)) :=
+  ⟨λ s => by sorry⟩
+
+example (ℬ : Set (Finset α)) : Finset (Finset α) := ℬ
 
 def chain_extension_filter_function (𝒜 : Finset (Finset α)) (e : Finset α) : α → Prop :=
-  fun a : α ↦ IsChain (· ⊂ ·) (insert (insert a e) (𝒜 : Set (Finset α))) ∧ insert a e ∉ (𝒜 : Set (Finset α))
+  fun a : α ↦ IsChain (· ⊂ ·) (insert (insert a e) 𝒜) ∧ insert a e ∉ 𝒜
 
-instance instDecidableIsChain (𝒜 : Set (Finset α)) : Decidable (IsChain (· ⊂ ·) 𝒜) := by
-  have 𝒜_finite : Set.Finite 𝒜 := Set.toFinite 𝒜
-  simp [IsChain, Set.Pairwise]
+instance instDecidableIsChain (𝒜 : Finset (Finset α)) : Decidable (IsChain (· ⊂ ·) 𝒜) := by
   sorry
 
 instance instDecidablePredChainExtension (e : Finset α) :
     DecidablePred (chain_extension_filter_function 𝒜 e) :=
-  fun a : α => inferInstanceAs (Decidable (IsChain (· ⊂ ·) (insert (insert a e) (𝒜 : Set (Finset α))) ∧ insert a e ∉ (𝒜 : Set (Finset α))))
+  fun a : α => inferInstanceAs (Decidable (IsChain (· ⊂ ·) (insert (insert a e) 𝒜) ∧ insert a e ∉ 𝒜))
 
-lemma chain_extension (hn : Fintype.card α = n) {i j : Finset.range (n + 1)} (ilej_succ_succ : (i : ℕ) + 2 ≤ ↑j) (chain𝒜 : IsChain (· ⊂ ·) (𝒜 : Set (Finset α)))
+lemma chain_extension (hn : Fintype.card α = n) {i j : Finset.range (n + 1)} (ilej_succ_succ : (i : ℕ) + 2 ≤ ↑j) (chain𝒜 : IsChain (· ⊂ ·) 𝒜)
     (hi : (𝒜 # i) = {layer_i}) (hj : (𝒜 # j) = {layer_j}) (emptylayer : ∀ l ∈ (Finset.range (n + 1)), i < l → l < j → #(𝒜 # l) = 0):
     Finset.filter (chain_extension_filter_function 𝒜 layer_i) (Finset.univ : Finset α) = layer_j \ layer_i := by
   have layer_j_mem : layer_j ∈ 𝒜 := by
@@ -201,8 +232,8 @@ lemma chain_extension (hn : Fintype.card α = n) {i j : Finset.range (n + 1)} (i
       exact hx.right layer_j_mem
     simp
     constructor
-    · have e_new_mem : e_new ∈ insert e_new (𝒜 : Set (Finset α)) := by simp
-      have layer_j_mem_insert : layer_j ∈ insert e_new (𝒜 : Set (Finset α)) := by
+    · have e_new_mem : e_new ∈ insert e_new 𝒜 := by simp
+      have layer_j_mem_insert : layer_j ∈ insert e_new 𝒜 := by
         simp
         right
         exact layer_j_mem
@@ -305,7 +336,7 @@ lemma chain_extension (hn : Fintype.card α = n) {i j : Finset.range (n + 1)} (i
       have : #(𝒜 # #e_new) > 0 := Finset.card_pos.mpr this
       linarith
 
-lemma one_elt_max_chain_layer (hn : Fintype.card α = n) (maxchain𝒜 : IsMaxChain (· ⊂ ·) (𝒜 : Set (Finset α))) (j : Finset.range (n + 1)) : #(𝒜 # j) = 1 := by
+lemma one_elt_max_chain_layer (hn : Fintype.card α = n) (maxchain𝒜 : IsMaxChain (· ⊂ ·) 𝒜) (j : Finset.range (n + 1)) : #(𝒜 # j) = 1 := by
   by_contra! ass
   have empty_layer : 𝒜 # j = ∅ := by
     cases Nat.le_one_iff_eq_zero_or_eq_one.mp (IsChain.max_one_elt_chain_layer maxchain𝒜.left j) with
@@ -327,13 +358,17 @@ lemma one_elt_max_chain_layer (hn : Fintype.card α = n) (maxchain𝒜 : IsMaxCh
         rw [jeqn] at empty_layer
         simp [empty_layer] at nslicemem
     simp [IsMaxChain] at maxchain𝒜
-    have larger_chain_with_univ : IsChain (· ⊂ ·) ((Insert.insert (Finset.univ : Finset α) 𝒜) : Set (Finset α)) := by
+    have larger_chain_with_univ' : _root_.IsChain (· ⊂ ·) (Insert.insert (Finset.univ : Finset α) 𝒜).toSet := by
+      have : ((Insert.insert (Finset.univ : Finset α) 𝒜) : Finset (Finset α)).toSet = ((Insert.insert (Finset.univ : Finset α) 𝒜) : Set (Finset α)) := by simp
+      rw [this]
       refine' IsChain.insert maxchain𝒜.left  _
       intro b bmem bneq
       right
       exact Finset.ssubset_iff_subset_ne.mpr ⟨by simp, fun h => bneq h.symm⟩
 
-    have univin𝒜 := Set.insert_eq_self.mp (maxchain𝒜.right larger_chain_with_univ (by simp)).symm
+    have larger_chain_with_univ : Finset.IsChain (· ⊂ ·) ((Insert.insert (Finset.univ : Finset α) 𝒜) : Finset (Finset α)) := larger_chain_with_univ'
+
+    have univin𝒜 := Finset.insert_eq_self.mp (maxchain𝒜.right larger_chain_with_univ (by simp)).symm
     exact univnotin𝒜 univin𝒜
   else if hbottom : ∀ i : Finset.range (n + 1), i < j → 𝒜 # i = ∅ then
     have emptynotin𝒜 : (∅ : Finset α) ∉ 𝒜 := by
@@ -348,13 +383,17 @@ lemma one_elt_max_chain_layer (hn : Fintype.card α = n) (maxchain𝒜 : IsMaxCh
       | inr jgen =>
         simp [hbottom ⟨0, by simp⟩ jgen] at zeroslicemem
     simp [IsMaxChain] at maxchain𝒜
-    have larger_chain_with_empty : IsChain (· ⊂ ·) ((Insert.insert (∅ : Finset α) 𝒜) : Set (Finset α)) := by
+    have larger_chain_with_empty' : _root_.IsChain (· ⊂ ·) ((Insert.insert (∅ : Finset α) 𝒜)).toSet := by
+      have : ((Insert.insert (∅ : Finset α) 𝒜)).toSet = (Insert.insert (∅ : Finset α) 𝒜.toSet) := by simp
+      rw [this]
       refine' IsChain.insert maxchain𝒜.left  _
       intro b bmem bneq
       left
       exact Finset.ssubset_iff_subset_ne.mpr ⟨by simp, bneq⟩
 
-    have emptyin𝒜 := Set.insert_eq_self.mp (maxchain𝒜.right larger_chain_with_empty (by simp)).symm
+    have larger_chain_with_empty : IsChain (· ⊂ ·) ((Insert.insert (∅ : Finset α) 𝒜)) := larger_chain_with_empty'
+
+    have emptyin𝒜 := Finset.insert_eq_self.mp (maxchain𝒜.right larger_chain_with_empty (by simp)).symm
     exact emptynotin𝒜 emptyin𝒜
 
   else
@@ -443,10 +482,10 @@ lemma one_elt_max_chain_layer (hn : Fintype.card α = n) (maxchain𝒜 : IsMaxCh
     simp at chain_extension_candidates_ne_empty
     obtain ⟨a, ha⟩ := chain_extension_candidates_ne_empty
     simp [chain_extension_candidates, chain_extension_filter_function] at ha
-    have := Set.insert_eq_self.mp (maxchain𝒜.right ha.left (by simp)).symm
+    have := Finset.insert_eq_self.mp (maxchain𝒜.right ha.left (by simp)).symm
     exact ha.right this
 
-lemma IsMaxChain.card {ℬ : Finset (Finset α)} (hn : Fintype.card α = n) (maxChainℬ : IsMaxChain (· ⊂ ·) ℬ.toSet) : ℬ.card = n + 1 := by
+lemma IsMaxChain.card {ℬ : Finset (Finset α)} (hn : Fintype.card α = n) (maxChainℬ : IsMaxChain (· ⊂ ·) ℬ) : ℬ.card = n + 1 := by
   rw [←sum_card_slice ℬ]
   calc
     ∑ r ∈ Iic (Fintype.card α), #(ℬ # r) = ∑ r ∈ Iic (Fintype.card α), 1 := by
@@ -456,20 +495,27 @@ lemma IsMaxChain.card {ℬ : Finset (Finset α)} (hn : Fintype.card α = n) (max
       exact one_elt_max_chain_layer hn maxChainℬ ⟨j, by simp [Nat.lt_succ_of_le jmem]⟩
     _ = n + 1 := by rw [←(Finset.card_eq_sum_ones (Iic (Fintype.card α)))]; simp [hn]
 
-lemma IsChain.card_le {ℬ : Finset (Finset α)} (hn : Fintype.card α = n) (chainℬ : IsChain (· ⊂ ·) ℬ.toSet) : ℬ.card ≤ n + 1 := by sorry
+lemma IsChain.card_le {ℬ : Finset (Finset α)} (hn : Fintype.card α = n) (chainℬ : IsChain (· ⊂ ·) ℬ) : ℬ.card ≤ n + 1 := by
+  rw [←sum_card_slice ℬ]
+  calc
+    ∑ r ∈ Iic (Fintype.card α), #(ℬ # r) ≤ ∑ r ∈ Iic (Fintype.card α), 1 := by
+      apply sum_le_sum
+      intro j jmem
+      exact IsChain.max_one_elt_chain_layer chainℬ j
+    _ = n + 1 := by rw [←(Finset.card_eq_sum_ones (Iic (Fintype.card α)))]; simp [hn]
 
-lemma IsMaxChain.iff_card {ℬ : Finset (Finset α)} (hn : Fintype.card α = n) (chainℬ : IsChain (· ⊂ ·) ℬ.toSet) : IsMaxChain (· ⊂ ·) ℬ.toSet ↔ ℬ.card = n + 1 := by
+lemma IsMaxChain.iff_card {ℬ : Finset (Finset α)} (hn : Fintype.card α = n) (chainℬ : IsChain (· ⊂ ·) ℬ) : IsMaxChain (· ⊂ ·) ℬ ↔ ℬ.card = n + 1 := by
   constructor
   · intro maxChainℬ
     exact IsMaxChain.card hn maxChainℬ
   · intro cardℬ
     constructor
     · exact chainℬ
-    · sorry
-    -- · intro 𝒜 chain𝒜 ℬssub𝒜
-    --   have : Set.Finite 𝒜 := by sorry
-    --   let finset𝒜 : Finset (Finset α):= 𝒜.toFinset
-    --   have : 𝒜.card ≤ n + 1:= IsChain.card_le hn (by sorry)
+    · intro 𝒜 chain𝒜 ℬssub𝒜
+      have hcard𝒜 : #𝒜 ≤ #ℬ := by
+        · rw [cardℬ]
+          exact IsChain.card_le hn chain𝒜
+      exact (Finset.subset_iff_eq_of_card_le hcard𝒜).mp ℬssub𝒜
 
 lemma card_maxChainThrough {ℬ : Finset (Finset α)} (hn : Fintype.card α = n) (chain : MaxChainThrough ℬ) : #chain.𝒜 = n + 1 := by
   rw [←sum_card_slice chain.𝒜]
@@ -481,34 +527,34 @@ lemma card_maxChainThrough {ℬ : Finset (Finset α)} (hn : Fintype.card α = n)
       exact one_elt_max_chain_layer hn chain.isMaxChain ⟨j, by simp [Nat.lt_succ_of_le jmem]⟩
     _ = n + 1 := by rw [←(Finset.card_eq_sum_ones (Iic (Fintype.card α)))]; simp [hn]
 
-lemma count_maxChainsThrough (n m : ℕ) (h_mn : m ≤ n + 1) (hn : Fintype.card α = n)
-    (ℬ : Finset (Finset α)) (cardℬ : #ℬ = m) (chainℬ : IsChain (· ⊂ ·) (ℬ : Set (Finset α)))
-    (monotone_cards: Monotone (fun i : Fin ℬ.toList.length ↦ (ℬ.toList.get i).card)) (empty_in_chain : ∅ ∈ ℬ) (univ_in_chain : univ ∈ ℬ) :
-    Fintype.card (ℬ.MaxChainThrough) = ∏ j : Fin (ℬ.toList.length - 1), (((ℬ.toList.get ⟨j + 1, by apply add_lt_of_lt_sub j.prop⟩).card) - (ℬ.toList.get ⟨j, lt_of_lt_pred j.prop⟩).card)! := by
-  induction' h_mn using decreasingInduction with n q ih
-  · sorry
-  · have entry_cards : ∀ j : Fin (ℬ.toList.length - 1), (ℬ.toList.get ⟨j, lt_of_lt_pred j.prop⟩).card = j.val := by sorry
-    have rhs_one := by calc
-      ∏ j : Fin (ℬ.toList.length - 1), (((ℬ.toList.get ⟨j + 1, by apply add_lt_of_lt_sub j.prop⟩).card) - (ℬ.toList.get ⟨j, lt_of_lt_pred j.prop⟩).card)! = ∏ j : Fin (ℬ.toList.length - 1), 1 := by
-        apply Finset.prod_congr (by simp)
-        intro j _
-        rw [entry_cards, entry_cards ⟨j + 1, by sorry⟩]
-        simp
-      _ = 1 := Fintype.prod_eq_one (fun a => 1) (congrFun rfl)
-    rw [rhs_one, Fintype.card_eq_one_iff]
-    use {
-      𝒜 := ℬ,
-      isMaxChain := (IsMaxChain.iff_card hn chainℬ).mpr cardℬ,
-      superChain := by
-        constructor
-        · exact chainℬ
-        · subset_rfl ℬ
-    }
+-- lemma count_maxChainsThrough (n m : ℕ) (h_mn : m ≤ n + 1) (hn : Fintype.card α = n)
+--     (ℬ : Finset (Finset α)) (cardℬ : #ℬ = m) (chainℬ : IsChain (· ⊂ ·) ℬ)
+--     (monotone_cards: Monotone (fun i : Fin ℬ.toList.length ↦ (ℬ.toList.get i).card)) (empty_in_chain : ∅ ∈ ℬ) (univ_in_chain : univ ∈ ℬ) :
+--     Fintype.card (ℬ.MaxChainThrough) = ∏ j : Fin (ℬ.toList.length - 1), (((ℬ.toList.get ⟨j + 1, by apply add_lt_of_lt_sub j.prop⟩).card) - (ℬ.toList.get ⟨j, lt_of_lt_pred j.prop⟩).card)! := by
+--   induction' h_mn using decreasingInduction with n q ih
+--   · sorry
+--   · have entry_cards : ∀ j : Fin (ℬ.toList.length - 1), (ℬ.toList.get ⟨j, lt_of_lt_pred j.prop⟩).card = j.val := by sorry
+--     have rhs_one := by calc
+--       ∏ j : Fin (ℬ.toList.length - 1), (((ℬ.toList.get ⟨j + 1, by apply add_lt_of_lt_sub j.prop⟩).card) - (ℬ.toList.get ⟨j, lt_of_lt_pred j.prop⟩).card)! = ∏ j : Fin (ℬ.toList.length - 1), 1 := by
+--         apply Finset.prod_congr (by simp)
+--         intro j _
+--         rw [entry_cards, entry_cards ⟨j + 1, by sorry⟩]
+--         simp
+--       _ = 1 := Fintype.prod_eq_one (fun a => 1) (congrFun rfl)
+--     rw [rhs_one, Fintype.card_eq_one_iff]
+--     use {
+--       𝒜 := ℬ,
+--       isMaxChain := (IsMaxChain.iff_card hn chainℬ).mpr cardℬ,
+--       superChain := by
+--         constructor
+--         · exact chainℬ
+--         · subset_rfl ℬ
+--     }
 
 lemma count_maxChains_through_singleton (e : Finset α) (hn : Fintype.card α = n): Fintype.card (MaxChainThrough {e}) = (#e)! * (n - #e)! := by sorry
 
 /-- The **Lubell-Yamamoto-Meshalkin inequality**. Sperner's Theorem follows as in Mathlib.Combinatorics.SetFamily.LYM as a corollary -/
-theorem lym_inequality (antichain𝒜 : IsAntichain (· ⊂ ·) (𝒜 : Set (Finset α))) (hn : Fintype.card α = n):
+theorem lym_inequality (antichain𝒜 : IsAntichain (· ⊂ ·) 𝒜) (hn : Fintype.card α = n):
     ∑ k ∈ Iic n, #(𝒜 # k) / (n.choose k : ℚ) ≤ (1 : ℚ) := by
   have : ∑ k ∈ Iic n, #(𝒜 # k) / (n.choose k : ℚ) ≤ (∑ k ∈ Iic n, #(𝒜 # k) * (k)! * (n - k)!) * (1 / (n)! : ℚ) := by
     calc
@@ -539,7 +585,7 @@ theorem lym_inequality (antichain𝒜 : IsAntichain (· ⊂ ·) (𝒜 : Set (Fin
 
   norm_cast
 
-  have slice_partition : Finset.disjiUnion (Iic n) 𝒜.slice (Finset.pairwiseDisjoint_slice.subset (Set.subset_univ _)) = (𝒜 : Finset (Finset α)) := by
+  have slice_partition : Finset.disjiUnion (Iic n) 𝒜.slice (Finset.pairwiseDisjoint_slice.subset (Set.subset_univ _)) = 𝒜 := by
     rw [Finset.disjiUnion_eq_biUnion (Iic n) 𝒜.slice (Finset.pairwiseDisjoint_slice.subset (Set.subset_univ _))]
     rw [←hn]
     simp [biUnion_slice 𝒜]
