@@ -22,14 +22,6 @@ notation:max G "[" A "]" => SimpleGraph.Subgraph.induce (⊤ : Subgraph G) (Fins
 ----------------------------------------------------------------------------------------------------
 -- Definitions of Ramsey property and Ramsey Number
 
--- TODO the type signatures are verbose. can i somehow define a type that's in all the classes i want
--- but still have inference work?
--- this should do it:
--- class MeFinClass (type : Type*) (N : outParam Nat) extends Fintype type where
---   [toDecidableEq : DecidableEq type]
---   [fin : Fintype type]
---   card : Fintype.card type = N
-
 -- In the book, `ramseyProp N m n` is written as `K_N has property (m, n)`. We write it like this
 -- because our edge colors in `K_N` are defined as presence/absence of an edge in a graph on
 -- `N` vertices. The book property reads as:
@@ -61,7 +53,6 @@ notation:max "R(" n ")" => R n n
 -- "It is clear that if `K_N` has property `(m, n)`, then so does every `K_s` with `s ≥ N`."
 lemma ramseyProp_mono {m n : ℕ} (N s : ℕ) (h : N ≤ s) (ramseyProp_N : ramseyProp N m n) : ramseyProp s m n := by
   intros W _ _ Wcard C _
-  rw [ramseyProp] at *
   rw [← Wcard, ← Fintype.card_fin N] at h
 
   -- We consider the subgraph induced by embedding `K_N` into `K_s`.
@@ -83,8 +74,9 @@ lemma ramseyProp_mono {m n : ℕ} (N s : ℕ) (h : N ≤ s) (ramseyProp_N : rams
 -- The Ramsey property is symmetric in `m` and `n`.
 lemma ramseyProp_symm (m n N : ℕ) (h : ramseyProp N m n) : (ramseyProp N n m) := by
   intro W _ _ Wcard C _
-  rw [ramseyProp] at h
+  -- we find a monochromatic subset in the complement graph
   obtain ⟨s, red_or_blue⟩ := h W Wcard Cᶜ
+  -- the result follows directly from clique/independent set complement properties.
   cases' red_or_blue with c₁ c₂
   · exact ⟨s, Or.inr ((isNIndepSet_compl C).mp c₁)⟩
   · exact ⟨s, (Or.inr ((isNClique_compl C).mp c₂)).symm⟩
@@ -96,12 +88,14 @@ lemma R_symm {m n : ℕ} : R(m,n) = R(n,m) := by
 
 -- The Ramsey number, if it exists, is positive if both `m` and `n` are positive.
 lemma R_pos (m n : ℕ) (_ : 0 < m) (_ : 0 < n) (h : ∃ N, ramseyProp N m n) : 0 < R(m, n) := by
-  by_contra R0; push_neg at R0
-  apply eq_zero_of_le_zero at R0
-  have : ramseyProp 0 m n := R0 ▸ (sInf_mem h)
-  simp_rw [ramseyProp, isNIndepSet_iff, isNClique_iff] at this
+  -- we assume `0 = R(m, n)`
+  by_contra R0; apply Nat.eq_zero_of_not_pos at R0
+  -- then zero has the ramsey property
+  have : ramseyProp 0 m n := R0 ▸ sInf_mem h
+  -- we can hence find `s`, an m-independent set or an n-clique, in the empty graph
   obtain ⟨s, p⟩ := this (Fin 0) rfl (⊥ : SimpleGraph (Fin 0))
-  simp_rw [eq_zero_of_le_zero (card_finset_fin_le s)] at p
+  -- that leads to contradiction, since `s` must be empty but `0 < m,n`
+  simp_rw [isNIndepSet_iff, isNClique_iff, eq_zero_of_le_zero (card_finset_fin_le s)] at p
   cases p <;> simp_all
 
 
@@ -148,7 +142,7 @@ theorem R_bounded_recursive (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
       exact le_of_add_le_add_left (le_of_pred_lt this)
 
     -- We reduce this case to symmetry, so we apply the appropriate rewrites.
-    have ex m n := Exists.imp (fun N => ramseyProp_symm m n N)
+    have ex m n := Exists.imp (ramseyProp_symm m n)
     apply ex at rₘ; apply ex at rₙ
     rw [Neq, @R_symm m, @R_symm (m + 1), add_comm] at cardV
 
