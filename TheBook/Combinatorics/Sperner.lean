@@ -24,6 +24,14 @@ import Mathlib.Data.Finset.Slice
 import Mathlib.Order.Antichain
 import Mathlib.Order.Chain
 
+
+example (n : Nat) : Nat.choose n 2 = n * (n - 1) / 2 := by
+  induction' n with n ih
+  · simp
+  · rw [Nat.triangle_succ n]
+    rw [Nat.choose, ih]
+    simp [Nat.add_comm]
+
 /-!
 # Proof of the LYM inequality and some observations on chains wrt the subset order
 -/
@@ -34,10 +42,11 @@ variable {α : Type*} {n m : ℕ} {𝒜 : Finset (Finset α)} {𝒞 : Set (Finse
 
 namespace Finset
 
+
 structure MaxChainThrough (ℬ : Finset (Finset α)) where
   𝒜 : Finset (Finset α)
   isMaxChain : IsMaxChain (· ⊂ ·) (𝒜 : Set (Finset α))
-  superChain : SuperChain (· ⊂ ·) (ℬ : Set (Finset α)) (𝒜 : Set (Finset α))
+  subChain : ℬ ⊆ 𝒜
 
 instance instFintypeMaxChainThrough {ℬ : Finset (Finset α)} : Fintype (MaxChainThrough ℬ) := by sorry
 
@@ -437,6 +446,31 @@ lemma one_elt_max_chain_layer (hn : Fintype.card α = n) (maxchain𝒜 : IsMaxCh
     have := Set.insert_eq_self.mp (maxchain𝒜.right ha.left (by simp)).symm
     exact ha.right this
 
+lemma IsMaxChain.card {ℬ : Finset (Finset α)} (hn : Fintype.card α = n) (maxChainℬ : IsMaxChain (· ⊂ ·) ℬ.toSet) : ℬ.card = n + 1 := by
+  rw [←sum_card_slice ℬ]
+  calc
+    ∑ r ∈ Iic (Fintype.card α), #(ℬ # r) = ∑ r ∈ Iic (Fintype.card α), 1 := by
+      apply Finset.sum_congr (by rfl)
+      intro j jmem
+      simp [hn] at jmem
+      exact one_elt_max_chain_layer hn maxChainℬ ⟨j, by simp [Nat.lt_succ_of_le jmem]⟩
+    _ = n + 1 := by rw [←(Finset.card_eq_sum_ones (Iic (Fintype.card α)))]; simp [hn]
+
+lemma IsChain.card_le {ℬ : Finset (Finset α)} (hn : Fintype.card α = n) (chainℬ : IsChain (· ⊂ ·) ℬ.toSet) : ℬ.card ≤ n + 1 := by sorry
+
+lemma IsMaxChain.iff_card {ℬ : Finset (Finset α)} (hn : Fintype.card α = n) (chainℬ : IsChain (· ⊂ ·) ℬ.toSet) : IsMaxChain (· ⊂ ·) ℬ.toSet ↔ ℬ.card = n + 1 := by
+  constructor
+  · intro maxChainℬ
+    exact IsMaxChain.card hn maxChainℬ
+  · intro cardℬ
+    constructor
+    · exact chainℬ
+    · sorry
+    -- · intro 𝒜 chain𝒜 ℬssub𝒜
+    --   have : Set.Finite 𝒜 := by sorry
+    --   let finset𝒜 : Finset (Finset α):= 𝒜.toFinset
+    --   have : 𝒜.card ≤ n + 1:= IsChain.card_le hn (by sorry)
+
 lemma card_maxChainThrough {ℬ : Finset (Finset α)} (hn : Fintype.card α = n) (chain : MaxChainThrough ℬ) : #chain.𝒜 = n + 1 := by
   rw [←sum_card_slice chain.𝒜]
   calc
@@ -447,15 +481,29 @@ lemma card_maxChainThrough {ℬ : Finset (Finset α)} (hn : Fintype.card α = n)
       exact one_elt_max_chain_layer hn chain.isMaxChain ⟨j, by simp [Nat.lt_succ_of_le jmem]⟩
     _ = n + 1 := by rw [←(Finset.card_eq_sum_ones (Iic (Fintype.card α)))]; simp [hn]
 
-variable (C : Nat → Type u)
-#check (@Nat.below C : Nat → Type u)
-
-lemma count_maxChainsThrough (ℬ : Finset (Finset α)) (cardℬ : #ℬ = m) (chainℬ : IsChain (· ⊂ ·) (ℬ : Set (Finset α))) (hn : Fintype.card α = n)
+lemma count_maxChainsThrough (n m : ℕ) (h_mn : m ≤ n + 1) (hn : Fintype.card α = n)
+    (ℬ : Finset (Finset α)) (cardℬ : #ℬ = m) (chainℬ : IsChain (· ⊂ ·) (ℬ : Set (Finset α)))
     (monotone_cards: Monotone (fun i : Fin ℬ.toList.length ↦ (ℬ.toList.get i).card)) (empty_in_chain : ∅ ∈ ℬ) (univ_in_chain : univ ∈ ℬ) :
     Fintype.card (ℬ.MaxChainThrough) = ∏ j : Fin (ℬ.toList.length - 1), (((ℬ.toList.get ⟨j + 1, by apply add_lt_of_lt_sub j.prop⟩).card) - (ℬ.toList.get ⟨j, lt_of_lt_pred j.prop⟩).card)! := by
-  induction n - m generalizing n m ℬ with
-  | zero => sorry
-  | succ s ih => sorry
+  induction' h_mn using decreasingInduction with n q ih
+  · sorry
+  · have entry_cards : ∀ j : Fin (ℬ.toList.length - 1), (ℬ.toList.get ⟨j, lt_of_lt_pred j.prop⟩).card = j.val := by sorry
+    have rhs_one := by calc
+      ∏ j : Fin (ℬ.toList.length - 1), (((ℬ.toList.get ⟨j + 1, by apply add_lt_of_lt_sub j.prop⟩).card) - (ℬ.toList.get ⟨j, lt_of_lt_pred j.prop⟩).card)! = ∏ j : Fin (ℬ.toList.length - 1), 1 := by
+        apply Finset.prod_congr (by simp)
+        intro j _
+        rw [entry_cards, entry_cards ⟨j + 1, by sorry⟩]
+        simp
+      _ = 1 := Fintype.prod_eq_one (fun a => 1) (congrFun rfl)
+    rw [rhs_one, Fintype.card_eq_one_iff]
+    use {
+      𝒜 := ℬ,
+      isMaxChain := (IsMaxChain.iff_card hn chainℬ).mpr cardℬ,
+      superChain := by
+        constructor
+        · exact chainℬ
+        · subset_rfl ℬ
+    }
 
 lemma count_maxChains_through_singleton (e : Finset α) (hn : Fintype.card α = n): Fintype.card (MaxChainThrough {e}) = (#e)! * (n - #e)! := by sorry
 
