@@ -24,6 +24,7 @@ import Mathlib.Data.Finset.Slice
 import Mathlib.Order.Antichain
 import Mathlib.Order.Chain
 
+-- set_option maxHeartbeats 200000
 
 /-!
 # Proof of the LYM inequality and some observations on chains wrt the subset order
@@ -626,7 +627,7 @@ lemma incident_indices_monotone_cards {n: ℕ} {s t : Fin (n + 1)} {ℬ : Finset
 lemma count_maxChainsThrough {n: ℕ} (m : ℕ) (h_mn : m ≤ n + 1) (hn : Fintype.card α = n)
     (ℬ : Finset (Finset α)) (cardℬ : #ℬ = m) (chainℬ : IsChain (· ⊂ ·) ℬ)
     (monotone_cards: StrictMono (fun (i : Fin ℬ.toList.length) ↦ #ℬ.toList[i])) (empty_in_chain : ∅ ∈ ℬ) (univ_in_chain : univ ∈ ℬ) :
-    Fintype.card (ℬ.MaxChainThrough) = ∏ j ∈ (Finset.univ : Finset (Fin (ℬ.toList.length - 1))), (#ℬ.toList[j.val + 1] - #ℬ.toList[j.val])! := by
+    Fintype.card (ℬ.MaxChainThrough) = ∏ j : Fin (ℬ.toList.length - 1), (#ℬ.toList[j.val + 1] - #ℬ.toList[j.val])! := by
   revert ℬ
   induction' h_mn using decreasingInduction with n_ q ih
   · intro ℬ cardℬ chainℬ monotone_cards empty_in_chain univ_in_chain
@@ -699,7 +700,48 @@ lemma count_maxChainsThrough {n: ℕ} (m : ℕ) (h_mn : m ≤ n + 1) (hn : Finty
       exact (Finset.univ : Finset ℬ'.MaxChainThrough).image (emb_MaxChainThrough ℬ')
 
     /- Here the induction hypothesis ih is applied-/
-    have card_extensions_wrt (a : extension_candidates) : #(extensions_wrt a) = (multiplicant' i_s) * ∏ j ∈ 𝒬', (multiplicant j) := by sorry
+    have card_extensions_wrt (a : extension_candidates) : #(extensions_wrt a) = (multiplicant' i_s) * ∏ j ∈ 𝒬', (multiplicant j) := by
+      let e_new := Insert.insert (↑a) layer_s
+      let ℬ' := (Insert.insert e_new ℬ)
+
+      have a_property₁ := a.prop
+      simp only [extension_candidates, mem_filter, chain_extension_filter_function] at a_property₁
+
+      have a_property₂ := a.prop
+      simp [extension_candidates_eq] at a_property₂
+
+      have ℬ'card : #ℬ' = n_ + 1 := by
+        simp [ℬ', ←cardℬ]
+        apply Finset.card_insert_of_not_mem
+        · exact a_property₁.right.right
+
+      have monotone_cards' : StrictMono (fun (i : Fin ℬ'.toList.length) ↦ #ℬ'.toList[i]) := by sorry
+
+      have := Finset.card_image_of_injective (Finset.univ : Finset (MaxChainThrough ℬ')) (inj_emb_MaxChainThrough ℬ')
+      simp [extensions_wrt, this]
+
+      have empty_in_chain' : ∅ ∈ ℬ' := by simp [ℬ']; exact mem_insert_iff.mpr (Or.inr empty_in_chain)
+      have univ_in_chain' : univ ∈ ℬ' := by simp [ℬ']; exact mem_insert_iff.mpr (Or.inr univ_in_chain)
+
+      let i_new := ℬ'.toList.indexOf e_new
+      have i_new_in_range : i_new < ℬ'.toList.length := List.indexOf_lt_length.mpr (mem_toList.mpr (mem_insert_self e_new ℬ))
+      have h_i_new : ℬ'.toList[i_new] = e_new := ℬ'.toList.indexOf_get i_new_in_range
+
+      let i_new' : Fin (ℬ'.toList.length - 1) := ⟨i_new, by sorry⟩
+      have h_i_new' : i_new' ∈ (Finset.univ : Finset (Fin (ℬ'.toList.length - 1))) := by simp
+
+      have ind_present := ih ℬ' ℬ'card a_property₁.right.left monotone_cards' empty_in_chain' univ_in_chain'
+
+      have product_split := Finset.prod_eq_mul_prod_diff_singleton h_i_new' (fun (i : Fin (ℬ'.toList.length - 1)) ↦ (#ℬ'.toList[i.val + 1] - #ℬ'.toList[i.val])!)
+
+      rw [ind_present, product_split]
+
+      have prod_identity : ∏ j ∈ 𝒬', multiplicant j = ∏ x ∈ univ \ {i_new'}, (#ℬ'.toList[↑x + 1] - #ℬ'.toList[↑x])! := by sorry
+
+      have mul_identity : multiplicant' i_s = (#ℬ'.toList[↑i_new' + 1] - #ℬ'.toList[↑i_new'])! := by sorry
+
+      rw [prod_identity, mul_identity]
+
 
     /-The set of maximal chains through ℬ is the disjoint union of maximal chains through the union of ℬ with some chain extension candidate-/
     have central_identity: (Finset.univ : Finset ℬ.MaxChainThrough).image (emb_MaxChainThrough ℬ) = extension_candidates.disjiUnion extensions_wrt (by sorry) := by sorry
