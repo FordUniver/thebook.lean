@@ -206,7 +206,7 @@ lemma IsChain.empty_layer_by_card (hn : Fintype.card α = n) (chain𝒜 : IsChai
   linarith
 
 lemma range_empty_layer (hn : Fintype.card α = n) (chain𝒜 : IsChain (· ⊂ ·) 𝒜) (empty_layer : ∃ i : Fin (n + 1), #(𝒜 # i) = 0) (empty_elt : ∅ ∈ 𝒜) (univ_elt : Finset.univ ∈ 𝒜) :
-    ∃ s : Fin (n + 1), ∃ t : Fin (n + 1), s + 2 ≤ t ∧ #(𝒜 # s) = 1 ∧ #(𝒜 # t) = 1 ∧ ∀ j : Fin (n + 1), s < j ∧ j < t → #(𝒜 # j) = 0 := by sorry
+    ∃ s : Fin (n + 1), ∃ t : Fin (n + 1), s.val + 2 ≤ t.val ∧ #(𝒜 # s) = 1 ∧ #(𝒜 # t) = 1 ∧ ∀ j : Fin (n + 1), s < j ∧ j < t → #(𝒜 # j) = 0 := by sorry
 
 lemma chain_extension (hn : Fintype.card α = n) {i j : Finset.range (n + 1)} (ilej_succ_succ : (i : ℕ) + 2 ≤ (j : ℕ)) (chain𝒜 : IsChain (· ⊂ ·) 𝒜)
     (hi : (𝒜 # i) = {layer_i}) (hj : (𝒜 # j) = {layer_j}) (emptylayer : ∀ l ∈ (Finset.range (n + 1)), i < l → l < j → #(𝒜 # l) = 0):
@@ -467,20 +467,18 @@ lemma one_elt_max_chain_layer (hn : Fintype.card α = n) (maxchain𝒜 : IsMaxCh
         | inl jltl => exact h_top jltl
         | inr jgtl => exact h_bottom jgtl
 
-    let e_bottom := (layer_singleton_of_nonempty maxchain𝒜.left s_bottom h_s_bottom.right).choose
-    have bottom_singleton : 𝒜 # s_bottom = {e_bottom} := (layer_singleton_of_nonempty maxchain𝒜.left s_bottom h_s_bottom.right).choose_spec.left
+    obtain ⟨e_bottom, ⟨bottom_singleton : 𝒜 # s_bottom = {e_bottom}, _⟩⟩ := layer_singleton_of_nonempty maxchain𝒜.left s_bottom h_s_bottom.right
 
-    let e_top := (layer_singleton_of_nonempty maxchain𝒜.left s_top h_s_top.right).choose
-    have top_singleton : 𝒜 # s_top = {e_top} := (layer_singleton_of_nonempty maxchain𝒜.left s_top h_s_top.right).choose_spec.left
+    obtain ⟨e_top, ⟨top_singleton : 𝒜 # s_top = {e_top}, _⟩⟩ := layer_singleton_of_nonempty maxchain𝒜.left s_top h_s_top.right
 
-    let chain_extension_candidates := Finset.filter (chain_extension_filter_function 𝒜 e_bottom) (Finset.univ : Finset α)
+    let extension_candidates := Finset.filter (chain_extension_filter_function 𝒜 e_bottom) (Finset.univ : Finset α)
 
-    have chain_extension_candidates_eq : chain_extension_candidates = e_top \ e_bottom := by
+    have extension_candidates_eq : extension_candidates = e_top \ e_bottom := by
       refine' chain_extension hn _ maxchain𝒜.left bottom_singleton top_singleton emptylayer
       apply Nat.succ_le_of_lt
       have : (s_bottom : ℕ) + 1 ≤ ↑j := Nat.succ_le_of_lt h_s_bottom.left
       exact Nat.lt_of_le_of_lt this h_s_top.left
-    simp at chain_extension_candidates_eq
+    simp at extension_candidates_eq
 
     have e_bottom_mem_card : e_bottom ∈ 𝒜 ∧ #e_bottom = s_bottom := by
       have := Finset.mem_singleton_self e_bottom
@@ -494,8 +492,8 @@ lemma one_elt_max_chain_layer (hn : Fintype.card α = n) (maxchain𝒜 : IsMaxCh
       simp [slice] at this
       exact this
 
-    have chain_extension_candidates_ne_empty : #chain_extension_candidates > 0 := by
-      rw [chain_extension_candidates_eq]
+    have extension_candidates_ne_empty : #extension_candidates > 0 := by
+      rw [extension_candidates_eq]
       have card_bottom_lt_card_top : #e_bottom < #e_top := by
         rw [e_top_mem_card.right, e_bottom_mem_card.right]
         exact Nat.lt_trans h_s_bottom.left h_s_top.left
@@ -503,9 +501,9 @@ lemma one_elt_max_chain_layer (hn : Fintype.card α = n) (maxchain𝒜 : IsMaxCh
         IsChain.ssubset_of_lt_cardinality maxchain𝒜.left e_bottom_mem_card.left e_top_mem_card.left card_bottom_lt_card_top
       have := Finset.card_sdiff_add_card_eq_card bottom_subset_top.left
       linarith
-    simp at chain_extension_candidates_ne_empty
-    obtain ⟨a, ha⟩ := chain_extension_candidates_ne_empty
-    simp [chain_extension_candidates, chain_extension_filter_function] at ha
+    simp at extension_candidates_ne_empty
+    obtain ⟨a, ha⟩ := extension_candidates_ne_empty
+    simp [extension_candidates, chain_extension_filter_function] at ha
     have := Finset.insert_eq_self.mp (maxchain𝒜.right ha.left (by simp)).symm
     exact ha.right this
 
@@ -551,62 +549,153 @@ lemma card_maxChainThrough {ℬ : Finset (Finset α)} (hn : Fintype.card α = n)
       exact one_elt_max_chain_layer hn chain.isMaxChain ⟨j, by simp [Nat.lt_succ_of_le jmem]⟩
     _ = n + 1 := by rw [←(Finset.card_eq_sum_ones (Iic (Fintype.card α)))]; simp [hn]
 
+lemma mem_card_of_slice {ℬ : Finset (Finset α)} (h : (ℬ # s) = {layer_s}) : layer_s ∈ ℬ ∧ #layer_s = s := by
+  have := Finset.mem_singleton_self layer_s
+  rw [←h] at this
+  simp [slice] at this
+  exact this
+
+#check length_toList
+
+lemma incident_indices_monotone_cards {n: ℕ} {s t : Fin (n + 1)} {ℬ : Finset (Finset α)} (ilej_succ_succ : s.val + 2 ≤ t.val) (hn : Fintype.card α = n)
+    (monotone_cards: StrictMono (fun i : Fin ℬ.toList.length ↦ (ℬ.toList.get i).card))
+    (hs : (ℬ # s) = {layer_s}) (ht : (ℬ # t) = {layer_t})
+    (empty_layer : ∀ j : Fin (n + 1), s < j → j < t → #(ℬ # ↑j) = 0) :
+    ∃ i_s : Fin (ℬ.toList.length - 1), ℬ.toList.get? i_s = layer_s ∧ ℬ.toList.get? (i_s.val + 1) = layer_t := by
+
+  let i_s := ℬ.toList.indexOf layer_s
+  have i_s_in_range : i_s < ℬ.toList.length := List.indexOf_lt_length.mpr (mem_toList.mpr (mem_card_of_slice hs).left)
+  have h_i_s : ℬ.toList.get ⟨i_s, i_s_in_range⟩ = layer_s := ℬ.toList.indexOf_get i_s_in_range
+
+  let i_t := ℬ.toList.indexOf layer_t
+  have i_t_in_range : i_t < ℬ.toList.length := List.indexOf_lt_length.mpr (mem_toList.mpr (mem_card_of_slice ht).left)
+  have h_i_t : ℬ.toList.get ⟨i_t, i_t_in_range⟩ = layer_t := ℬ.toList.indexOf_get i_t_in_range
+
+  have i_s_eq_i_t_succ : i_t = i_s + 1 := by
+    by_contra ass₁
+    have : (⟨i_t, i_t_in_range⟩ : Fin ℬ.toList.length) > (⟨i_s, i_s_in_range⟩ : Fin ℬ.toList.length) := by
+      by_contra! ass₂
+      have := (StrictMono.monotone monotone_cards) ass₂
+      simp only [h_i_s, h_i_t, (mem_card_of_slice hs).right, (mem_card_of_slice ht).right] at this
+      linarith
+    have i_s_succ_lt : i_s + 1 < i_t := Nat.lt_of_le_of_ne this fun a => ass₁ (id (Eq.symm a))
+
+    let e := ℬ.toList.get ⟨i_s + 1, Nat.lt_trans i_s_succ_lt i_t_in_range⟩
+
+    have e_card_gt' : #e > s := by
+      have : (⟨i_s, i_s_in_range⟩ : Fin ℬ.toList.length) < (⟨i_s + 1, Nat.lt_trans i_s_succ_lt i_t_in_range⟩ : Fin ℬ.toList.length) := by simp
+      have := monotone_cards this
+      simp only [h_i_s, (mem_card_of_slice hs).right] at this
+      exact this
+
+    have e_card_lt' : #e < t := by
+      have : (⟨i_t, i_t_in_range⟩ : Fin ℬ.toList.length) > (⟨i_s + 1, Nat.lt_trans i_s_succ_lt i_t_in_range⟩ : Fin ℬ.toList.length) := by simp [i_s_succ_lt]
+      have := monotone_cards this
+      simp only [h_i_t, (mem_card_of_slice ht).right] at this
+      exact this
+
+    have card_e_mod : #e % (n + 1) = #e := mod_eq_of_lt (Nat.lt_trans e_card_lt' t.is_lt)
+
+    have e_card_gt : Fin.ofNat #e > s := by simp [Fin.ofNat, card_e_mod]; exact e_card_gt'
+    have e_card_lt : Fin.ofNat #e < t := by simp [Fin.ofNat, card_e_mod]; exact e_card_lt'
+
+
+    have layer_empty := empty_layer (Fin.ofNat #e) e_card_gt e_card_lt
+
+    have layer_nonempty : e ∈ (ℬ # ↑(Fin.ofNat #e : Fin (n + 1))) := by
+      simp [mem_slice]
+      constructor
+      · apply mem_toList.mp
+        exact List.get_mem ℬ.toList (i_s + 1) (Nat.lt_trans i_s_succ_lt i_t_in_range)
+      · simp [Fin.ofNat, card_e_mod]
+
+    simp at layer_empty
+
+    simp [layer_empty] at layer_nonempty
+
+  have i_s_upperbound : i_s < ℬ.toList.length - 1 :=
+    have : i_s + 1 < ℬ.toList.length := by rw [←i_s_eq_i_t_succ]; exact i_t_in_range
+    lt_sub_of_add_lt this
+
+  use ⟨i_s, i_s_upperbound⟩
+
+  simp only [i_s_eq_i_t_succ] at h_i_t
+
+
+  have h_i_s' : ℬ.toList.get? i_s = layer_s := by
+    refine' List.get?_eq_some.mpr _
+    use Nat.lt_of_lt_of_le i_s_upperbound (Nat.pred_le ℬ.toList.length)
+
+  have h_i_t' : ℬ.toList.get? (i_s + 1) = layer_t := by
+    refine' List.get?_eq_some.mpr _
+    use add_lt_of_lt_sub i_s_upperbound
+
+  exact ⟨h_i_s', h_i_t'⟩
+
+
 lemma count_maxChainsThrough {n: ℕ} (m : ℕ) (h_mn : m ≤ n + 1) (hn : Fintype.card α = n)
     (ℬ : Finset (Finset α)) (cardℬ : #ℬ = m) (chainℬ : IsChain (· ⊂ ·) ℬ)
-    (monotone_cards: Monotone (fun i : Fin ℬ.toList.length ↦ (ℬ.toList.get i).card)) (empty_in_chain : ∅ ∈ ℬ) (univ_in_chain : univ ∈ ℬ) :
-    Fintype.card (ℬ.MaxChainThrough) = ∏ j : Fin (ℬ.toList.length - 1), (((ℬ.toList.get ⟨j + 1, by apply add_lt_of_lt_sub j.prop⟩).card) - (ℬ.toList.get ⟨j, lt_of_lt_pred j.prop⟩).card)! := by
+    (monotone_cards: StrictMono (fun i : Fin ℬ.toList.length ↦ (ℬ.toList.get i).card)) (empty_in_chain : ∅ ∈ ℬ) (univ_in_chain : univ ∈ ℬ) :
+    Fintype.card (ℬ.MaxChainThrough) = ∏ j : Fin (ℬ.toList.length - 1), (#(ℬ.toList.get ⟨j + 1, by apply add_lt_of_lt_sub j.prop⟩) - #(ℬ.toList.get ⟨j, lt_of_lt_pred j.prop⟩))! := by
   revert ℬ
   induction' h_mn using decreasingInduction with n_ q ih
   · intro ℬ cardℬ chainℬ monotone_cards empty_in_chain univ_in_chain
-    have cardℬ_lt : #ℬ < n + 1 := lt_of_eq_of_lt cardℬ q
-    have empty_range_existence :=  range_empty_layer hn chainℬ (IsChain.empty_layer_by_card hn chainℬ cardℬ_lt) empty_in_chain univ_in_chain
-    let s' : Fin (n + 1) := empty_range_existence.choose
-    let t' : Fin (n + 1) := empty_range_existence.choose_spec.choose
-    have empty_range : s' + 2 ≤ t' ∧ #(ℬ # s') = 1 ∧ #(ℬ # t') = 1 ∧ ∀ (j : Fin (n + 1)), s' < j ∧ j < t' → #(ℬ # ↑j) = 0 := empty_range_existence.choose_spec.choose_spec
+
+    obtain ⟨s', t', empty_range : s'.val + 2 ≤ t'.val ∧ #(ℬ # s') = 1 ∧ #(ℬ # t') = 1 ∧ ∀ (j : Fin (n + 1)), s' < j ∧ j < t' → #(ℬ # ↑j) = 0⟩ :=
+      range_empty_layer hn chainℬ (IsChain.empty_layer_by_card hn chainℬ (lt_of_eq_of_lt cardℬ q)) empty_in_chain univ_in_chain
 
     let s : Finset.range (n + 1) := ⟨s'.val, mem_range.mpr s'.is_lt⟩
     let t : Finset.range (n + 1) := ⟨t'.val, mem_range.mpr t'.is_lt⟩
 
-    have ilej_succ_succ : (s : ℕ) + 2 < (t : ℕ) := by
+    have ilej_succ_succ : (s : ℕ) + 2 ≤ (t : ℕ) := by simp [empty_range.left]
+
+    obtain ⟨layer_t, ht : (ℬ # t) = {layer_t}⟩ := Finset.card_eq_one.mp empty_range.right.right.left
+    obtain ⟨layer_s, hs : (ℬ # s) = {layer_s}⟩ := Finset.card_eq_one.mp empty_range.right.left
+
+
+    have empty_layer' : ∀ j ∈ Finset.range (n + 1), s < j → j < t → #(ℬ # ↑j) = 0 := by
       simp
-      sorry
+      intro j jinrange jgt jlt
 
-    have layer_s_exists := Finset.card_eq_one.mp empty_range.right.left
-    let layer_s := layer_s_exists.choose
-    have hs : (ℬ # s) = {layer_s} := layer_s_exists.choose_spec
-
-    have layer_t_exists := Finset.card_eq_one.mp empty_range.right.right.left
-    let layer_t := layer_t_exists.choose
-    have ht : (ℬ # t) = {layer_t} := layer_t_exists.choose_spec
-
-    have empty_layer : ∀ j ∈ Finset.range (n + 1), s < j ∧ j < t → #(ℬ # ↑j) = 0 := by sorry
-      -- simp
-      -- intro j j_lt jgt jlt
-      -- have := empty_range.right.right.right j ⟨jgt, jlt⟩
-      -- simp at this
-      -- exact this
-
-    have := chain_extension hn (by sorry) chainℬ hs ht (by sorry)
-
-    let chain_extension_candidates := Finset.filter (chain_extension_filter_function ℬ layer_s) (Finset.univ : Finset α)
-
-    have chain_extension_candidates_eq : chain_extension_candidates = layer_t \ layer_s := by
-      refine' chain_extension hn (by sorry) chainℬ hs ht (by sorry)
-
-    have layer_s_mem_card : layer_s ∈ ℬ ∧ #layer_s = s := by
-      have := Finset.mem_singleton_self layer_s
-      rw [←hs] at this
-      simp [slice] at this
+      have nsuccnezero : n + 1 ≠ 0 := by simp
+      have jmod : j % (n + 1) = j := (mod_eq_iff_lt nsuccnezero).mpr jinrange
+      have s'ltj : s' < Fin.ofNat j := by simp [Fin.ofNat, jmod]; exact jgt
+      have jltt' : Fin.ofNat j < t' := by simp [Fin.ofNat, jmod]; exact jlt
+      have := empty_range.right.right.right j ⟨s'ltj, jltt'⟩
+      simp [jmod] at this
       exact this
 
-    have layer_t_mem_card : layer_t ∈ ℬ ∧ #layer_t = t := by
-      have := Finset.mem_singleton_self layer_t
-      rw [←ht] at this
-      simp [slice] at this
+    have empty_layer : ∀ j : Fin (n + 1), s' < j → j < t' → #(ℬ # ↑j) = 0 := by
+      simp
+      intro j jgt jlt
+
+      have nsuccnezero : n + 1 ≠ 0 := by simp
+      have := empty_range.right.right.right j ⟨jgt, jlt⟩
+      simp at this
       exact this
 
-    have chain_extension_candidates_card : #chain_extension_candidates = t - s := by
-      rw [chain_extension_candidates_eq]
+    let extension_candidates := Finset.filter (chain_extension_filter_function ℬ layer_s) (Finset.univ : Finset α)
+
+    have extension_candidates_eq : extension_candidates = layer_t \ layer_s := by
+      refine' chain_extension hn ilej_succ_succ chainℬ hs ht empty_layer'
+
+    have layer_s_mem_card := mem_card_of_slice hs
+    have layer_t_mem_card := mem_card_of_slice ht
+
+    obtain ⟨i_s, ⟨entry_i_s', entry_i_s_succ'⟩⟩ := incident_indices_monotone_cards ilej_succ_succ hn monotone_cards hs ht empty_layer
+
+    have i_s_in_range : i_s < ℬ.toList.length := Nat.lt_of_lt_of_le i_s.is_lt (Nat.pred_le ℬ.toList.length)
+    have i_s_succ_in_range : i_s.val + 1 < ℬ.toList.length := add_lt_of_lt_sub i_s.is_lt
+
+    have entry_i_s : ℬ.toList.get ⟨i_s, i_s_in_range⟩ = layer_s := by sorry
+    have entry_i_s_succ : ℬ.toList.get ⟨i_s + 1, i_s_succ_in_range⟩ = layer_t := by sorry
+
+    let multiplicant' (j : Fin (ℬ.toList.length - 1)) : ℕ := (#((ℬ.toList.get ⟨j + 1, add_lt_of_lt_sub j.is_lt⟩)) - #(ℬ.toList.get ⟨j, Nat.lt_of_lt_of_le j.is_lt (Nat.pred_le ℬ.toList.length)⟩) - 1)!
+    let multiplicant (j : Fin (ℬ.toList.length - 1)) : ℕ := (#((ℬ.toList.get ⟨j + 1, add_lt_of_lt_sub j.is_lt⟩)) - #(ℬ.toList.get ⟨j, Nat.lt_of_lt_of_le j.is_lt (Nat.pred_le ℬ.toList.length)⟩))!
+
+    have extension_candidates_card : #extension_candidates = #((ℬ.toList.get ⟨i_s + 1, i_s_succ_in_range⟩)) - #(ℬ.toList.get ⟨i_s, i_s_in_range⟩) := by
+      rw [entry_i_s, entry_i_s_succ, layer_s_mem_card.right, layer_t_mem_card.right]
+      rw [extension_candidates_eq]
       have card_bottom_lt_card_top : #layer_s < #layer_t := by
         rw [layer_s_mem_card.right, layer_t_mem_card.right]
         linarith
@@ -616,48 +705,36 @@ lemma count_maxChainsThrough {n: ℕ} (m : ℕ) (h_mn : m ≤ n + 1) (hn : Finty
       rw [←layer_s_mem_card.right, ←layer_t_mem_card.right]
       exact Nat.eq_sub_of_add_eq this
 
-    let i_s := ℬ.toList.indexOf layer_s
-    have layer_s_memList : layer_s ∈ ℬ.toList := by
-      rw [mem_toList]
-      exact layer_s_mem_card.left
-    have i_s_in_range : i_s < ℬ.toList.length := List.indexOf_lt_length.mpr layer_s_memList
-    have h_i_s : ℬ.toList.get ⟨i_s, i_s_in_range⟩ = layer_s := ℬ.toList.indexOf_get i_s_in_range
-
-    let i_t := ℬ.toList.indexOf layer_t
-    have layer_t_memList : layer_t ∈ ℬ.toList := by
-      rw [mem_toList]
-      exact layer_t_mem_card.left
-    have i_t_in_range : i_t < ℬ.toList.length := List.indexOf_lt_length.mpr layer_t_memList
-    have h_i_t : ℬ.toList.get ⟨i_t, i_t_in_range⟩ = layer_t := ℬ.toList.indexOf_get i_t_in_range
-
-    have i_s_i_t : i_t = i_s + 1 := by sorry
-
-    have is_upperbound : i_s < ℬ.toList.length - 1 :=
-      have : i_s + 1 < ℬ.toList.length := by rw [←i_s_i_t]; exact i_t_in_range
-      lt_sub_of_add_lt this
+    let 𝒥 := { j : Fin (ℬ.toList.length - 1) // j ≠ ⟨i_s, i_s.is_lt⟩ }
 
     let extensions_wrt (x : α) : Finset (Finset (Finset α)) := by
       let ℬ' : Finset (Finset α) := Insert.insert (Insert.insert x layer_s) ℬ
       exact (Finset.univ : Finset ℬ'.MaxChainThrough).image (emb_MaxChainThrough ℬ')
 
     /- Here the induction hypothesis ih is applied-/
-    have card_extensions_wrt (x : chain_extension_candidates) : #(extensions_wrt x) = (#((ℬ.toList.get ⟨i_s + 1, by sorry⟩)) - #(ℬ.toList.get ⟨i_s, by sorry⟩) - 1)! * ∏ j : { j : Fin (ℬ.toList.length - 1) // j ≠ ⟨i_s, is_upperbound⟩ }, (#((ℬ.toList.get ⟨j + 1, by sorry⟩)) - #(ℬ.toList.get ⟨j, by sorry⟩))! := by sorry
+    have card_extensions_wrt (a : extension_candidates) : #(extensions_wrt a) = (multiplicant' i_s) * ∏ j : 𝒥, (multiplicant j.1) := by sorry
 
     /-The set of maximal chains through ℬ is the disjoint union of maximal chains through the union of ℬ with some chain extension candidate-/
-    have central_identity: (Finset.univ : Finset ℬ.MaxChainThrough).image (emb_MaxChainThrough ℬ) = chain_extension_candidates.disjiUnion extensions_wrt (by sorry) := by sorry
+    have central_identity: (Finset.univ : Finset ℬ.MaxChainThrough).image (emb_MaxChainThrough ℬ) = extension_candidates.disjiUnion extensions_wrt (by sorry) := by sorry
 
     have := Finset.card_image_of_injective (Finset.univ : Finset ℬ.MaxChainThrough) (inj_emb_MaxChainThrough ℬ)
 
     rw [Fintype.card, ←this, central_identity, card_disjiUnion]
 
     calc
-      ∑ a ∈ chain_extension_candidates, #(extensions_wrt a) =
-          ∑ a ∈ chain_extension_candidates, ∏ j : { j : Fin (ℬ.toList.length - 1) // j ≠ ⟨i_s, is_upperbound⟩ }, (#((ℬ.toList.get ⟨i_s + 1, by sorry⟩)) - #(ℬ.toList.get ⟨i_s, by sorry⟩) - 1)! * (#((ℬ.toList.get ⟨j + 1, by sorry⟩)) - #(ℬ.toList.get ⟨j, by sorry⟩))! := by
+      ∑ a ∈ extension_candidates, #(extensions_wrt a) =
+          ∑ a ∈ extension_candidates, (multiplicant' i_s) * ∏ j : 𝒥, (multiplicant j.1) := by
         apply sum_congr (by simp)
         intro x hx
+        exact card_extensions_wrt ⟨x, hx⟩
+      _ = (multiplicant i_s) *  ∏ j : 𝒥, (multiplicant j.1) := by
+        simp only [Finset.sum_const, extension_candidates_card, multiplicant']
+        have : (#ℬ.toList[↑i_s + 1] - #ℬ.toList[↑i_s]) > 0 := by sorry
+        have := mul_factorial_pred this
+        simp
         sorry
-        --exact card_extensions_wrt ⟨x, hx⟩
-      _ = (#((ℬ.toList.get ⟨i_s + 1, by sorry⟩)) - #(ℬ.toList.get ⟨i_s, by sorry⟩) - 1)! * ∑ a ∈ chain_extension_candidates, ∏ j : { j : Fin (ℬ.toList.length - 1) // j ≠ ⟨i_s, is_upperbound⟩ }, (#((ℬ.toList.get ⟨j + 1, by sorry⟩)) - #(ℬ.toList.get ⟨j, by sorry⟩))!
+
+      _ = ∏ j : Fin (ℬ.toList.length - 1), (#((ℬ.toList.get ⟨j + 1, add_lt_of_lt_sub j.is_lt⟩)) - #(ℬ.toList.get ⟨j, Nat.lt_of_lt_of_le j.is_lt (Nat.pred_le ℬ.toList.length)⟩))! := by sorry
 
   · intro ℬ cardℬ chainℬ monotone_cards empty_in_chain univ_in_chain
     have entry_cards : ∀ j : Fin (ℬ.toList.length - 1), (ℬ.toList.get ⟨j, lt_of_lt_pred j.prop⟩).card = j.val := by sorry
