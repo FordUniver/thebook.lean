@@ -626,7 +626,7 @@ lemma incident_indices_monotone_cards {n: ℕ} {s t : Fin (n + 1)} {ℬ : Finset
 lemma count_maxChainsThrough {n: ℕ} (m : ℕ) (h_mn : m ≤ n + 1) (hn : Fintype.card α = n)
     (ℬ : Finset (Finset α)) (cardℬ : #ℬ = m) (chainℬ : IsChain (· ⊂ ·) ℬ)
     (monotone_cards: StrictMono (fun (i : Fin ℬ.toList.length) ↦ #ℬ.toList[i])) (empty_in_chain : ∅ ∈ ℬ) (univ_in_chain : univ ∈ ℬ) :
-    Fintype.card (ℬ.MaxChainThrough) = ∏ j : Fin (ℬ.toList.length - 1), (#ℬ.toList[j.val + 1] - #ℬ.toList[j.val])! := by
+    Fintype.card (ℬ.MaxChainThrough) = ∏ j ∈ (Finset.univ : Finset (Fin (ℬ.toList.length - 1))), (#ℬ.toList[j.val + 1] - #ℬ.toList[j.val])! := by
   revert ℬ
   induction' h_mn using decreasingInduction with n_ q ih
   · intro ℬ cardℬ chainℬ monotone_cards empty_in_chain univ_in_chain
@@ -691,17 +691,15 @@ lemma count_maxChainsThrough {n: ℕ} (m : ℕ) (h_mn : m ≤ n + 1) (hn : Finty
       rw [←layer_s_mem_card.right, ←layer_t_mem_card.right]
       exact Nat.eq_sub_of_add_eq this
 
-    let 𝒥' := { j : Fin (ℬ.toList.length - 1) // j ≠ ⟨i_s, i_s.is_lt⟩ }
-    let 𝒥 := Fin (ℬ.toList.length - 1)
     let 𝒬 := (Finset.univ : Finset (Fin (ℬ.toList.length - 1)))
-    let 𝒬' := (Finset.univ : Finset (Fin (ℬ.toList.length - 1))) \ {i_s}
+    let 𝒬' := 𝒬 \ {i_s}
 
     let extensions_wrt (x : α) : Finset (Finset (Finset α)) := by
       let ℬ' : Finset (Finset α) := Insert.insert (Insert.insert x layer_s) ℬ
       exact (Finset.univ : Finset ℬ'.MaxChainThrough).image (emb_MaxChainThrough ℬ')
 
     /- Here the induction hypothesis ih is applied-/
-    have card_extensions_wrt (a : extension_candidates) : #(extensions_wrt a) = (multiplicant' i_s) * ∏ j : 𝒥', (multiplicant j.1) := by sorry
+    have card_extensions_wrt (a : extension_candidates) : #(extensions_wrt a) = (multiplicant' i_s) * ∏ j ∈ 𝒬', (multiplicant j) := by sorry
 
     /-The set of maximal chains through ℬ is the disjoint union of maximal chains through the union of ℬ with some chain extension candidate-/
     have central_identity: (Finset.univ : Finset ℬ.MaxChainThrough).image (emb_MaxChainThrough ℬ) = extension_candidates.disjiUnion extensions_wrt (by sorry) := by sorry
@@ -710,17 +708,13 @@ lemma count_maxChainsThrough {n: ℕ} (m : ℕ) (h_mn : m ≤ n + 1) (hn : Finty
 
     rw [Fintype.card, ←this, central_identity, card_disjiUnion]
 
-    #check Finset.prod_mul_distrib
-    #check Finset.prod_eq_mul_prod_diff_singleton
-    #check Finset.prod
-
     calc
       ∑ a ∈ extension_candidates, #(extensions_wrt a) =
-          ∑ a ∈ extension_candidates, (multiplicant' i_s) * ∏ j : 𝒥', (multiplicant j.1) := by
+          ∑ a ∈ extension_candidates, (multiplicant' i_s) * ∏ j ∈ 𝒬', (multiplicant j) := by
         apply sum_congr (by simp)
         intro x hx
         exact card_extensions_wrt ⟨x, hx⟩
-      _ = (multiplicant i_s) *  ∏ j : 𝒥', (multiplicant j.1) := by
+      _ = (multiplicant i_s) *  ∏ j ∈ 𝒬', (multiplicant j) := by
         simp [Finset.sum_const, extension_candidates_card, multiplicant']
         rw [←mul_assoc]
         congr
@@ -730,13 +724,14 @@ lemma count_maxChainsThrough {n: ℕ} (m : ℕ) (h_mn : m ≤ n + 1) (hn : Finty
           have : s'.val < t'.val := by linarith [empty_range.left]
           exact this
       _ = (multiplicant i_s) *  ∏ j ∈ 𝒬', (multiplicant j) := by simp
-      _ = ∏ j : Fin (ℬ.toList.length - 1), (multiplicant j) := by
-        simp [𝒥']
-        apply Finset.prod_eq_mul_prod_diff_singleton
-
-      _ = ∏ j : Fin (ℬ.toList.length - 1), (#ℬ.toList[j.val + 1] - #ℬ.toList[j.val])! := by sorry
-
-
+      _ = ∏ j ∈ 𝒬, (multiplicant j) := by
+        simp [𝒬']
+        have : i_s ∈ 𝒬 := by simp [𝒬]
+        exact (Finset.prod_eq_mul_prod_diff_singleton this multiplicant).symm
+      _ = ∏ j ∈ 𝒬, (#ℬ.toList[j.val + 1] - #ℬ.toList[j.val])! := by
+        apply prod_congr (by simp)
+        intro x hx
+        rfl
 
   · intro ℬ cardℬ chainℬ monotone_cards empty_in_chain univ_in_chain
     have entry_cards : ∀ j : Fin (ℬ.toList.length - 1), #ℬ.toList[j.val] = j.val := by sorry
