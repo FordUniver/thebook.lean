@@ -10,9 +10,6 @@ open SimpleGraph Finset Fintype Nat
 -- The subgraph induced by a vertex subset
 notation:max G "[" A "]" => SimpleGraph.Subgraph.induce (⊤ : Subgraph G) (Finset.toSet A)
 
--- TODOS
--- 5. Change red and blue to notation?
-
 -- Edge colorings
 -- Because we are lucky, we only talk about two-colorings of the complete graph here.
 -- Those can be represented as graphs on the vertex set, where we consider the edge `(v, w)`
@@ -40,15 +37,6 @@ def ramseyProp (N m n : ℕ) :=
       (C : SimpleGraph V) [DecidableRel C.Adj],
     ∃ (s : Finset V), (C.IsNIndepSet m s) ∨ (C.IsNClique n s)
 
--- Straight from the book:
---    "...we ask for the smallest number `N` (if it exists) with this property
---    — and this is the Ramsey number `R(m, n)`."
--- Note that `sInf ∅ = 0`, so our lean definition does not include "existence" like the paper version.
--- We need to keep that in mind when using our `R`.
-noncomputable def R (m n : ℕ) : ℕ := sInf { N | ramseyProp N m n}
-
-notation:max "R(" m "," n ")" => R m n
-notation:max "R(" n ")" => R n n
 
 -- "It is clear that if `K_N` has property `(m, n)`, then so does every `K_s` with `s ≥ N`."
 lemma ramseyProp_mono {m n : ℕ} (N s : ℕ) (h : N ≤ s) (ramseyProp_N : ramseyProp N m n) : ramseyProp s m n := by
@@ -59,17 +47,52 @@ lemma ramseyProp_mono {m n : ℕ} (N s : ℕ) (h : N ≤ s) (ramseyProp_N : rams
   obtain ⟨A, A_subset, A_card⟩ := exists_subset_card_eq h
   let C' := C[A]
 
-  -- Since `K_N` has the Ramsey property, we can find a monochromatic vertex subset `s` in the incuded subgraph.
+  -- Since `K_N` has the Ramsey property, we can find a monochromatic vertex subset `A'` in the induced subgraph.
   have := ramseyProp_N A (by simp [A_card])
-  obtain ⟨s, red_or_blue⟩ := @this C'.coe (Classical.decRel C'.coe.Adj)
+  obtain ⟨A', red_or_blue⟩ := @this C'.coe (Classical.decRel C'.coe.Adj)
 
-  -- consider s as a Finset of W (the vertices of C)
-  use map ⟨Subtype.val, Subtype.val_injective⟩ s
+  -- consider `A'` as a Finset of `W` (the vertices of `C`)
+  use map ⟨Subtype.val, Subtype.val_injective⟩ A'
 
   -- cliques and independent in the induced subgraph are also such in the supergraph.
   exact Or.imp (induce_isNIndepSet C).mp (induce_isNClique C) red_or_blue
 
--- We prove some properties of the Ramsey property that will come in handy:
+
+-- Straight from the book:
+--    "...we ask for the smallest number `N` (if it exists) with this property
+--    — and this is the Ramsey number `R(m, n)`."
+-- Note that `sInf ∅ = 0`, so our lean definition does not include "existence" like the paper version.
+-- We need to keep that in mind when using our `R`.
+noncomputable def R (m n : ℕ) : ℕ := sInf { N | ramseyProp N m n}
+
+notation:max "R(" m "," n ")" => R m n
+notation:max "R(" n ")" => R n n
+
+----------------------------------------------------------------------------------------------------
+-- Base case proofs
+
+-- ...we certainly have `R(m,2) = m` because either all of the edges of `K_m` are red or
+-- there is a blue edge, resulting in a blue `K_2`.
+lemma ramseyProp_two {m : ℕ} : ramseyProp m m 2 := by
+    intro _ _ _ cardV C _
+    by_cases all_red : C.IsNIndepSet m univ
+    · -- All edges are red, so we're done
+      exact ⟨univ, (Or.inr all_red).symm⟩
+    · simp [isNIndepSet_iff, isIndepSet_iff, Set.Pairwise, card_univ, cardV] at all_red
+      -- There is a blue edge (v,w)
+      obtain ⟨v, ⟨w, ⟨_, vwblue⟩⟩⟩ := all_red
+      exact ⟨{v, w}, by simp_all [isNClique_iff]⟩
+
+lemma ind_start_R_two {m : ℕ} : R(m, 2) = m := by
+  have m_le_N (N : ℕ) (ram : ramseyProp N m 2) : m ≤ N := by
+    obtain ⟨s, h⟩ := ram (Fin N) (Fintype.card_fin N) ⊥
+    simp [isNClique_bot_iff] at h
+    rw [← h.2]
+    exact (card_finset_fin_le s)
+  have r2 : ramseyProp m m 2 := ramseyProp_two
+  exact le_antisymm (Nat.sInf_le r2) (le_csInf ⟨m, r2⟩ m_le_N)
+
+
 
 -- The Ramsey property is symmetric in `m` and `n`.
 lemma ramseyProp_symm (m n N : ℕ) (h : ramseyProp N m n) : (ramseyProp N n m) := by
@@ -83,8 +106,15 @@ lemma ramseyProp_symm (m n N : ℕ) (h : ramseyProp N m n) : (ramseyProp N n m) 
 
 -- The Ramsey number is also symmetric.
 lemma R_symm {m n : ℕ} : R(m,n) = R(n,m) := by
-  have {N : ℕ} : (ramseyProp N m n) ↔ (ramseyProp N n m) := ⟨ramseyProp_symm m n N, ramseyProp_symm n m N⟩
+  have {N : ℕ} := Iff.intro (ramseyProp_symm m n N) (ramseyProp_symm n m N)
   simp [R, this]
+
+-- "By symmetry, we have `R(2,n) = n`."
+-- TODO if we do symmety inside the induction, we don't need this
+lemma ind_start_two_R {m : ℕ} : R(2, m) = m := by
+  simp[R_symm]; exact ind_start_R_two
+
+-- We prove some properties of the Ramsey property that will come in handy:
 
 -- The Ramsey number, if it exists, is positive if both `m` and `n` are positive.
 lemma R_pos (m n : ℕ) (_ : 0 < m) (_ : 0 < n) (h : ∃ N, ramseyProp N m n) : 0 < R(m, n) := by
@@ -246,43 +276,6 @@ theorem R_bounded_recursive (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
 
 
 
-----------------------------------------------------------------------------------------------------
--- Base case proofs
-
--- ...we certainly have `R(m,2) = m` because either all of the edges of `K_m` are red or
--- there is a blue edge, resulting in a blue `K_2`.
-lemma ramseyProp_two {m : ℕ} : ramseyProp m m 2 := by
-    intro V finV decV cardV C _
-    let all : Finset V := univ
-    by_cases all_red : C.IsNIndepSet m all
-    · -- All edges are red, so we're done
-      exact ⟨all, (Or.inr all_red).symm⟩
-    · -- There is a blue edge
-      rw [isNIndepSet_iff, isIndepSet_iff, Set.Pairwise] at all_red
-      rw [not_and_or, card_univ] at all_red
-      simp [cardV] at all_red
-      obtain ⟨v, ⟨_, ⟨w, ⟨_, ⟨_, vwblue⟩⟩⟩⟩⟩ := all_red
-      let s : Finset V := {v, w}
-      have pairblue : C.IsNClique 2 s := by simp_all [isNClique_iff, s]
-      exact ⟨s, (Or.inl pairblue).symm⟩
-
-lemma ind_start_R_two {m : ℕ} : R(m, 2) = m := by
-  have m_le_N (N : ℕ) (ram : ramseyProp N m 2) : m ≤ N := by
-    obtain ⟨s, h⟩ := ram (Fin N) (Fintype.card_fin N) ⊥
-    have : ¬ (IsNClique ⊥ 2 s) := by
-      rw [isNClique_bot_iff]
-      push_neg
-      intro si
-      simp [one_lt_two] at si
-    simp[this] at h
-    rw [← h.2]
-    exact (card_finset_fin_le s)
-  exact le_antisymm (Nat.sInf_le ramseyProp_two) (le_csInf ⟨m, ramseyProp_two⟩ m_le_N)
-
--- "By symmetry, we have `R(2,n) = n`."
--- TODO if we do symmety inside the induction, we don't need this
-lemma ind_start_two_R {m : ℕ} : R(2, m) = m := by
-  simp[R_symm]; exact ind_start_R_two
 
 ----------------------------------------------------------------------------------------------------
 -- my induction principle
