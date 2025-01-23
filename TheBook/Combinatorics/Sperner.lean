@@ -148,6 +148,17 @@ instance IsChain.sub_is_trans : IsTrans 𝒜 (fun (e₁ e₂ : 𝒜) ↦ e₁.va
 instance card_le : LE (Finset α) where
   le x y := #x ≤ #y
 
+instance card_lt : LT (Finset α) where
+  lt x y := #x < #y
+
+instance card_preorder : Preorder (Finset α) := {
+  le := (· ≤ ·),
+  lt := (· < ·),
+  le_refl := fun x =>  Nat.le_refl #x,
+  le_trans := fun _ _ _ hxy hyz => Nat.le_trans hxy hyz,
+  lt_iff_le_not_le := fun _ _ => Nat.lt_iff_le_not_le
+}
+
 instance card_le_is_total : IsTotal 𝒜 (fun (e₁ e₂ : 𝒜) ↦ e₁.val ≤ e₂.val) :=
   ⟨fun a b ↦ Nat.le_total #a.val #b.val⟩
 
@@ -582,7 +593,7 @@ lemma card_maxChainThrough {ℬ : Finset (Finset α)} (hn : Fintype.card α = n)
     _ = n + 1 := by rw [←(Finset.card_eq_sum_ones (Iic (Fintype.card α)))]; simp [hn]
 
 lemma incident_indices_monotone_cards {n: ℕ} {s t : Fin (n + 1)} {ℬ : Finset (Finset α)} (ilej_succ_succ : s.val + 2 ≤ t.val)
-    (monotone_cards: StrictMono (fun i : Fin ℬ.toList.length ↦ (ℬ.toList[i.val]).card))
+    (monotone_cards: List.Sorted (fun (e₁ e₂) ↦ #e₁ < #e₂) ℬ.toList)
     (hs : (ℬ # s) = {layer_s}) (ht : (ℬ # t) = {layer_t})
     (empty_layer : ∀ j : Fin (n + 1), s < j → j < t → #(ℬ # ↑j) = 0) :
     ∃ i_s : Fin (ℬ.toList.length - 1), ℬ.toList[i_s.val]  = layer_s ∧ ℬ.toList[i_s.val + 1] = layer_t := by
@@ -595,27 +606,42 @@ lemma incident_indices_monotone_cards {n: ℕ} {s t : Fin (n + 1)} {ℬ : Finset
   have i_t_in_range : i_t < ℬ.toList.length := List.indexOf_lt_length.mpr (mem_toList.mpr (mem_card_of_slice ht).left)
   have h_i_t : ℬ.toList[i_t] = layer_t := ℬ.toList.indexOf_get i_t_in_range
 
+  simp at i_t_in_range
+  simp at i_s_in_range
+
   have i_s_eq_i_t_succ : i_t = i_s + 1 := by
     by_contra ass₁
-    have : (⟨i_t, i_t_in_range⟩ : Fin ℬ.toList.length) > (⟨i_s, i_s_in_range⟩ : Fin ℬ.toList.length) := by
+    have : i_t > i_s := by
       by_contra! ass₂
-      have := (StrictMono.monotone monotone_cards) ass₂
-      simp only [h_i_s, h_i_t, (mem_card_of_slice hs).right, (mem_card_of_slice ht).right] at this
+      unfold List.Sorted at monotone_cards
+      have : ℬ.toList[i_t] ≤ ℬ.toList[i_s] := by
+        cases le_iff_eq_or_lt.mp ass₂ with
+        | inl h =>
+          simp [h]
+        | inr h =>
+          have : i_t < (Finset.univ : Finset ℬ).toList.length := by
+            simpa
+          have := ((List.pairwise_iff_get.mp monotone_cards) ⟨i_t, by simpa⟩ ⟨i_s, by simpa⟩ h)
+          simp at this
+          exact le_of_lt this
+      simp [h_i_s, h_i_t] at this
+      have : t.val ≤ s.val := by
+        simp [←(mem_card_of_slice hs).right, ←(mem_card_of_slice ht).right]
+        exact this
       linarith
     have i_s_succ_lt : i_s + 1 < i_t := Nat.lt_of_le_of_ne this fun a => ass₁ (id (Eq.symm a))
 
     let e := ℬ.toList[i_s + 1]
 
     have e_card_gt' : #e > s := by
-      have : (⟨i_s, i_s_in_range⟩ : Fin ℬ.toList.length) < (⟨i_s + 1, Nat.lt_trans i_s_succ_lt i_t_in_range⟩ : Fin ℬ.toList.length) := by simp
-      have := monotone_cards this
-      simp only [h_i_s, (mem_card_of_slice hs).right] at this
+      have := (List.pairwise_iff_get.mp monotone_cards) ⟨i_s, by simpa⟩ ⟨i_s + 1, by apply Nat.lt_trans i_s_succ_lt; simpa ⟩ (by simp : i_s < i_s + 1)
+      simp [h_i_s, (mem_card_of_slice hs).right] at this
+      unfold e
       exact this
 
     have e_card_lt' : #e < t := by
-      have : (⟨i_t, i_t_in_range⟩ : Fin ℬ.toList.length) > (⟨i_s + 1, Nat.lt_trans i_s_succ_lt i_t_in_range⟩ : Fin ℬ.toList.length) := by simp [i_s_succ_lt]
-      have := monotone_cards this
-      simp only [h_i_t, (mem_card_of_slice ht).right] at this
+      have := (List.pairwise_iff_get.mp monotone_cards) ⟨i_s + 1, by apply Nat.lt_trans i_s_succ_lt; simpa⟩ ⟨i_t, by simpa⟩ i_s_succ_lt
+      simp [h_i_t, (mem_card_of_slice ht).right] at this
       exact this
 
     have card_e_mod : #e % (n + 1) = #e := mod_eq_of_lt (Nat.lt_trans e_card_lt' t.is_lt)
@@ -644,16 +670,20 @@ lemma incident_indices_monotone_cards {n: ℕ} {s t : Fin (n + 1)} {ℬ : Finset
   use ⟨i_s, i_s_upperbound⟩
 
   simp only [i_s_eq_i_t_succ] at h_i_t
-
   exact ⟨h_i_s, h_i_t⟩
+
 
 lemma count_maxChainsThrough {n: ℕ} (m : ℕ) (h_mn : m ≤ n + 1) (hn : Fintype.card α = n)
     (ℬ : Finset (Finset α)) (cardℬ : #ℬ = m) (chainℬ : IsChain (· ⊂ ·) ℬ)
-    (monotone_cards: StrictMono (fun (i : Fin ℬ.toList.length) ↦ #ℬ.toList[i])) (empty_in_chain : ∅ ∈ ℬ) (univ_in_chain : univ ∈ ℬ) :
+    (empty_in_chain : ∅ ∈ ℬ) (univ_in_chain : univ ∈ ℬ) :
     Fintype.card (ℬ.MaxChainThrough) = ∏ j : Fin (ℬ.toList.length - 1), (#ℬ.toList[j.val + 1] - #ℬ.toList[j.val])! := by
   revert ℬ
   induction' h_mn using decreasingInduction with n_ q ih
-  · intro ℬ cardℬ chainℬ monotone_cards empty_in_chain univ_in_chain
+  · intro ℬ cardℬ chainℬ empty_in_chain univ_in_chain
+
+    let sorted_list := ((Finset.univ : Finset ℬ).toList.insertionSort (fun (e₁ e₂ : ℬ) ↦ #e₁.val ≤ #e₂.val))
+
+    have monotone_cards : sorted_list.Sorted (fun (e₁ e₂ : ℬ) ↦ #e₁.val < #e₂.val) := IsChain.card_strict_mono chainℬ
 
     obtain ⟨s', t', empty_range : s'.val + 2 ≤ t'.val ∧ #(ℬ # s') = 1 ∧ #(ℬ # t') = 1 ∧ ∀ (j : Fin (n + 1)), s' < j ∧ j < t' → #(ℬ # ↑j) = 0⟩ :=
       range_empty_layer hn chainℬ (IsChain.empty_layer_by_card hn chainℬ (lt_of_eq_of_lt cardℬ q)) empty_in_chain univ_in_chain
