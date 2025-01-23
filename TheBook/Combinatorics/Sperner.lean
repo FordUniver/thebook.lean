@@ -619,6 +619,14 @@ lemma card_maxChainThrough {ℬ : Finset (Finset α)} (hn : Fintype.card α = n)
       exact one_elt_max_chain_layer hn chain.isMaxChain ⟨j, by simp [Nat.lt_succ_of_le jmem]⟩
     _ = n + 1 := by rw [←(Finset.card_eq_sum_ones (Iic (Fintype.card α)))]; simp [hn]
 
+lemma first_entry {ℬ : Finset (Finset α)} (list : List (Finset α))
+    (monotone_cards: List.Sorted (fun (e₁ e₂) ↦ #e₁ < #e₂) list) (h_list: ℬ.toList ~ list)
+    (empty_in_chain : ∅ ∈ ℬ) : list[0]'(by sorry) = ∅ := by sorry
+
+lemma last_entry {list : List (Finset α)} {ℬ : Finset (Finset α)}
+    (monotone_cards: List.Sorted (fun (e₁ e₂) ↦ #e₁ < #e₂) list) (h_list: ℬ.toList ~ list)
+    (univ_in_chain : univ ∈ ℬ) : list[list.length - 1]'(by sorry) = univ := by sorry
+
 lemma incident_indices_monotone_cards {n: ℕ} {s t : Fin (n + 1)} {ℬ : Finset (Finset α)} (ilej_succ_succ : s.val + 2 ≤ t.val) (list : List (Finset α))
     (monotone_cards: List.Sorted (fun (e₁ e₂) ↦ #e₁ < #e₂) list) (h_list: ℬ.toList ~ list)
     (hs : (ℬ # s) = {layer_s}) (ht : (ℬ # t) = {layer_t})
@@ -846,29 +854,52 @@ lemma count_maxChainsThrough {n: ℕ} (m : ℕ) (h_mn : m ≤ n + 1) (hn : Finty
       have i_new_lt_i_univ_pred : i_new < list'.length - 1 := Nat.lt_of_lt_of_le i_new_lt_i_univ' (Nat.le_pred_of_lt i_univ_in_range)
 
       let i_new' : Fin (list'.length - 1) := ⟨i_new, i_new_lt_i_univ_pred⟩
-      have h_i_new' : i_new' ∈ (Finset.univ : Finset (Fin (list'.length - 1))) := by simp
+      let i_new'_pred : Fin (list'.length - 1) := ⟨i_new - 1, Nat.lt_of_le_of_lt (Nat.pred_le i_new) i_new_lt_i_univ_pred⟩
 
-      have ind_present := ih ℬ' ℬ'card a_property₁.right.left empty_in_chain' univ_in_chain' list' list_per'.symm list_sorted'
+      have ind_present : Fintype.card (ℬ'.MaxChainThrough) = ∏ j : Fin (list'.length - 1), (#list'[j.val + 1] - #list'[j.val])! :=
+        ih ℬ' ℬ'card a_property₁.right.left empty_in_chain' univ_in_chain' list' list_per'.symm list_sorted'
 
-
-
-      have product_split := Finset.prod_eq_mul_prod_diff_singleton h_i_new' (fun (i : Fin (list'.length - 1)) ↦ (#list'[i.val + 1] - #list'[i.val])!)
+      have product_split : ∏ j : Fin (list'.length - 1), (#list'[j.val + 1] - #list'[j.val])! =
+          (#list'[i_new'.val + 1] - #list'[i_new'.val])! * ∏ j ∈ univ \ {i_new'}, (#list'[j.val + 1] - #list'[j.val])! :=
+        Finset.prod_eq_mul_prod_diff_singleton (by simp) (fun (i : Fin (list'.length - 1)) ↦ (#list'[i.val + 1] - #list'[i.val])!)
 
       rw [ind_present, product_split]
 
-      have prod_identity : ∏ j ∈ 𝒬', multiplicant j = ∏ x ∈ univ \ {i_new'}, (#list'[↑x + 1] - #list'[↑x])! := by
-        simp [𝒬', multiplicant]
-        sorry
+      have prod_identity : ∏ j ∈ (Finset.univ : Finset (Fin (list'.length - 1))) \ {i_new'}, (#list'[j.val + 1] - #list'[j.val])! = ∏ j ∈ 𝒬', multiplicant j := by
+        calc
+          ∏ j ∈ (Finset.univ : Finset (Fin (list'.length - 1))) \ {i_new'}, (#list'[j.val + 1] - #list'[j.val])!
+            = (#list'[i_new'_pred.val + 1] - #list'[i_new'_pred.val])! * ∏ j ∈ ((Finset.univ : Finset (Fin (list'.length - 1))) \ {i_new'}) \ {i_new'_pred}, (#list'[j.val + 1] - #list'[j.val])! := by
+              refine' Finset.prod_eq_mul_prod_diff_singleton _ (fun (i : Fin (list'.length - 1)) ↦ (#list'[i.val + 1] - #list'[i.val])!)
+              apply mem_sdiff.mpr
+              constructor
+              · simp
+              · unfold i_new'_pred i_new'
+                simp
+                apply sub_one_ne_self
 
-      have mul_identity : multiplicant' i_s = (#list'[↑i_new' + 1] - #list'[↑i_new'])! := by sorry
+                have list_first_entry : list'[0] = ∅ := first_entry list' list_sorted' list_per'.symm empty_in_chain'
 
-      rw [prod_identity, mul_identity]
+                by_contra ass
+
+                simp [←ass, h_i_new] at list_first_entry
+                unfold e_new at list_first_entry
+
+                have := nonempty_iff_ne_empty.mp (Finset.insert_nonempty a.val layer_s)
+
+                exact this list_first_entry
+
+            _ = 1 * ∏ j ∈ ((Finset.univ : Finset (Fin (list'.length - 1))) \ {i_new'}) \ {i_new'_pred}, (#list'[j.val + 1] - #list'[j.val])! := by
+              congr
+              sorry
+
+      sorry
+      -- have mul_identity : multiplicant' i_s = (#list'[↑i_new' + 1] - #list'[↑i_new'])! := by sorry
 
 
     /-The set of maximal chains through ℬ is the disjoint union of maximal chains through the union of ℬ with some chain extension candidate-/
     have central_identity: (Finset.univ : Finset ℬ.MaxChainThrough).image (emb_MaxChainThrough ℬ) = extension_candidates.disjiUnion extensions_wrt (by sorry) := by sorry
 
-    have := Finset.card_image_of_injective (Finset.univ : Finset ℬ.MaxChainThrough) (inj_emb_MaxChainThrough ℬ)
+    have := Finset.card_image_of_injective (Finset.univ : Finset ℬ.MaxChainThrough) inj_emb_MaxChainThrough
 
     rw [Fintype.card, ←this, central_identity, card_disjiUnion]
 
@@ -897,10 +928,10 @@ lemma count_maxChainsThrough {n: ℕ} (m : ℕ) (h_mn : m ≤ n + 1) (hn : Finty
         intro x hx
         rfl
 
-  · intro ℬ cardℬ chainℬ monotone_cards empty_in_chain univ_in_chain
-    have entry_cards : ∀ j : Fin (ℬ.toList.length - 1), #ℬ.toList[j.val] = j.val := by sorry
+  · intro ℬ cardℬ chainℬ empty_in_chain univ_in_chain list list_sorted list_perm
+    have entry_cards : ∀ j : Fin (list.length - 1), #list[j.val] = j.val := by sorry
     have rhs_one := by calc
-      ∏ j : Fin (ℬ.toList.length - 1), (#ℬ.toList[j.val + 1] - #ℬ.toList[j.val])! = ∏ j : Fin (ℬ.toList.length - 1), 1 := by
+      ∏ j : Fin (list.length - 1), (#list[j.val + 1] - #list[j.val])! = ∏ j : Fin (list.length - 1), 1 := by
         apply Finset.prod_congr (by simp)
         intro j _
         rw [entry_cards, entry_cards ⟨j + 1, by sorry⟩]
@@ -955,7 +986,8 @@ theorem lym_inequality (antichain𝒜 : IsAntichain (· ⊂ ·) 𝒜) (hn : Fint
   have slice_partition : Finset.disjiUnion (Iic n) 𝒜.slice (Finset.pairwiseDisjoint_slice.subset (Set.subset_univ _)) = 𝒜 := by
     rw [Finset.disjiUnion_eq_biUnion (Iic n) 𝒜.slice (Finset.pairwiseDisjoint_slice.subset (Set.subset_univ _))]
     rw [←hn]
-    simp [biUnion_slice 𝒜]
+    --simp (biUnion_slice 𝒜)
+    sorry
 
   calc
     ∑ k ∈ Iic n, #(𝒜 # k) * (k)! * (n - k)! = ∑ k ∈ Iic n, ∑ e ∈ (𝒜 # k), (#e)! * (n - #e)! := by
