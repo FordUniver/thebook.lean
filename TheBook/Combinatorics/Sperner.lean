@@ -79,7 +79,16 @@ structure MaxChainThrough (ℬ : Finset (Finset α)) where
 
 def emb_MaxChainThrough (ℬ : Finset (Finset α)) (X : ℬ.MaxChainThrough) : Finset (Finset α) := X.𝒜
 
-lemma inj_emb_MaxChainThrough (ℬ : Finset (Finset α)) : Injective (emb_MaxChainThrough ℬ) := by sorry
+@[ext] lemma MaxChainThrough_eq {ℬ : Finset (Finset α)} (𝒞₁ 𝒞₂ : ℬ.MaxChainThrough) (hA : 𝒞₁.𝒜 = 𝒞₂.𝒜) : 𝒞₁ = 𝒞₂ := by
+  cases 𝒞₁
+  cases 𝒞₂
+  congr
+
+lemma inj_emb_MaxChainThrough {ℬ : Finset (Finset α)} : Injective (emb_MaxChainThrough ℬ) := by
+  intro 𝒞₁ 𝒞₂ h
+  unfold emb_MaxChainThrough at h
+  ext
+  rw [h]
 
 instance instFintypeMaxChainThrough {ℬ : Finset (Finset α)} : Fintype (MaxChainThrough ℬ) := by sorry
 
@@ -203,7 +212,7 @@ lemma IsChain.subset_of_le_cardinality (chain𝒜 : IsChain (· ⊂ ·) 𝒜) {e
     exact Finset.subset_of_eq (IsChain.unique_of_cardinality_chain chain𝒜 e₁mem e₂mem hcard_eq)
 
 
-variable [Fintype α] [DecidableEq α] [DecidableEq (Finset (Finset α))]
+variable [Fintype α] [DecidableEq α] [DecidableEq (Finset (Finset α))] [DecidableEq (Finset α)]
 
 instance : Coe (Set (Finset α)) (Finset (Finset α)) :=
   ⟨λ s => by sorry⟩
@@ -215,7 +224,7 @@ def chain_extension_filter_function (𝒜 : Finset (Finset α)) (e : Finset α) 
   fun a : α ↦ IsChain (· ⊂ ·) (insert (insert a e) 𝒜) ∧ insert a e ∉ 𝒜
 
 instance instDecidableIsChain (𝒜 : Finset (Finset α)) : Decidable (IsChain (· ⊂ ·) 𝒜) := by
-  sorry
+  apply Finset.decidableDforallFinset
 
 instance instDecidablePredChainExtension (e : Finset α) :
     DecidablePred (chain_extension_filter_function 𝒜 e) :=
@@ -738,7 +747,7 @@ lemma count_maxChainsThrough {n: ℕ} (m : ℕ) (h_mn : m ≤ n + 1) (hn : Finty
 
       have monotone_cards' : StrictMono (fun (i : Fin ℬ'.toList.length) ↦ #ℬ'.toList[i]) := by sorry
 
-      have := Finset.card_image_of_injective (Finset.univ : Finset (MaxChainThrough ℬ')) (inj_emb_MaxChainThrough ℬ')
+      have := Finset.card_image_of_injective (Finset.univ : Finset (MaxChainThrough ℬ')) inj_emb_MaxChainThrough
       simp [extensions_wrt, this]
 
       have empty_in_chain' : ∅ ∈ ℬ' := by simp [ℬ']; exact mem_insert_iff.mpr (Or.inr empty_in_chain)
