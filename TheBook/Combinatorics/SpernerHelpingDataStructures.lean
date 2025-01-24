@@ -1,105 +1,10 @@
-/-
-Copyright 2022 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
-Authors: Moritz Firsching, Jakob Zimmermann
--/
-import Mathlib.Tactic
-import Mathlib.Combinatorics.Enumerative.DoubleCounting
-import Mathlib.Combinatorics.Derangements.Finite
-import Mathlib.Logic.Equiv.Defs
-import Mathlib.Data.Set.Basic
-import Mathlib.Data.Finset.Slice
-import Mathlib.Order.Antichain
-import Mathlib.Order.Chain
-import Mathlib.Data.List.Perm.Basic
-
-/-!
-# Proof of the LYM inequality and some observations on chains wrt the subset order
--/
+import TheBook.ToMathlib.Chain_optional
+import TheBook.ToMathlib.Chain
+import TheBook.ToMathlib.List
 
 open Function Finset Nat Set BigOperators List
 
-variable {α : Type*} {n m : ℕ} {𝒜 : Finset (Finset α)}
-
-namespace Finset
-
-/-
-## Proposals for new definitions of chains in Finset namespace
--/
-
-variable {β : Type*} (r : β → β → Prop)
-
-/-- In this file, we use `≺` as a local notation for any relation `r`. -/
-local infixl:50 " ≺ " => r
-
-/-
-  The following definitions match the ones in Mathlib.Order.Chain, but use Finset in order to be able to carry information on finiteness inside the chain property.
--/
-
-def IsChain (s : Finset β) : Prop :=
-  s.toSet.Pairwise fun x y => x ≺ y ∨ y ≺ x
-
-/-- `SuperChain s t` means that `t` is a chain that strictly includes `s`. -/
-def SuperChain (s t : Finset β) : Prop :=
-  IsChain r t ∧ s ⊂ t
-
-/-- A chain `s` is a maximal chain if there does not exists a chain strictly including `s`. -/
-def IsMaxChain (s :  Finset β) : Prop :=
-  IsChain r s ∧ ∀ ⦃t⦄, IsChain r t → s ⊆ t → s = t
-
-def IsAntichain (r : α → α → Prop) (s : Finset α) : Prop :=
-  s.toSet.Pairwise rᶜ
-
-end Finset
-
-variable (ℬ₀ : Set β) (ℬ₁ : Finset β) (r : β → β → Prop)
-
-/- The usual definition of chains are compatible if used along the toSet method-/
-example (h : Finset.IsChain r ℬ₁) : IsChain r ℬ₁.toSet := h
-example (h : IsChain r ℬ₁.toSet) : Finset.IsChain r ℬ₁ := h
-
-
-instance [Fintype ℬ₀] : Coe (IsChain r ℬ₀) (Finset.IsChain r ℬ₀.toFinset) :=
-  ⟨fun h ↦ (fun _ hx _ hy xneqy ↦ h (Set.mem_toFinset.mp hx) (Set.mem_toFinset.mp hy) xneqy)⟩
-
-example [Fintype ℬ₀] (h : IsChain r ℬ₀) : Finset.IsChain r ℬ₀.toFinset := h
-
-variable {γ : Type*}
-
-instance [Fintype β] : Fintype (Finset β) := {
-  elems := Finset.powerset (@Finset.univ β _),
-  complete := by simp
-}
-
-noncomputable instance [Fintype β] : Fintype ℬ₀ := Fintype.ofFinite ↑ℬ₀
-
-noncomputable instance [Fintype β] : Coe (Set β) (Finset β) := ⟨fun s ↦ s.toFinset⟩
-
-noncomputable example [Fintype β] (𝒟 : Set β) : Finset β := 𝒟
-
-instance [Fintype β] : Coe (_root_.IsChain r ℬ₀) (Finset.IsChain r ℬ₀.toFinset) :=
-  ⟨fun h ↦ (fun _ hx _ hy xneqy ↦ h (Set.mem_toFinset.mp hx) (Set.mem_toFinset.mp hy) xneqy)⟩
-
-instance [Fintype β] : Fintype (Set β) := {
-  elems := (Finset.powerset (@Finset.univ β _)).map ⟨Finset.toSet, Finset.coe_injective⟩,
-  complete := by intro x; simp; use x.toFinset; simp
-}
-
-variable (β : Type*) [Fintype β] (𝒞₀ : Set β) (𝒞₁ : Finset β) (r₁ : β → β → Prop) [Fintype 𝒞₀]
-
-example (h : _root_.IsChain r₁ 𝒞₀) : Finset.IsChain r₁ 𝒞₀.toFinset := h
+variable {α : Type*} {n m : ℕ} {𝒜 : Finset (Finset α)} (𝒞₀ : Set α) (𝒞₁ : Finset α) [Fintype 𝒞₀]
 
 namespace Finset
 
@@ -123,209 +28,6 @@ lemma inj_emb_MaxChainThrough {ℬ : Finset (Finset α)} : Injective (emb_MaxCha
 
 instance instFintypeMaxChainThrough {ℬ : Finset (Finset α)} : Fintype (MaxChainThrough ℬ) := by sorry
 
-lemma IsChain.equivalence_subset_relations : (IsChain (· ⊆ .) 𝒜) ↔ (IsChain (· ⊂ .) 𝒜) := by
-  constructor
-  · intro h e₁ e₁mem e₂ e₂mem e₁neqe₂
-    cases h e₁mem e₂mem e₁neqe₂ with
-    | inl e₁sube₂ => left; exact Finset.ssubset_iff_subset_ne.mpr ⟨e₁sube₂, e₁neqe₂⟩
-    | inr e₂sube₁ => right; exact Finset.ssubset_iff_subset_ne.mpr ⟨e₂sube₁, e₁neqe₂.symm⟩
-  · intro h e₁ e₁mem e₂ e₂mem e₁neqe₂
-    cases h e₁mem e₂mem e₁neqe₂ with
-    | inl e₁sube₂ => left; exact e₁sube₂.left
-    | inr e₂sube₁ => right; exact e₂sube₁.left
-
-lemma IsMaxChain.equivalence_subset_relations : (IsMaxChain (· ⊆ .) 𝒜) ↔ (IsMaxChain (· ⊂ .) 𝒜) := by
-  constructor
-  · intro h
-    exact ⟨IsChain.equivalence_subset_relations.mp h.left, fun t chain => h.right (IsChain.equivalence_subset_relations.mpr chain)⟩
-  · intro h
-    exact ⟨IsChain.equivalence_subset_relations.mpr h.left, fun t chain => h.right (IsChain.equivalence_subset_relations.mp chain)⟩
-
-lemma SuperChain.equivalence_subset_relations {ℬ : Finset (Finset α)} : (SuperChain (· ⊆ .) ℬ 𝒜) ↔ (SuperChain (· ⊂ .) ℬ 𝒜) := by
-  constructor
-  · intro h
-    exact ⟨IsChain.equivalence_subset_relations.mp h.left, h.right⟩
-  · intro h
-    exact ⟨IsChain.equivalence_subset_relations.mpr h.left, h.right⟩
-
-/-- In a chain with respect to the subset order there can not be two sets of same cardinality -/
-lemma IsChain.unique_of_cardinality_chain (chain𝒜 : IsChain (· ⊂ ·) 𝒜) {a b : Finset α}
-    (amem : a ∈ 𝒜) (bmem : b ∈ 𝒜) (hcard : #a = #b) : a = b := by
-  by_contra aneb
-  cases chain𝒜 amem bmem aneb with
-  | inl h =>
-    have := Finset.card_strictMono h
-    linarith
-  | inr h =>
-    have := Finset.card_strictMono h
-    linarith
-
-/-- In a chain with respect to the subset order there can be at most one set of a given cardinality -/
-lemma IsChain.max_one_elt_chain_layer (chain𝒜 : IsChain (· ⊂ ·) 𝒜) (j : ℕ) : #(𝒜 # j) ≤ 1 := by
-  by_contra! ass
-  have : (𝒜 # j) ≠ (∅ : Finset (Finset α)) := by
-    intro assempty
-    have := Finset.card_eq_zero.mpr assempty
-    linarith
-  obtain ⟨a, amem⟩ := Finset.nonempty_iff_ne_empty.mpr this
-  obtain ⟨b, ⟨bmem, aneb⟩⟩ := Finset.exists_mem_ne ass a
-  have cardeqab : #a = #b := by rw [(Finset.mem_slice.mp amem).right, (Finset.mem_slice.mp bmem).right]
-  exact aneb (IsChain.unique_of_cardinality_chain chain𝒜 (Finset.slice_subset bmem) (Finset.slice_subset amem) cardeqab.symm)
-
-instance IsChain.sub_is_trans : IsTrans 𝒜 (fun (e₁ e₂ : 𝒜) ↦ e₁.val ⊆ e₂.val) :=
-  ⟨fun _ _ _ h₁ h₂ => subset_trans h₁ h₂⟩
-
-instance card_le : LE (Finset α) where
-  le x y := #x ≤ #y
-
-instance card_lt : LT (Finset α) where
-  lt x y := #x < #y
-
-instance card_preorder : Preorder (Finset α) := {
-  le := (· ≤ ·),
-  lt := (· < ·),
-  le_refl := fun x =>  Nat.le_refl #x,
-  le_trans := fun _ _ _ hxy hyz => Nat.le_trans hxy hyz,
-  lt_iff_le_not_le := fun _ _ => Nat.lt_iff_le_not_le
-}
-
-instance card_le_is_total : IsTotal 𝒜 (fun (e₁ e₂ : 𝒜) ↦ e₁.val ≤ e₂.val) :=
-  ⟨fun a b ↦ Nat.le_total #a.val #b.val⟩
-
-instance card_le_is_trans : IsTrans 𝒜 (fun (e₁ e₂ : 𝒜) ↦ e₁.val ≤ e₂.val) :=
-  ⟨fun _ _ _ h₁ h₂ ↦ Nat.le_trans h₁ h₂⟩
-
-instance IsChain.card_le_is_trans : IsTrans 𝒜 (fun (e₁ e₂ : 𝒜) ↦ e₁.val ⊆ e₂.val) :=
-  ⟨fun _ _ _ h₁ h₂ => subset_trans h₁ h₂⟩
-
-#check List.Nodup.insert
-
-theorem List.Nodup.orderedInsert [LE α] [DecidableRel (fun (x₁ x₂ : α) ↦ x₁ ≤ x₂)]
-  {l : List α} {a : α} (l_nodup : l.Nodup) (a_not_mem : a ∉ l) :
-  (orderedInsert (· ≤ ·) a l).Nodup := by
-  induction l with
-  | nil =>
-    simp [orderedInsert]
-  | cons x xs ih =>
-    simp [orderedInsert]
-    simp at a_not_mem
-    simp at l_nodup
-    split
-    · simp [List.Nodup]
-      constructor
-      · constructor
-        · exact a_not_mem.left
-        · intro u hu
-          by_contra ass
-          rw [←ass] at hu
-          exact a_not_mem.right hu
-      · constructor
-        · intro u hu
-          by_contra ass
-          rw [←ass] at hu
-          exact l_nodup.left hu
-        · exact l_nodup.right
-    · simp
-      constructor
-      · constructor
-        · exact fun x ↦ a_not_mem.left x.symm
-        · exact l_nodup.left
-      · exact ih l_nodup.right a_not_mem.right
-
-theorem List.Nodup.insertionSort [LE α] [DecidableRel (fun (x₁ x₂ : α) ↦ x₁ ≤ x₂)]  {l : List α} (h : l.Nodup) : (l.insertionSort (fun (x₁ x₂ : α) ↦ x₁ ≤ x₂)).Nodup := by
-  induction l with
-  | nil =>
-    simp [List.insertionSort, List.Nodup]
-  | cons x xs ih =>
-    simp [List.insertionSort]
-    have sorted_nodup : (xs.insertionSort (fun x₁ x₂ => x₁ ≤ x₂)).Nodup := ih h.tail
-    have x_ne_mem_sorted : x ∉ xs.insertionSort (fun x₁ x₂ => x₁ ≤ x₂) := by
-      by_contra ass
-      simp at h
-      exact h.left ((List.mem_insertionSort (· ≤ ·)).mp ass)
-    exact List.Nodup.orderedInsert sorted_nodup x_ne_mem_sorted
-
-#check List.attach
-
-lemma card_strict_mono' (chain𝒜 : IsChain (· ⊂ ·) 𝒜) : ((Finset.univ : Finset 𝒜).toList.insertionSort (fun (e₁ e₂ : 𝒜) ↦ #e₁.val ≤ #e₂.val)).Sorted (fun (e₁ e₂ : 𝒜) ↦ #e₁.val < #e₂.val) := by
-  apply List.pairwise_iff_get.mpr
-  intro x y xlty
-  let elt_x := ((List.insertionSort (fun (e₁ e₂ : 𝒜) => #e₁.val ≤ #e₂.val) univ.toList).get x)
-  let elt_y := ((List.insertionSort (fun (e₁ e₂ : 𝒜) => #e₁.val ≤ #e₂.val) univ.toList).get y)
-  have card_le : elt_x.val ≤ elt_y.val := List.pairwise_iff_get.mp (List.sorted_insertionSort (fun (e₁ e₂ : 𝒜) ↦ #e₁.val ≤ #e₂.val) (Finset.univ : Finset 𝒜).toList) x y xlty
-  by_contra! ass
-  have card_eq := Nat.le_antisymm card_le ass
-
-  have elt_x_eq_elt_y := Subtype.eq (IsChain.unique_of_cardinality_chain chain𝒜 elt_x.prop elt_y.prop card_eq)
-  have elt_x_neq_elt_y : elt_x ≠ elt_y := List.pairwise_iff_get.mp (List.Nodup.insertionSort ((Finset.univ : Finset 𝒜).nodup_toList)) x y xlty
-
-  exact elt_x_neq_elt_y elt_x_eq_elt_y
-
-def IsChain.card_strict_mono (chain𝒜 : IsChain (· ⊂ ·) 𝒜) : ∃ l : List (Finset α), l ~ 𝒜.toList ∧ l.Sorted (#· < #·) := by
-  let l' := ((Finset.univ : Finset 𝒜).toList.insertionSort (fun (e₁ e₂ : 𝒜) ↦ #e₁.val ≤ #e₂.val))
-  have l'_sorted : l'.Sorted (fun (e₁ e₂ : 𝒜) ↦ #e₁.val < #e₂.val) := card_strict_mono' chain𝒜
-
-  let l := l'.map Subtype.val
-  use l
-  constructor
-  · calc
-      l ~ (Finset.univ : Finset 𝒜).toList.map Subtype.val := Perm.map Subtype.val (perm_insertionSort (fun e₁ e₂ => #e₁.val ≤ #e₂.val) (Finset.univ : Finset 𝒜).toList)
-      _ ~ 𝒜.toList := by
-        sorry
-  · unfold l Sorted
-    apply List.pairwise_iff_get.mpr
-    intro i j iltj
-    simp [List.getElem_map, List.unattach, -List.map_subtype]
-
-    have : (l'.map Subtype.val).length = l'.length := length_map l' Subtype.val
-
-    have iltj_coe : (Fin.cast this i) < (Fin.cast this j) := by
-      apply Fin.lt_def.mpr
-      simp
-      exact iltj
-
-    have := List.pairwise_iff_get.mp l'_sorted (Fin.cast this i) (Fin.cast this j) iltj_coe
-    exact this
-
-/-- If a chain intersects a layer of the boolean lattice this intersection is a singleton -/
-lemma layer_singleton_of_nonempty (chain𝒜 : IsChain (· ⊂ ·) 𝒜) (j : Finset.range (n + 1)) (layer_nonempty : (𝒜 # j) ≠ ∅):
-    ∃! e : Finset α, 𝒜 # j = {e} := by
-  have : # (𝒜 # j) = 1 := by
-    cases Nat.le_one_iff_eq_zero_or_eq_one.mp (IsChain.max_one_elt_chain_layer chain𝒜 j) with
-    | inl card_zero =>
-      simp at card_zero
-      exact False.elim (layer_nonempty card_zero)
-    | inr card_one => exact card_one
-  obtain ⟨e, he⟩ := Finset.card_eq_one.mp this
-  have unique : ∀ a : Finset α, 𝒜 # j = {a} → a = e := by
-    intro a ha
-    rw [he] at ha
-    simp at ha
-    exact ha.symm
-
-  exact ⟨e, he, unique⟩
-
-lemma IsChain.ssubset_of_lt_cardinality (chain𝒜 : IsChain (· ⊂ ·) 𝒜) {e₁ e₂ : Finset α} (e₁mem : e₁ ∈ 𝒜) (e₂mem : e₂ ∈ 𝒜)
-    (hcard : #e₁ < #e₂) : e₁ ⊂ e₂ := by
-  have e₁nee₂ : e₁ ≠ e₂ := by
-    intro ass
-    have : #e₁ = #e₂ := by rw [ass]
-    linarith
-  cases chain𝒜 e₁mem e₂mem e₁nee₂ with
-  | inl h => exact Finset.ssubset_iff_subset_ne.mpr ⟨h.left, e₁nee₂⟩
-  | inr h =>
-    have : #e₂ < #e₁ := Finset.card_strictMono h
-    linarith
-
-lemma IsChain.subset_of_le_cardinality (chain𝒜 : IsChain (· ⊂ ·) 𝒜) {e₁ e₂ : Finset α} (e₁mem : e₁ ∈ 𝒜) (e₂mem : e₂ ∈ 𝒜)
-    (hcard : #e₁ ≤ #e₂) : e₁ ⊆ e₂ := by
-  cases Nat.eq_or_lt_of_le hcard with
-  | inr hcard_lt =>
-    exact (IsChain.ssubset_of_lt_cardinality chain𝒜 e₁mem e₂mem hcard_lt).left
-  | inl hcard_eq =>
-    exact Finset.subset_of_eq (IsChain.unique_of_cardinality_chain chain𝒜 e₁mem e₂mem hcard_eq)
-
-
 variable [Fintype α] [DecidableEq α] [DecidableEq (Finset (Finset α))] [DecidableEq (Finset α)]
 
 def chain_extension_filter_function (𝒜 : Finset (Finset α)) (e : Finset α) : α → Prop :=
@@ -337,6 +39,8 @@ instance instDecidableIsChain (𝒜 : Finset (Finset α)) : Decidable (IsChain (
 instance instDecidablePredChainExtension (e : Finset α) :
     DecidablePred (chain_extension_filter_function 𝒜 e) :=
   fun a : α => inferInstanceAs (Decidable (IsChain (· ⊂ ·) (insert (insert a e) 𝒜) ∧ insert a e ∉ 𝒜))
+
+def extension_candidates (ℬ : Finset (Finset α)) (e : Finset α) := Finset.filter (chain_extension_filter_function ℬ e) (Finset.univ : Finset α)
 
 lemma IsChain.empty_layer_by_card (hn : Fintype.card α = n) (chain𝒜 : IsChain (· ⊂ ·) 𝒜) (card𝒜 : #𝒜 < n+1) : ∃ i : Fin (n + 1), #(𝒜 # i) = 0 := by
   by_contra! ass
@@ -365,9 +69,11 @@ lemma mem_card_of_slice {ℬ : Finset (Finset α)} (h : (ℬ # s) = {layer_s}) :
   simp [slice] at this
   exact this
 
-lemma chain_extension (hn : Fintype.card α = n) {i j : Finset.range (n + 1)} (ilej_succ_succ : (i : ℕ) + 2 ≤ (j : ℕ)) (chain𝒜 : IsChain (· ⊂ ·) 𝒜)
+lemma extension_candidates_characterisation (hn : Fintype.card α = n) {i j : Finset.range (n + 1)} (ilej_succ_succ : (i : ℕ) + 2 ≤ (j : ℕ)) (chain𝒜 : IsChain (· ⊂ ·) 𝒜)
     (hi : (𝒜 # i) = {layer_i}) (hj : (𝒜 # j) = {layer_j}) (emptylayer : ∀ l ∈ (Finset.range (n + 1)), i < l → l < j → #(𝒜 # l) = 0):
-    Finset.filter (chain_extension_filter_function 𝒜 layer_i) (Finset.univ : Finset α) = layer_j \ layer_i := by
+    extension_candidates 𝒜 layer_i = layer_j \ layer_i := by
+  unfold extension_candidates
+
   have layer_j_mem_card := mem_card_of_slice hj
   have layer_i_mem_card := mem_card_of_slice hi
 
@@ -614,7 +320,7 @@ lemma one_elt_max_chain_layer (hn : Fintype.card α = n) (maxchain𝒜 : IsMaxCh
     let extension_candidates := Finset.filter (chain_extension_filter_function 𝒜 e_bottom) (Finset.univ : Finset α)
 
     have extension_candidates_eq : extension_candidates = e_top \ e_bottom := by
-      refine' chain_extension hn _ maxchain𝒜.left bottom_singleton top_singleton emptylayer
+      refine' extension_candidates_characterisation hn _ maxchain𝒜.left bottom_singleton top_singleton emptylayer
       apply Nat.succ_le_of_lt
       have : (s_bottom : ℕ) + 1 ≤ ↑j := Nat.succ_le_of_lt h_s_bottom.left
       exact Nat.lt_of_le_of_lt this h_s_top.left
@@ -776,9 +482,6 @@ lemma incident_indices_monotone_cards {n: ℕ} {s t : Fin (n + 1)} {ℬ : Finset
   simp only [i_s_eq_i_t_succ] at h_i_t
   exact ⟨h_i_s, h_i_t⟩
 
-
-def extension_candidates (ℬ : Finset (Finset α)) (e : Finset α) := Finset.filter (chain_extension_filter_function ℬ e) (Finset.univ : Finset α)
-
 def extensions_wrt (ℬ : Finset (Finset α)) (e : Finset α) (x : α) : Finset (Finset (Finset α)) := by
   let ℬ' : Finset (Finset α) := Insert.insert (Insert.insert x e) ℬ
   exact (Finset.univ : Finset ℬ'.MaxChainThrough).image (emb_MaxChainThrough ℬ')
@@ -794,13 +497,9 @@ lemma chain_through_extension_candidates_pairwiseDisjoint (ℬ : Finset (Finset 
 
   sorry
 
-
-
-/-The set of maximal chains through ℬ is the disjoint union of maximal chains through the union of ℬ with some chain extension candidate-/
 lemma central_identity {ℬ : Finset (Finset α)} (e : Finset α) (e_mem : e ∈ ℬ) :
   Finset.univ.image (emb_MaxChainThrough ℬ) = (extension_candidates ℬ e).disjiUnion (extensions_wrt ℬ e)
   (chain_through_extension_candidates_pairwiseDisjoint ℬ e e_mem) := by sorry
-
 
 lemma count_maxChainsThrough {n: ℕ} (m : ℕ) (h_mn : m ≤ n + 1) (hn : Fintype.card α = n)
     (ℬ : Finset (Finset α)) (cardℬ : #ℬ = m) (chainℬ : IsChain (· ⊂ ·) ℬ) (empty_in_chain : ∅ ∈ ℬ) (univ_in_chain : univ ∈ ℬ)
@@ -847,7 +546,7 @@ lemma count_maxChainsThrough {n: ℕ} (m : ℕ) (h_mn : m ≤ n + 1) (hn : Finty
     let extension_candidates := Finset.filter (chain_extension_filter_function ℬ layer_s) (Finset.univ : Finset α)
 
     have extension_candidates_eq : extension_candidates = layer_t \ layer_s := by
-      refine' chain_extension hn ilej_succ_succ chainℬ hs ht empty_layer'
+      refine' extension_candidates_characterisation hn ilej_succ_succ chainℬ hs ht empty_layer'
 
     have layer_s_mem_card := mem_card_of_slice hs
     have layer_t_mem_card := mem_card_of_slice ht
@@ -986,7 +685,7 @@ lemma count_maxChainsThrough {n: ℕ} (m : ℕ) (h_mn : m ≤ n + 1) (hn : Finty
             _ = 1 * ∏ j ∈ ((Finset.univ : Finset (Fin (list'.length - 1))) \ {i_new'}) \ {i_new'_pred}, (#list'[j.val + 1] - #list'[j.val])! := by
               congr
               sorry
-
+        sorry
       sorry
       -- have mul_identity : multiplicant' i_s = (#list'[↑i_new' + 1] - #list'[↑i_new'])! := by sorry
 
@@ -1044,65 +743,3 @@ lemma count_maxChainsThrough {n: ℕ} (m : ℕ) (h_mn : m ≤ n + 1) (hn : Finty
     simpa
 
 lemma count_maxChains_through_singleton (e : Finset α) (hn : Fintype.card α = n): Fintype.card (MaxChainThrough {e}) = (#e)! * (n - #e)! := by sorry
-
-/-- The **Lubell-Yamamoto-Meshalkin inequality**. Sperner's Theorem follows as in Mathlib.Combinatorics.SetFamily.LYM as a corollary -/
-theorem lym_inequality (antichain𝒜 : IsAntichain (· ⊂ ·) 𝒜) (hn : Fintype.card α = n):
-    ∑ k ∈ Iic n, #(𝒜 # k) / (n.choose k : ℚ) ≤ (1 : ℚ) := by
-  have : ∑ k ∈ Iic n, #(𝒜 # k) / (n.choose k : ℚ) ≤ (∑ k ∈ Iic n, #(𝒜 # k) * (k)! * (n - k)!) * (1 / (n)! : ℚ) := by
-    calc
-      ∑ k ∈ Iic n, #(𝒜 # k) / (n.choose k : ℚ) = ∑ k ∈ Iic n, #(𝒜 # k) * (k)! * (n - k)! * (1 / (n)! : ℚ) := by
-        apply Finset.sum_congr (by simp)
-        intro j jmem
-        simp at jmem
-        rw [div_eq_mul_inv, mul_assoc, mul_assoc, Nat.choose_eq_factorial_div_factorial]
-        congr
-        field_simp
-
-        have choose_divisibility (a b : ℕ) (h : a ≤ b) : ((a)! * (b - a)!) ∣ (b)! := by
-          use b.choose a
-          rw [Nat.mul_comm, ←Nat.mul_assoc]
-          exact (Nat.choose_mul_factorial_mul_factorial h).symm
-
-        rw [Nat.cast_div (choose_divisibility j n jmem), Nat.cast_mul]
-        · field_simp
-        · norm_num
-          constructor <;> apply Nat.factorial_ne_zero
-        · exact jmem
-      _ = (∑ k ∈ Iic n, #(𝒜 # k) * (k)! * (n - k)!) * (1 / (n)! : ℚ) := by simp [←Finset.sum_mul]
-    rfl
-
-  refine' le_trans this _
-  rw [mul_one_div]
-  apply (div_le_one (by simp [Nat.factorial_pos n])).mpr
-
-  norm_cast
-
-  have slice_partition : Finset.disjiUnion (Iic n) 𝒜.slice (Finset.pairwiseDisjoint_slice.subset (Set.subset_univ _)) = 𝒜 := by
-    rw [Finset.disjiUnion_eq_biUnion (Iic n) 𝒜.slice (Finset.pairwiseDisjoint_slice.subset (Set.subset_univ _))]
-    rw [←hn]
-    --simp (biUnion_slice 𝒜)
-    sorry
-
-  calc
-    ∑ k ∈ Iic n, #(𝒜 # k) * (k)! * (n - k)! = ∑ k ∈ Iic n, ∑ e ∈ (𝒜 # k), (#e)! * (n - #e)! := by
-      apply Finset.sum_congr (by simp)
-      intro k _
-      have hq : ∀ e ∈ (𝒜 # k), (#e)! * (n - #e)! = (k)! * (n - k)! := by
-        intro e he
-        simp [slice] at he
-        rw [he.2]
-      rw [Finset.sum_congr rfl hq, Finset.sum_const]
-      ring
-    _ = ∑ e ∈ 𝒜, (#e)! * (n - #e)! := by
-      conv =>
-        rhs
-        rw [←slice_partition]
-      apply Eq.symm
-      apply sum_disjiUnion
-    _ = ∑ e ∈ 𝒜, Fintype.card (MaxChainThrough {e}) := by
-      apply Finset.sum_congr (by simp)
-      intro e _
-      apply Eq.symm
-      exact count_maxChains_through_singleton e hn
-    _ ≤ (n)! := by sorry
-    --here one must embedd the chains into some common space for counting as solved in 'Sperner_handcrafted_definitions.lean' with the function 'f_embedded_chains'
