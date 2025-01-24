@@ -44,6 +44,10 @@ variable {β : Type*} (r : β → β → Prop)
 /-- In this file, we use `≺` as a local notation for any relation `r`. -/
 local infixl:50 " ≺ " => r
 
+/-
+  The following definitions match the ones in Mathlib.Order.Chain, but use Finset in order to be able to carry information on finiteness inside the chain property.
+-/
+
 def IsChain (s : Finset β) : Prop :=
   s.toSet.Pairwise fun x y => x ≺ y ∨ y ≺ x
 
@@ -60,14 +64,42 @@ def IsAntichain (r : α → α → Prop) (s : Finset α) : Prop :=
 
 end Finset
 
-instance : Coe (IsChain (· ⊂ ·) 𝒜.toSet) (𝒜.IsChain (· ⊂ ·)) :=
-  ⟨λ h => h⟩
+variable (ℬ₀ : Set β) (ℬ₁ : Finset β) (r : β → β → Prop)
 
-instance : Coe (𝒜.IsChain (· ⊂ ·)) (IsChain (· ⊂ ·) 𝒜.toSet) :=
-  ⟨λ h => h⟩
+/- The usual definition of chains are compatible if used along the toSet method-/
+example (h : Finset.IsChain r ℬ₁) : IsChain r ℬ₁.toSet := h
+example (h : IsChain r ℬ₁.toSet) : Finset.IsChain r ℬ₁ := h
 
-example (h : IsChain (· ⊂ ·) 𝒜.toSet) : 𝒜.IsChain (· ⊂ ·) := h
-example (h : 𝒜.IsChain (· ⊂ ·)) : IsChain (· ⊂ ·) 𝒜.toSet := h
+
+instance [Fintype ℬ₀] : Coe (IsChain r ℬ₀) (Finset.IsChain r ℬ₀.toFinset) :=
+  ⟨fun h ↦ (fun _ hx _ hy xneqy ↦ h (Set.mem_toFinset.mp hx) (Set.mem_toFinset.mp hy) xneqy)⟩
+
+example [Fintype ℬ₀] (h : IsChain r ℬ₀) : Finset.IsChain r ℬ₀.toFinset := h
+
+variable {γ : Type*}
+
+instance [Fintype β] : Fintype (Finset β) := {
+  elems := Finset.powerset (@Finset.univ β _),
+  complete := by simp
+}
+
+noncomputable instance [Fintype β] : Fintype ℬ₀ := Fintype.ofFinite ↑ℬ₀
+
+noncomputable instance [Fintype β] : Coe (Set β) (Finset β) := ⟨fun s ↦ s.toFinset⟩
+
+noncomputable example [Fintype β] (𝒟 : Set β) : Finset β := 𝒟
+
+instance [Fintype β] : Coe (_root_.IsChain r ℬ₀) (Finset.IsChain r ℬ₀.toFinset) :=
+  ⟨fun h ↦ (fun _ hx _ hy xneqy ↦ h (Set.mem_toFinset.mp hx) (Set.mem_toFinset.mp hy) xneqy)⟩
+
+instance [Fintype β] : Fintype (Set β) := {
+  elems := (Finset.powerset (@Finset.univ β _)).map ⟨Finset.toSet, Finset.coe_injective⟩,
+  complete := by intro x; simp; use x.toFinset; simp
+}
+
+variable (β : Type*) [Fintype β] (𝒞₀ : Set β) (𝒞₁ : Finset β) (r₁ : β → β → Prop) [Fintype 𝒞₀]
+
+example (h : _root_.IsChain r₁ 𝒞₀) : Finset.IsChain r₁ 𝒞₀.toFinset := h
 
 namespace Finset
 
@@ -166,7 +198,54 @@ instance card_le_is_trans : IsTrans 𝒜 (fun (e₁ e₂ : 𝒜) ↦ e₁.val �
 instance IsChain.card_le_is_trans : IsTrans 𝒜 (fun (e₁ e₂ : 𝒜) ↦ e₁.val ⊆ e₂.val) :=
   ⟨fun _ _ _ h₁ h₂ => subset_trans h₁ h₂⟩
 
-theorem List.nodup_insertionSort [LE α] [DecidableRel (fun (x₁ x₂ : α) ↦ x₁ ≤ x₂)]  {l : List α} (h : l.Nodup) : (l.insertionSort (fun (x₁ x₂ : α) ↦ x₁ ≤ x₂)).Nodup := by sorry
+#check List.Nodup.insert
+
+theorem List.Nodup.orderedInsert [LE α] [DecidableRel (fun (x₁ x₂ : α) ↦ x₁ ≤ x₂)]
+  {l : List α} {a : α} (l_nodup : l.Nodup) (a_not_mem : a ∉ l) :
+  (orderedInsert (· ≤ ·) a l).Nodup := by
+  induction l with
+  | nil =>
+    simp [orderedInsert]
+  | cons x xs ih =>
+    simp [orderedInsert]
+    simp at a_not_mem
+    simp at l_nodup
+    split
+    · simp [List.Nodup]
+      constructor
+      · constructor
+        · exact a_not_mem.left
+        · intro u hu
+          by_contra ass
+          rw [←ass] at hu
+          exact a_not_mem.right hu
+      · constructor
+        · intro u hu
+          by_contra ass
+          rw [←ass] at hu
+          exact l_nodup.left hu
+        · exact l_nodup.right
+    · simp
+      constructor
+      · constructor
+        · exact fun x ↦ a_not_mem.left x.symm
+        · exact l_nodup.left
+      · exact ih l_nodup.right a_not_mem.right
+
+theorem List.Nodup.insertionSort [LE α] [DecidableRel (fun (x₁ x₂ : α) ↦ x₁ ≤ x₂)]  {l : List α} (h : l.Nodup) : (l.insertionSort (fun (x₁ x₂ : α) ↦ x₁ ≤ x₂)).Nodup := by
+  induction l with
+  | nil =>
+    simp [List.insertionSort, List.Nodup]
+  | cons x xs ih =>
+    simp [List.insertionSort]
+    have sorted_nodup : (xs.insertionSort (fun x₁ x₂ => x₁ ≤ x₂)).Nodup := ih h.tail
+    have x_ne_mem_sorted : x ∉ xs.insertionSort (fun x₁ x₂ => x₁ ≤ x₂) := by
+      by_contra ass
+      simp at h
+      exact h.left ((List.mem_insertionSort (· ≤ ·)).mp ass)
+    exact List.Nodup.orderedInsert sorted_nodup x_ne_mem_sorted
+
+#check List.attach
 
 lemma card_strict_mono' (chain𝒜 : IsChain (· ⊂ ·) 𝒜) : ((Finset.univ : Finset 𝒜).toList.insertionSort (fun (e₁ e₂ : 𝒜) ↦ #e₁.val ≤ #e₂.val)).Sorted (fun (e₁ e₂ : 𝒜) ↦ #e₁.val < #e₂.val) := by
   apply List.pairwise_iff_get.mpr
@@ -178,11 +257,9 @@ lemma card_strict_mono' (chain𝒜 : IsChain (· ⊂ ·) 𝒜) : ((Finset.univ :
   have card_eq := Nat.le_antisymm card_le ass
 
   have elt_x_eq_elt_y := Subtype.eq (IsChain.unique_of_cardinality_chain chain𝒜 elt_x.prop elt_y.prop card_eq)
-  have elt_x_neq_elt_y : elt_x ≠ elt_y := List.pairwise_iff_get.mp (List.nodup_insertionSort ((Finset.univ : Finset 𝒜).nodup_toList)) x y xlty
+  have elt_x_neq_elt_y : elt_x ≠ elt_y := List.pairwise_iff_get.mp (List.Nodup.insertionSort ((Finset.univ : Finset 𝒜).nodup_toList)) x y xlty
 
   exact elt_x_neq_elt_y elt_x_eq_elt_y
-
-#check Perm.map Subtype.val
 
 def IsChain.card_strict_mono (chain𝒜 : IsChain (· ⊂ ·) 𝒜) : ∃ l : List (Finset α), l ~ 𝒜.toList ∧ l.Sorted (#· < #·) := by
   let l' := ((Finset.univ : Finset 𝒜).toList.insertionSort (fun (e₁ e₂ : 𝒜) ↦ #e₁.val ≤ #e₂.val))
@@ -209,7 +286,6 @@ def IsChain.card_strict_mono (chain𝒜 : IsChain (· ⊂ ·) 𝒜) : ∃ l : Li
 
     have := List.pairwise_iff_get.mp l'_sorted (Fin.cast this i) (Fin.cast this j) iltj_coe
     exact this
-
 
 /-- If a chain intersects a layer of the boolean lattice this intersection is a singleton -/
 lemma layer_singleton_of_nonempty (chain𝒜 : IsChain (· ⊂ ·) 𝒜) (j : Finset.range (n + 1)) (layer_nonempty : (𝒜 # j) ≠ ∅):
@@ -251,12 +327,6 @@ lemma IsChain.subset_of_le_cardinality (chain𝒜 : IsChain (· ⊂ ·) 𝒜) {e
 
 
 variable [Fintype α] [DecidableEq α] [DecidableEq (Finset (Finset α))] [DecidableEq (Finset α)]
-
-instance : Coe (Set (Finset α)) (Finset (Finset α)) :=
-  ⟨λ s => by sorry⟩
-
-
-example (ℬ : Set (Finset α)) : Finset (Finset α) := ℬ
 
 def chain_extension_filter_function (𝒜 : Finset (Finset α)) (e : Finset α) : α → Prop :=
   fun a : α ↦ IsChain (· ⊂ ·) (insert (insert a e) 𝒜) ∧ insert a e ∉ 𝒜
@@ -707,6 +777,31 @@ lemma incident_indices_monotone_cards {n: ℕ} {s t : Fin (n + 1)} {ℬ : Finset
   exact ⟨h_i_s, h_i_t⟩
 
 
+def extension_candidates (ℬ : Finset (Finset α)) (e : Finset α) := Finset.filter (chain_extension_filter_function ℬ e) (Finset.univ : Finset α)
+
+def extensions_wrt (ℬ : Finset (Finset α)) (e : Finset α) (x : α) : Finset (Finset (Finset α)) := by
+  let ℬ' : Finset (Finset α) := Insert.insert (Insert.insert x e) ℬ
+  exact (Finset.univ : Finset ℬ'.MaxChainThrough).image (emb_MaxChainThrough ℬ')
+
+lemma chain_through_extension_candidates_pairwiseDisjoint (ℬ : Finset (Finset α)) (e : Finset α) (e_mem : e ∈ ℬ) : PairwiseDisjoint (extension_candidates ℬ e) (extensions_wrt ℬ e) := by
+  intro x hx y hy xneqy
+  simp [_root_.Disjoint]
+  simp [extensions_wrt]
+  intro A hA_x hA_y
+  intro 𝒜 h𝒜
+  have a_extension_e_x := hA_x h𝒜
+  have a_extension_e_y := hA_y h𝒜
+
+  sorry
+
+
+
+/-The set of maximal chains through ℬ is the disjoint union of maximal chains through the union of ℬ with some chain extension candidate-/
+lemma central_identity {ℬ : Finset (Finset α)} (e : Finset α) (e_mem : e ∈ ℬ) :
+  Finset.univ.image (emb_MaxChainThrough ℬ) = (extension_candidates ℬ e).disjiUnion (extensions_wrt ℬ e)
+  (chain_through_extension_candidates_pairwiseDisjoint ℬ e e_mem) := by sorry
+
+
 lemma count_maxChainsThrough {n: ℕ} (m : ℕ) (h_mn : m ≤ n + 1) (hn : Fintype.card α = n)
     (ℬ : Finset (Finset α)) (cardℬ : #ℬ = m) (chainℬ : IsChain (· ⊂ ·) ℬ) (empty_in_chain : ∅ ∈ ℬ) (univ_in_chain : univ ∈ ℬ)
     (list : List (Finset α)) (list_per : ℬ.toList ~ list) (list_sorted : list.Sorted (#· < #·)):
@@ -896,8 +991,7 @@ lemma count_maxChainsThrough {n: ℕ} (m : ℕ) (h_mn : m ≤ n + 1) (hn : Finty
       -- have mul_identity : multiplicant' i_s = (#list'[↑i_new' + 1] - #list'[↑i_new'])! := by sorry
 
 
-    /-The set of maximal chains through ℬ is the disjoint union of maximal chains through the union of ℬ with some chain extension candidate-/
-    have central_identity: (Finset.univ : Finset ℬ.MaxChainThrough).image (emb_MaxChainThrough ℬ) = extension_candidates.disjiUnion extensions_wrt (by sorry) := by sorry
+    have central_identity := central_identity layer_s layer_s_mem_card.left
 
     have := Finset.card_image_of_injective (Finset.univ : Finset ℬ.MaxChainThrough) inj_emb_MaxChainThrough
 
