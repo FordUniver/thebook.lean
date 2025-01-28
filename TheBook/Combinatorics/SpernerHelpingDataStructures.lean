@@ -30,36 +30,6 @@ instance instFintypeMaxChainThrough {ℬ : Finset (Finset α)} : Fintype (MaxCha
 
 variable [Fintype α] [DecidableEq α] [DecidableEq (Finset (Finset α))] [DecidableEq (Finset α)]
 
-def chain_extension_filter_function (𝒜 : Finset (Finset α)) (e : Finset α) : α → Prop :=
-  fun a : α ↦ IsChain (· ⊂ ·) (insert (insert a e) 𝒜) ∧ insert a e ∉ 𝒜
-
-instance instDecidableIsChain (𝒜 : Finset (Finset α)) : Decidable (IsChain (· ⊂ ·) 𝒜) := by
-  apply Finset.decidableDforallFinset
-
-instance instDecidablePredChainExtension (e : Finset α) :
-    DecidablePred (chain_extension_filter_function 𝒜 e) :=
-  fun a : α => inferInstanceAs (Decidable (IsChain (· ⊂ ·) (insert (insert a e) 𝒜) ∧ insert a e ∉ 𝒜))
-
-def extension_candidates (ℬ : Finset (Finset α)) (e : Finset α) := Finset.filter (chain_extension_filter_function ℬ e) (Finset.univ : Finset α)
-
-lemma IsChain.empty_layer_by_card (hn : Fintype.card α = n) (chain𝒜 : IsChain (· ⊂ ·) 𝒜) (card𝒜 : #𝒜 < n+1) : ∃ i : Fin (n + 1), #(𝒜 # i) = 0 := by
-  by_contra! ass
-  have : ∀ (i : Fin (n + 1)), #(𝒜 # i) = 1 := by
-    intro i
-    have non_zero := ass i
-    cases Nat.le_one_iff_eq_zero_or_eq_one.mp (IsChain.max_one_elt_chain_layer chain𝒜 i) with
-    | inl h => exfalso; exact (non_zero h)
-    | inr h => exact h
-  rw [←sum_card_slice 𝒜] at card𝒜
-  have := calc
-    ∑ r ∈ Iic (Fintype.card α), #(𝒜 # r) = ∑ r ∈ Iic (Fintype.card α), 1 := by
-      apply Finset.sum_congr (by rfl)
-      intro j jmem
-      simp [hn] at jmem
-      exact this ⟨j, by simp [Nat.lt_succ_of_le jmem]⟩
-    _ = n + 1 := by rw [←(Finset.card_eq_sum_ones (Iic (Fintype.card α)))]; simp [hn]
-  linarith
-
 lemma range_empty_layer (hn : Fintype.card α = n) (chain𝒜 : IsChain (· ⊂ ·) 𝒜) (empty_layer : ∃ i : Fin (n + 1), #(𝒜 # i) = 0) (empty_elt : ∅ ∈ 𝒜) (univ_elt : Finset.univ ∈ 𝒜) :
     ∃ s : Fin (n + 1), ∃ t : Fin (n + 1), s.val + 2 ≤ t.val ∧ #(𝒜 # s) = 1 ∧ #(𝒜 # t) = 1 ∧ ∀ j : Fin (n + 1), s < j ∧ j < t → #(𝒜 # j) = 0 := by sorry
 
@@ -206,185 +176,6 @@ lemma extension_candidates_characterisation (hn : Fintype.card α = n) {i j : Fi
       have : #(𝒜 # #e_new) > 0 := Finset.card_pos.mpr this
       linarith
 
-lemma one_elt_max_chain_layer (hn : Fintype.card α = n) (maxchain𝒜 : IsMaxChain (· ⊂ ·) 𝒜) (j : Finset.range (n + 1)) : #(𝒜 # j) = 1 := by
-  by_contra! ass
-  have empty_layer : 𝒜 # j = ∅ := by
-    cases Nat.le_one_iff_eq_zero_or_eq_one.mp (IsChain.max_one_elt_chain_layer maxchain𝒜.left j) with
-    | inl h => simp at h; exact h
-    | inr h => omega
-
-  if htop : ∀ i : Finset.range (n + 1), i > j → 𝒜 # i = ∅ then
-    have univnotin𝒜 : (Finset.univ : Finset α) ∉ 𝒜 := by
-      intro ass₂
-      have nslicemem : (Finset.univ : Finset α) ∈ 𝒜 # n := by
-        simp [Finset.slice]
-        exact ⟨ass₂, hn⟩
-      cases Nat.lt_or_ge j n with
-      | inl jltn =>
-        have nsliceempty : 𝒜 # n = ∅ := htop ⟨n, Finset.mem_range.mpr (Nat.lt_succ_self n)⟩ jltn
-        simp [nsliceempty] at nslicemem
-      | inr jgen =>
-        have jeqn : j = n := Nat.eq_of_le_of_lt_succ jgen (Finset.mem_range.1 (by simp))
-        rw [jeqn] at empty_layer
-        simp [empty_layer] at nslicemem
-    simp [IsMaxChain] at maxchain𝒜
-    have larger_chain_with_univ' : _root_.IsChain (· ⊂ ·) (Insert.insert (Finset.univ : Finset α) 𝒜).toSet := by
-      have : ((Insert.insert (Finset.univ : Finset α) 𝒜) : Finset (Finset α)).toSet = ((Insert.insert (Finset.univ : Finset α) 𝒜) : Set (Finset α)) := by simp
-      rw [this]
-      refine' IsChain.insert maxchain𝒜.left  _
-      intro b bmem bneq
-      right
-      exact Finset.ssubset_iff_subset_ne.mpr ⟨by simp, fun h => bneq h.symm⟩
-
-    have larger_chain_with_univ : Finset.IsChain (· ⊂ ·) ((Insert.insert (Finset.univ : Finset α) 𝒜) : Finset (Finset α)) := larger_chain_with_univ'
-
-    have univin𝒜 := Finset.insert_eq_self.mp (maxchain𝒜.right larger_chain_with_univ (by simp)).symm
-    exact univnotin𝒜 univin𝒜
-  else if hbottom : ∀ i : Finset.range (n + 1), i < j → 𝒜 # i = ∅ then
-    have emptynotin𝒜 : (∅ : Finset α) ∉ 𝒜 := by
-      intro ass₃
-      have zeroslicemem : (∅ : Finset α) ∈ 𝒜 # 0 := by
-        simp [Finset.slice]
-        exact ass₃
-      cases Nat.eq_zero_or_pos j with
-      | inl jeqzero =>
-        rw [jeqzero] at empty_layer
-        simp [empty_layer] at zeroslicemem
-      | inr jgen =>
-        simp [hbottom ⟨0, by simp⟩ jgen] at zeroslicemem
-    simp [IsMaxChain] at maxchain𝒜
-    have larger_chain_with_empty' : _root_.IsChain (· ⊂ ·) ((Insert.insert (∅ : Finset α) 𝒜)).toSet := by
-      have : ((Insert.insert (∅ : Finset α) 𝒜)).toSet = (Insert.insert (∅ : Finset α) 𝒜.toSet) := by simp
-      rw [this]
-      refine' IsChain.insert maxchain𝒜.left  _
-      intro b bmem bneq
-      left
-      exact Finset.ssubset_iff_subset_ne.mpr ⟨by simp, bneq⟩
-
-    have larger_chain_with_empty : IsChain (· ⊂ ·) ((Insert.insert (∅ : Finset α) 𝒜)) := larger_chain_with_empty'
-
-    have emptyin𝒜 := Finset.insert_eq_self.mp (maxchain𝒜.right larger_chain_with_empty (by simp)).symm
-    exact emptynotin𝒜 emptyin𝒜
-
-  else
-    simp at htop hbottom
-    let indices_nonempty_top := Finset.filter (fun i : Finset.range (n + 1) ↦ i > j ∧ 𝒜 # i ≠ ∅) (Finset.univ : Finset (Finset.range (n + 1)))
-    let indices_nonempty_bottom := Finset.filter (fun i : Finset.range (n + 1) ↦ i < j ∧ 𝒜 # i ≠ ∅) (Finset.univ : Finset (Finset.range (n + 1)))
-    have nonempty_indices_nonempty_top : indices_nonempty_top.Nonempty := by
-      simp [Finset.Nonempty]
-      obtain ⟨i, ⟨⟨ilen, jlti⟩, jlayernotempty⟩⟩ := htop
-      use i
-      simp [indices_nonempty_top]
-      constructor
-      · use ilen
-      · exact jlayernotempty
-
-    have nonempty_indices_nonempty_bottom : indices_nonempty_bottom.Nonempty := by
-      simp [Finset.Nonempty]
-      obtain ⟨i, ⟨⟨ilen, iltj⟩, jlayernotempty⟩⟩ := hbottom
-      use i
-      simp [indices_nonempty_bottom]
-      constructor
-      · use ilen
-      · exact jlayernotempty
-
-    obtain ⟨s_top, s_top_min⟩ := Finset.min_of_nonempty nonempty_indices_nonempty_top
-    have h_s_top := Finset.mem_of_min s_top_min
-    simp [indices_nonempty_top] at h_s_top
-
-    obtain ⟨s_bottom, s_bottom_max⟩ := Finset.max_of_nonempty nonempty_indices_nonempty_bottom
-    have h_s_bottom := Finset.mem_of_max s_bottom_max
-    simp [indices_nonempty_bottom] at h_s_bottom
-
-    have emptylayer : ∀ l ∈ (Finset.range (n + 1)), s_bottom < l → l < s_top → #(𝒜 # l) = 0 := by
-      intro l lmem s_bottom_lt_l l_lt_s_top
-
-      have h_top : ⟨l, lmem⟩ ∉ indices_nonempty_top := Finset.not_mem_of_lt_min l_lt_s_top s_top_min
-      have h_bottom : ⟨l, lmem⟩ ∉ indices_nonempty_bottom := Finset.not_mem_of_max_lt s_bottom_lt_l s_bottom_max
-
-      simp [indices_nonempty_top] at h_top
-      simp [indices_nonempty_bottom] at h_bottom
-
-      simp
-
-      by_cases jeql : j = ⟨l, lmem⟩
-      · rw [←empty_layer, jeql]
-      · cases (Nat.lt_or_gt_of_ne (fun ass : ↑j = l => jeql (by simp [←ass]))) with
-        | inl jltl => exact h_top jltl
-        | inr jgtl => exact h_bottom jgtl
-
-    obtain ⟨e_bottom, ⟨bottom_singleton : 𝒜 # s_bottom = {e_bottom}, _⟩⟩ := layer_singleton_of_nonempty maxchain𝒜.left s_bottom h_s_bottom.right
-
-    obtain ⟨e_top, ⟨top_singleton : 𝒜 # s_top = {e_top}, _⟩⟩ := layer_singleton_of_nonempty maxchain𝒜.left s_top h_s_top.right
-
-    let extension_candidates := Finset.filter (chain_extension_filter_function 𝒜 e_bottom) (Finset.univ : Finset α)
-
-    have extension_candidates_eq : extension_candidates = e_top \ e_bottom := by
-      refine' extension_candidates_characterisation hn _ maxchain𝒜.left bottom_singleton top_singleton emptylayer
-      apply Nat.succ_le_of_lt
-      have : (s_bottom : ℕ) + 1 ≤ ↑j := Nat.succ_le_of_lt h_s_bottom.left
-      exact Nat.lt_of_le_of_lt this h_s_top.left
-    simp at extension_candidates_eq
-
-    have e_bottom_mem_card : e_bottom ∈ 𝒜 ∧ #e_bottom = s_bottom := by
-      have := Finset.mem_singleton_self e_bottom
-      rw [←bottom_singleton] at this
-      simp [slice] at this
-      exact this
-
-    have e_top_mem_card : e_top ∈ 𝒜 ∧ #e_top = s_top := by
-      have := Finset.mem_singleton_self e_top
-      rw [←top_singleton] at this
-      simp [slice] at this
-      exact this
-
-    have extension_candidates_ne_empty : #extension_candidates > 0 := by
-      rw [extension_candidates_eq]
-      have card_bottom_lt_card_top : #e_bottom < #e_top := by
-        rw [e_top_mem_card.right, e_bottom_mem_card.right]
-        exact Nat.lt_trans h_s_bottom.left h_s_top.left
-      have bottom_subset_top : e_bottom ⊂ e_top :=
-        IsChain.ssubset_of_lt_cardinality maxchain𝒜.left e_bottom_mem_card.left e_top_mem_card.left card_bottom_lt_card_top
-      have := Finset.card_sdiff_add_card_eq_card bottom_subset_top.left
-      linarith
-    simp at extension_candidates_ne_empty
-    obtain ⟨a, ha⟩ := extension_candidates_ne_empty
-    simp [extension_candidates, chain_extension_filter_function] at ha
-    have := Finset.insert_eq_self.mp (maxchain𝒜.right ha.left (by simp)).symm
-    exact ha.right this
-
-lemma IsMaxChain.card {ℬ : Finset (Finset α)} (hn : Fintype.card α = n) (maxChainℬ : IsMaxChain (· ⊂ ·) ℬ) : ℬ.card = n + 1 := by
-  rw [←sum_card_slice ℬ]
-  calc
-    ∑ r ∈ Iic (Fintype.card α), #(ℬ # r) = ∑ r ∈ Iic (Fintype.card α), 1 := by
-      apply Finset.sum_congr (by rfl)
-      intro j jmem
-      simp [hn] at jmem
-      exact one_elt_max_chain_layer hn maxChainℬ ⟨j, by simp [Nat.lt_succ_of_le jmem]⟩
-    _ = n + 1 := by rw [←(Finset.card_eq_sum_ones (Iic (Fintype.card α)))]; simp [hn]
-
-lemma IsChain.card_le {ℬ : Finset (Finset α)} (hn : Fintype.card α = n) (chainℬ : IsChain (· ⊂ ·) ℬ) : ℬ.card ≤ n + 1 := by
-  rw [←sum_card_slice ℬ]
-  calc
-    ∑ r ∈ Iic (Fintype.card α), #(ℬ # r) ≤ ∑ r ∈ Iic (Fintype.card α), 1 := by
-      apply sum_le_sum
-      intro j jmem
-      exact IsChain.max_one_elt_chain_layer chainℬ j
-    _ = n + 1 := by rw [←(Finset.card_eq_sum_ones (Iic (Fintype.card α)))]; simp [hn]
-
-lemma IsMaxChain.iff_card {ℬ : Finset (Finset α)} (hn : Fintype.card α = n) (chainℬ : IsChain (· ⊂ ·) ℬ) : IsMaxChain (· ⊂ ·) ℬ ↔ ℬ.card = n + 1 := by
-  constructor
-  · intro maxChainℬ
-    exact IsMaxChain.card hn maxChainℬ
-  · intro cardℬ
-    constructor
-    · exact chainℬ
-    · intro 𝒜 chain𝒜 ℬssub𝒜
-      have hcard𝒜 : #𝒜 ≤ #ℬ := by
-        · rw [cardℬ]
-          exact IsChain.card_le hn chain𝒜
-      exact (Finset.subset_iff_eq_of_card_le hcard𝒜).mp ℬssub𝒜
-
 lemma card_maxChainThrough {ℬ : Finset (Finset α)} (hn : Fintype.card α = n) (chain : MaxChainThrough ℬ) : #chain.𝒜 = n + 1 := by
   rw [←sum_card_slice chain.𝒜]
   calc
@@ -392,7 +183,7 @@ lemma card_maxChainThrough {ℬ : Finset (Finset α)} (hn : Fintype.card α = n)
       apply Finset.sum_congr (by rfl)
       intro j jmem
       simp [hn] at jmem
-      exact one_elt_max_chain_layer hn chain.isMaxChain ⟨j, by simp [Nat.lt_succ_of_le jmem]⟩
+      exact IsMaxChain.one_elt_max_chain_layer hn chain.isMaxChain ⟨j, by simp [Nat.lt_succ_of_le jmem]⟩
     _ = n + 1 := by rw [←(Finset.card_eq_sum_ones (Iic (Fintype.card α)))]; simp [hn]
 
 lemma first_entry {ℬ : Finset (Finset α)} (list : List (Finset α))
@@ -494,7 +285,6 @@ lemma chain_through_extension_candidates_pairwiseDisjoint (ℬ : Finset (Finset 
   intro 𝒜 h𝒜
   have a_extension_e_x := hA_x h𝒜
   have a_extension_e_y := hA_y h𝒜
-
   sorry
 
 lemma central_identity {ℬ : Finset (Finset α)} (e : Finset α) (e_mem : e ∈ ℬ) :
@@ -603,7 +393,7 @@ lemma count_maxChainsThrough {n: ℕ} (m : ℕ) (h_mn : m ≤ n + 1) (hn : Finty
         apply Finset.card_insert_of_not_mem
         · exact a_property₁.right.right
 
-      obtain ⟨list', ⟨list_per' : list' ~ (insert e_new ℬ).toList, list_sorted' ⟩⟩ := IsChain.card_strict_mono a_property₁.right.left
+      obtain ⟨list', ⟨list_per' : list' ~ (insert e_new ℬ).toList, list_sorted' ⟩⟩ := Chain.card_strict_mono a_property₁.right.left
       have embedding_card := Finset.card_image_of_injective (Finset.univ : Finset (MaxChainThrough ℬ')) inj_emb_MaxChainThrough
       simp [extensions_wrt, embedding_card]
 

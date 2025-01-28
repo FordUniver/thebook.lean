@@ -44,7 +44,6 @@ lemma maximal_of_maximum (s : Finset α) (M : G.IsMaximumClique s) : G.IsMaximal
       exact lt_irrefl _ (lt_of_lt_of_le hlt hle)
   }
 
-
 variable [Fintype α]
 
 private lemma fintype_cliqueNum_bddAbove : BddAbove {n | ∃ s, G.IsNClique n s} := by

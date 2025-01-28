@@ -9,12 +9,13 @@ import Mathlib.Order.Chain
 import Mathlib.Data.List.Perm.Basic
 import TheBook.ToMathlib.Chain_optional
 import TheBook.ToMathlib.Chain
+import TheBook.ToMathlib.Antichain
 import TheBook.ToMathlib.List
 import TheBook.Combinatorics.SpernerHelpingDataStructures
 
 open Function Finset Nat Set BigOperators List
 
-variable {α : Type*} {n m : ℕ} {𝒜 : Finset (Finset α)} [Fintype α] [DecidableEq α] [DecidableEq (Finset α)]
+variable {α : Type*} {n m : ℕ} {𝒜 : Finset (Finset α)} [Fintype α] [DecidableEq α]
 
 namespace Finset
 
@@ -53,8 +54,8 @@ theorem lym_inequality (antichain𝒜 : IsAntichain (· ⊂ ·) 𝒜) (hn : Fint
   have slice_partition : Finset.disjiUnion (Iic n) 𝒜.slice (Finset.pairwiseDisjoint_slice.subset (Set.subset_univ _)) = 𝒜 := by
     rw [Finset.disjiUnion_eq_biUnion (Iic n) 𝒜.slice (Finset.pairwiseDisjoint_slice.subset (Set.subset_univ _))]
     rw [←hn]
-    --simp (biUnion_slice 𝒜)
-    sorry
+    have := biUnion_slice  𝒜
+    exact this
 
   calc
     ∑ k ∈ Iic n, #(𝒜 # k) * (k)! * (n - k)! = ∑ k ∈ Iic n, ∑ e ∈ (𝒜 # k), (#e)! * (n - #e)! := by
@@ -77,4 +78,9 @@ theorem lym_inequality (antichain𝒜 : IsAntichain (· ⊂ ·) 𝒜) (hn : Fint
       intro e _
       apply Eq.symm
       exact count_maxChains_through_singleton e hn
+    _ = ∑ e ∈ 𝒜, #((Finset.univ : Finset (MaxChainThrough {e})).image (emb_MaxChainThrough {e})) := by
+      apply Finset.sum_congr (by simp)
+      intro e e_mem
+      rw [Finset.card_image_of_injective (Finset.univ : Finset (MaxChainThrough {e})) inj_emb_MaxChainThrough, Finset.card_univ]
+    _ = #(𝒜.disjiUnion (fun e : Finset α ↦ (Finset.univ : Finset (MaxChainThrough {e})).image (emb_MaxChainThrough {e})) (AntiChain.disj_union_chain_through antichain𝒜))
     _ ≤ (n)! := by sorry
