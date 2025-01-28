@@ -1,4 +1,3 @@
-import TheBook.ToMathlib.Chain_optional
 import TheBook.ToMathlib.Chain
 import TheBook.ToMathlib.List
 
@@ -302,7 +301,7 @@ lemma count_maxChainsThrough {n: ℕ} (m : ℕ) (h_mn : m ≤ n + 1) (hn : Finty
     let sorted_list := ((Finset.univ : Finset ℬ).toList.insertionSort (fun (e₁ e₂ : ℬ) ↦ #e₁.val ≤ #e₂.val))
 
     obtain ⟨s', t', empty_range : s'.val + 2 ≤ t'.val ∧ #(ℬ # s') = 1 ∧ #(ℬ # t') = 1 ∧ ∀ (j : Fin (n + 1)), s' < j ∧ j < t' → #(ℬ # ↑j) = 0⟩ :=
-      range_empty_layer hn chainℬ (IsChain.empty_layer_by_card hn chainℬ (lt_of_eq_of_lt cardℬ q)) empty_in_chain univ_in_chain
+      range_empty_layer hn chainℬ (Chain.empty_layer_by_card hn chainℬ (lt_of_eq_of_lt cardℬ q)) empty_in_chain univ_in_chain
 
     let s : Finset.range (n + 1) := ⟨s'.val, mem_range.mpr s'.is_lt⟩
     let t : Finset.range (n + 1) := ⟨t'.val, mem_range.mpr t'.is_lt⟩

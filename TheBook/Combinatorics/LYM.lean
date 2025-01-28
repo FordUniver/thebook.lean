@@ -7,7 +7,6 @@ import Mathlib.Data.Finset.Slice
 import Mathlib.Order.Antichain
 import Mathlib.Order.Chain
 import Mathlib.Data.List.Perm.Basic
-import TheBook.ToMathlib.Chain_optional
 import TheBook.ToMathlib.Chain
 import TheBook.ToMathlib.Antichain
 import TheBook.ToMathlib.List
