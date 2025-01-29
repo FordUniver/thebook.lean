@@ -54,18 +54,21 @@ lemma List.Nodup.insertionSort {l : List α} (h : l.Nodup) : (l.insertionSort (f
 
 end Nodup
 
+
 section Perm
 
-variable {α : Type*} {𝒜 : Finset α} [DecidableEq α]
+variable {α : Type*} {𝒜 : Set (Finset α)} [DecidablePred (· ∈ 𝒜)] [Fintype α] [DecidableEq α]
 
-lemma Finset.subtype_toList : List.map Subtype.val (Finset.univ : Finset 𝒜).toList ~ 𝒜.toList := by
+instance : Fintype 𝒜 := setFintype 𝒜
+
+lemma Finset.subtype_toList : List.map Subtype.val (Finset.univ : Finset 𝒜).toList ~ 𝒜.toFinset.toList := by
   refine' perm_iff_count.mpr _
   intro a
-  by_cases h : a ∈ 𝒜
+  by_cases h : a ∈ 𝒜.toFinset
   case pos =>
-    have count_rhs := nodup_iff_count_eq_one.mp 𝒜.nodup_toList a (mem_toList.mpr h)
-    have count_lhs₀ := count_map_of_injective (Finset.univ : Finset 𝒜).toList Subtype.val Subtype.val_injective ⟨a, h⟩
-    have count_lhs₁ := nodup_iff_count_eq_one.mp (Finset.univ : Finset 𝒜).nodup_toList ⟨a, h⟩ (mem_toList.mpr (by simp))
+    have count_rhs := nodup_iff_count_eq_one.mp 𝒜.toFinset.nodup_toList a (mem_toList.mpr h)
+    have count_lhs₀ := count_map_of_injective (Finset.univ : Finset 𝒜).toList Subtype.val Subtype.val_injective ⟨a, mem_toFinset.mp h⟩
+    have count_lhs₁ := nodup_iff_count_eq_one.mp (Finset.univ : Finset 𝒜).nodup_toList ⟨a, mem_toFinset.mp h⟩ (mem_toList.mpr (by simp))
     rw [count_rhs, count_lhs₀, count_lhs₁]
   case neg =>
     have count_rhs := List.count_eq_zero_of_not_mem (fun ass ↦ h (mem_toList.mp ass))
@@ -76,7 +79,7 @@ lemma Finset.subtype_toList : List.map Subtype.val (Finset.univ : Finset 𝒜).t
 
       have := x.prop
       rw [x_eq_a] at this
-      exact h this
+      exact h (mem_toFinset.mpr this)
 
     rw [count_rhs, count_lhs]
 end Perm

@@ -14,16 +14,17 @@ import TheBook.Combinatorics.SpernerHelpingDataStructures
 
 open Function Finset Nat Set BigOperators List
 
-variable {α : Type*} {n m : ℕ} {𝒜 : Finset (Finset α)} [Fintype α] [DecidableEq α]
+variable {α : Type*} {n m : ℕ} [DecidableEq α] [Fintype α] {𝒜 : Set (Finset α)} [DecidablePred (· ∈ 𝒜)] [DecidableEq (Set (Finset α))]
+instance : Fintype 𝒜 := setFintype 𝒜
 
 namespace Finset
 
 /-- The **Lubell-Yamamoto-Meshalkin inequality**. Sperner's Theorem follows as in Mathlib.Combinatorics.SetFamily.LYM as a corollary -/
 theorem lym_inequality (antichain𝒜 : IsAntichain (· ⊂ ·) 𝒜) (hn : Fintype.card α = n):
-    ∑ k ∈ Iic n, #(𝒜 # k) / (n.choose k : ℚ) ≤ (1 : ℚ) := by
-  have : ∑ k ∈ Iic n, #(𝒜 # k) / (n.choose k : ℚ) ≤ (∑ k ∈ Iic n, #(𝒜 # k) * (k)! * (n - k)!) * (1 / (n)! : ℚ) := by
+    ∑ k ∈ Iic n, #(𝒜.toFinset # k) / (n.choose k : ℚ) ≤ (1 : ℚ) := by
+  have : ∑ k ∈ Iic n, #(𝒜.toFinset # k) / (n.choose k : ℚ) ≤ (∑ k ∈ Iic n, #(𝒜.toFinset # k) * (k)! * (n - k)!) * (1 / (n)! : ℚ) := by
     calc
-      ∑ k ∈ Iic n, #(𝒜 # k) / (n.choose k : ℚ) = ∑ k ∈ Iic n, #(𝒜 # k) * (k)! * (n - k)! * (1 / (n)! : ℚ) := by
+      ∑ k ∈ Iic n, #(𝒜.toFinset # k) / (n.choose k : ℚ) = ∑ k ∈ Iic n, #(𝒜.toFinset # k) * (k)! * (n - k)! * (1 / (n)! : ℚ) := by
         apply Finset.sum_congr (by simp)
         intro j jmem
         simp at jmem
@@ -41,7 +42,7 @@ theorem lym_inequality (antichain𝒜 : IsAntichain (· ⊂ ·) 𝒜) (hn : Fint
         · norm_num
           constructor <;> apply Nat.factorial_ne_zero
         · exact jmem
-      _ = (∑ k ∈ Iic n, #(𝒜 # k) * (k)! * (n - k)!) * (1 / (n)! : ℚ) := by simp [←Finset.sum_mul]
+      _ = (∑ k ∈ Iic n, #(𝒜.toFinset # k) * (k)! * (n - k)!) * (1 / (n)! : ℚ) := by simp [←Finset.sum_mul]
     rfl
 
   refine' le_trans this _
@@ -50,17 +51,17 @@ theorem lym_inequality (antichain𝒜 : IsAntichain (· ⊂ ·) 𝒜) (hn : Fint
 
   norm_cast
 
-  have slice_partition : Finset.disjiUnion (Iic n) 𝒜.slice (Finset.pairwiseDisjoint_slice.subset (Set.subset_univ _)) = 𝒜 := by
-    rw [Finset.disjiUnion_eq_biUnion (Iic n) 𝒜.slice (Finset.pairwiseDisjoint_slice.subset (Set.subset_univ _))]
+  have slice_partition : Finset.disjiUnion (Iic n) 𝒜.toFinset.slice (Finset.pairwiseDisjoint_slice.subset (Set.subset_univ _)) = 𝒜.toFinset := by
+    rw [Finset.disjiUnion_eq_biUnion (Iic n) 𝒜.toFinset.slice (Finset.pairwiseDisjoint_slice.subset (Set.subset_univ _))]
     rw [←hn]
-    have := biUnion_slice  𝒜
+    have := biUnion_slice 𝒜.toFinset
     exact this
 
   calc
-    ∑ k ∈ Iic n, #(𝒜 # k) * (k)! * (n - k)! = ∑ k ∈ Iic n, ∑ e ∈ (𝒜 # k), (#e)! * (n - #e)! := by
+    ∑ k ∈ Iic n, #(𝒜.toFinset # k) * (k)! * (n - k)! = ∑ k ∈ Iic n, ∑ e ∈ (𝒜.toFinset # k), (#e)! * (n - #e)! := by
       apply Finset.sum_congr (by simp)
       intro k _
-      have hq : ∀ e ∈ (𝒜 # k), (#e)! * (n - #e)! = (k)! * (n - k)! := by
+      have hq : ∀ e ∈ (𝒜.toFinset # k), (#e)! * (n - #e)! = (k)! * (n - k)! := by
         intro e he
         simp [slice] at he
         rw [he.2]
@@ -81,5 +82,5 @@ theorem lym_inequality (antichain𝒜 : IsAntichain (· ⊂ ·) 𝒜) (hn : Fint
       apply Finset.sum_congr (by simp)
       intro e e_mem
       rw [Finset.card_image_of_injective (Finset.univ : Finset (MaxChainThrough {e})) inj_emb_MaxChainThrough, Finset.card_univ]
-    _ = #(𝒜.disjiUnion (fun e : Finset α ↦ (Finset.univ : Finset (MaxChainThrough {e})).image (emb_MaxChainThrough {e})) (AntiChain.disj_union_chain_through antichain𝒜))
+    _ = #(𝒜.toFinset.disjiUnion (fun e : Finset α ↦ (Finset.univ : Finset (MaxChainThrough {e})).image (emb_MaxChainThrough {e})) (by simp [AntiChain.disj_union_chain_through antichain𝒜])) := by sorry
     _ ≤ (n)! := by sorry
