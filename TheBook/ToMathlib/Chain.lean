@@ -4,16 +4,72 @@ import Mathlib.Data.Finset.Slice
 import Mathlib.Data.Fintype.Basic
 import Init.Core
 
+/-!
+# Chain
+
+In this file we introduce introduce Lemmata for chains with respect to the subset relation.
+First we consider finite chains of sets in general. Then we consider chains of sets containing elements of some 'Fintype α'.
+
+This module is organized into the sections 'ChainCoercions', 'ChainSubset', 'ChainExtension', 'ChainSubsetFintype' and 'ChainCardinalityOrder'.
+
+## Main results
+
+- `IsChain.equivalence_subset_relations`: A set of sets is a chain with respect to the proper subset relation if and only if it is a chain with respect to the subset relation.
+- `IsChain.max_one_elt_chain_layer`: In a finite chain each slice (layer) contains at most one element.
+- `IsChain.ssubset_of_lt_cardinality`: A strong inequality of the cardinality of two chain elements implies a proper subset relation.
+- `IsChain.subset_of_le_cardinality`: A weak inequality of the cardinality of two chain elements implies a subset relation.
+- `extension_candidates_characterisation`: Given two sets 'layer_i' and 'layer_j' in a chain such that there is no set of intermediate cardinality and '#layer_j ≥ #layer_i + 2', the extension candidates for 'layer_i' are given by 'layer_j \ layer_i'.
+- `Chain.empty_layer_by_card`: Any chain of sets of 'Fintype α' that contains less than 'Fintype.card α' sets, contains an empty slice.
+- `Chain.empty_layer_by_card`: In a maximal chain every slice contains exactly one element.
+- `IsMaxChain.card`: The cardinality of a maximal chain of sets of some 'Fintpype α' is 'Fintype.card α + 1'.
+- `IsChain.card_le`: The cardinality of a chain of sets of some 'Fintpype α' is at most 'Fintype.card α + 1'.
+- `IsMaxChain.iff_card`: A chain of sets of some 'Fintpype α' is maximal if and only if it contains 'Fintype.card α + 1' sets.
+- `Chain.card_strict_mono`: Given a chain of sets of some 'Fintype α' there exists a permutation of the list of its elements, such that its elements cardinalities are sorted by strict inequalities.
+-/
+
 namespace Finset
 
 open Function Finset Nat Set BigOperators List
 
-section ChainSubset
+section ChainCoercions
 
-/- Here we proof lemmata concerning the poset of the subset relation on sets of any type-/
+/-!
+# ChainCoercions
+
+In this section we introduce coercions such that we can use the 'IsChain' relation together with the coercions 'toSet' and 'toFinset' in a natural way
+and use the subset and the proper subset relation interchangably.
+
+## Main results
+
+- `IsChain.equivalence_subset_relations`: A set of sets is a chain with respect to the proper subset relation if and only if it is a chain with respect to the subset relation.
+-/
 
 variable {α : Type*} {𝒜 : Finset (Finset α)} {ℬ : Finset (Set α)} {𝒞 : Set (Finset α)} {𝒟 : Set (Set α)}
 
+/- A set of sets is a chain with respect to the proper subset relation if and only if it is a chain with respect to the subset relation.-/
+lemma IsChain.equivalence_subset_relations : (IsChain (· ⊆ .) 𝒟) ↔ (IsChain (· ⊂ .) 𝒟) := by
+  constructor
+  · intro h e₁ e₁mem e₂ e₂mem e₁neqe₂
+    cases h e₁mem e₂mem e₁neqe₂ with
+    | inl e₁sube₂ => left; exact Set.ssubset_iff_subset_ne.mpr ⟨e₁sube₂, e₁neqe₂⟩
+    | inr e₂sube₁ => right; exact Set.ssubset_iff_subset_ne.mpr ⟨e₂sube₁, e₁neqe₂.symm⟩
+  · intro h e₁ e₁mem e₂ e₂mem e₁neqe₂
+    cases h e₁mem e₂mem e₁neqe₂ with
+    | inl e₁sube₂ => left; exact e₁sube₂.left
+    | inr e₂sube₁ => right; exact e₂sube₁.left
+
+/- A set of sets is a maximal chain with respect to the proper subset relation if and only if it is a chain with respect to the subset relation-/
+lemma IsMaxChain.equivalence_subset_relations : (IsMaxChain (· ⊆ .) 𝒟) ↔ (IsMaxChain (· ⊂ .) 𝒟) := by
+  constructor
+  · intro h
+    exact ⟨IsChain.equivalence_subset_relations.mp h.left, fun t chain => h.right (IsChain.equivalence_subset_relations.mpr chain)⟩
+  · intro h
+    exact ⟨IsChain.equivalence_subset_relations.mpr h.left, fun t chain => h.right (IsChain.equivalence_subset_relations.mp chain)⟩
+
+instance : Coe (IsChain (· ⊆ ·) 𝒟) (IsChain (· ⊂ ·) 𝒟) := ⟨fun h => IsChain.equivalence_subset_relations.mp h⟩
+instance : Coe (IsChain (· ⊂ ·) 𝒟) (IsChain (· ⊆ ·) 𝒟) := ⟨fun h => IsChain.equivalence_subset_relations.mpr h⟩
+
+/- A set of sets is a chain if the set of the corresponding finite sets is a chain (with respect to the proper subset relation).-/
 instance : Coe (IsChain (· ⊂ ·) 𝒞) (IsChain (· ⊂ ·) (toSet '' 𝒞)) := ⟨ by
   intro h
   intro x hx y hy x_neg_y
@@ -29,46 +85,68 @@ instance : Coe (IsChain (· ⊂ ·) 𝒞) (IsChain (· ⊂ ·) (toSet '' 𝒞)) 
   exact h hx'.left hy'.left x'_neg_y'
 ⟩
 
+/- A set of sets is a chain if the set of the corresponding finite sets is a chain (with respect to the subset relation).-/
+instance : Coe (IsChain (· ⊆ ·) 𝒞) (IsChain (· ⊆ ·) (toSet '' 𝒞)) := ⟨ by
+  intro h
+  intro x hx y hy x_neg_y
+  obtain ⟨x', hx'⟩ := hx
+  obtain ⟨y', hy'⟩ := hy
+  have x'_neg_y' : x' ≠ y' := by
+    by_contra ass
+    rw [ass] at hx'
+    rw [←hx'.right, hy'.right] at x_neg_y
+    simp at x_neg_y
+
+  simp [←hx'.right, ←hy'.right]
+  exact h hx'.left hy'.left x'_neg_y'
+⟩
+
+/- A set of finite sets is a chain if the set of the corresponding sets is a chain (with respect to the proper subset relation).-/
 instance : Coe (IsChain (· ⊂ ·) (toSet '' 𝒞)) (IsChain (· ⊂ ·) 𝒞) :=
   ⟨ fun h _ hx _ hy x_neg_y ↦ h (Set.mem_image_of_mem toSet hx) (Set.mem_image_of_mem toSet hy) (fun ass ↦ x_neg_y (coe_inj.mp ass))⟩
 
+/- A set of finite sets is a chain if the set of the corresponding sets is a chain (with respect to the subset relation).-/
 instance : Coe (IsChain (· ⊆ ·) (toSet '' 𝒞)) (IsChain (· ⊆ ·) 𝒞) :=
   ⟨ fun h _ hx _ hy x_neg_y ↦ h (Set.mem_image_of_mem toSet hx) (Set.mem_image_of_mem toSet hy) (fun ass ↦ x_neg_y (coe_inj.mp ass))⟩
 
-instance : Coe (IsChain (· ⊂ ·) (toSet '' 𝒞)) (IsChain (· ⊂ ·) 𝒞) := ⟨ by
-  intro h
-  intro x hx y hy x_neg_y
-  exact h (Set.mem_image_of_mem toSet hx) (Set.mem_image_of_mem toSet hy) (fun ass ↦ x_neg_y (coe_inj.mp ass))
-⟩
+/- Now we can write the following examples without coercion errors.-/
+example (h : IsChain (· ⊂ ·) 𝒞) : (IsChain (· ⊆ ·) (toSet '' 𝒞)) := h
+example (h : IsChain (· ⊂ ·) (toSet '' 𝒞)) : (IsChain (· ⊆ ·) 𝒞) := h
 
-instance [Fintype 𝒞] : Coe (IsChain (· ⊂ ·) 𝒞) (IsChain (· ⊂ ·) 𝒞.toFinset.toSet) := ⟨ by
-  intro h x hx Real.young_inequality hy x_neg_y
-  simp at hx hy
-  exact h hx hy x_neg_y
-⟩
+/- Considering the next two examples we might want to have also a coercion from 'IsChain (· ⊂ ·) 𝒞' to 'IsChain (· ⊂ ·) 𝒞.toFinset.toSet', but we do not need it.-/
+example [Fintype 𝒞] (h : IsChain (· ⊂ ·) 𝒞) : (IsChain (· ⊆ ·) 𝒞.toFinset.toSet) := by simp; exact (h : IsChain (· ⊆ ·) 𝒞)
+example [Fintype 𝒟] (h : IsChain (· ⊆ ·) 𝒟) : (IsChain (· ⊂ ·) 𝒟.toFinset.toSet) := by simp; exact (h : IsChain (· ⊂ ·) 𝒟)
 
-lemma IsChain.equivalence_subset_relations : (IsChain (· ⊆ .) 𝒟) ↔ (IsChain (· ⊂ .) 𝒟) := by
-  constructor
-  · intro h e₁ e₁mem e₂ e₂mem e₁neqe₂
-    cases h e₁mem e₂mem e₁neqe₂ with
-    | inl e₁sube₂ => left; exact Set.ssubset_iff_subset_ne.mpr ⟨e₁sube₂, e₁neqe₂⟩
-    | inr e₂sube₁ => right; exact Set.ssubset_iff_subset_ne.mpr ⟨e₂sube₁, e₁neqe₂.symm⟩
-  · intro h e₁ e₁mem e₂ e₂mem e₁neqe₂
-    cases h e₁mem e₂mem e₁neqe₂ with
-    | inl e₁sube₂ => left; exact e₁sube₂.left
-    | inr e₂sube₁ => right; exact e₂sube₁.left
+/- For completion consider also the following examples.-/
+example (h : IsChain (· ⊂ ·) 𝒜.toSet) : (IsChain (· ⊆ ·) 𝒜.toSet) := h
+example (h : IsChain (· ⊂ ·) ℬ.toSet) : (IsChain (· ⊆ ·) ℬ.toSet) := h
+example (h : IsChain (· ⊆ ·) 𝒜.toSet) : (IsChain (· ⊂ ·) 𝒜.toSet) := h
+example (h : IsChain (· ⊆ ·) ℬ.toSet) : (IsChain (· ⊂ ·) ℬ.toSet) := h
+example (h : IsChain (· ⊂ ·) 𝒜.toSet) : (IsChain (· ⊆ ·) (toSet '' 𝒜.toSet)) := h
 
-example (h : IsChain (· ⊂ ·) 𝒞) : (IsChain (· ⊆ ·) (toSet '' 𝒞)) := IsChain.equivalence_subset_relations.mpr h
+/- A general observation-/
+example : IsTrans 𝒟 (fun (e₁ e₂ : 𝒟) ↦ e₁.val ⊆ e₂.val) := by apply IsTrans.swap
 
-example (h : IsChain (· ⊂ ·) 𝒞) : (IsChain (· ⊆ ·) 𝒞) := (IsChain.equivalence_subset_relations.mpr h : IsChain (· ⊆ ·) (toSet '' 𝒞))
+end ChainCoercions
 
-lemma IsMaxChain.equivalence_subset_relations : (IsMaxChain (· ⊆ .) 𝒟) ↔ (IsMaxChain (· ⊂ .) 𝒟) := by
-  constructor
-  · intro h
-    exact ⟨IsChain.equivalence_subset_relations.mp h.left, fun t chain => h.right (IsChain.equivalence_subset_relations.mpr chain)⟩
-  · intro h
-    exact ⟨IsChain.equivalence_subset_relations.mpr h.left, fun t chain => h.right (IsChain.equivalence_subset_relations.mp chain)⟩
 
+section ChainSubset
+
+/-!
+# ChainSubset
+
+In this section we consider Lemmata on general chains with respect to the subset relation
+
+## Main results
+
+- `IsChain.max_one_elt_chain_layer`: In a finite chain each slice (layer) contains at most one element.
+- `IsChain.ssubset_of_lt_cardinality`: A strong inequality of the cardinality of two chain elements implies a proper subset relation.
+- `IsChain.subset_of_le_cardinality`: A weak inequality of the cardinality of two chain elements implies a subset relation.
+-/
+
+variable {α : Type*} {𝒞 : Set (Finset α)} {𝒟 : Set (Set α)}
+
+/- Two elements in a chain of equal cardinality must be equal.-/
 lemma IsChain.unique_of_cardinality_chain (chain𝒞 : IsChain (· ⊂ ·) 𝒞) {a b : Finset α}
     (amem : a ∈ 𝒞) (bmem : b ∈ 𝒞) (hcard : #a = #b) : a = b := by
   by_contra aneb
@@ -80,6 +158,7 @@ lemma IsChain.unique_of_cardinality_chain (chain𝒞 : IsChain (· ⊂ ·) 𝒞)
     have := Finset.card_strictMono h
     linarith
 
+/- In a finite chain each slice (layer) contains at most one element.-/
 lemma IsChain.max_one_elt_chain_layer [Fintype 𝒞] (chain𝒞 : IsChain (· ⊂ ·) 𝒞) (j : ℕ) : #(𝒞.toFinset # j) ≤ 1 := by
   by_contra! ass
   have : (𝒞.toFinset # j) ≠ (∅ : Finset (Finset α)) := by
@@ -92,9 +171,7 @@ lemma IsChain.max_one_elt_chain_layer [Fintype 𝒞] (chain𝒞 : IsChain (· �
   have := Finset.slice_subset (bmem)
   exact aneb (IsChain.unique_of_cardinality_chain chain𝒞 (mem_toFinset.mp (Finset.slice_subset bmem)) (mem_toFinset.mp (Finset.slice_subset amem)) cardeqab.symm)
 
-instance IsChain.subset_is_trans : IsTrans 𝒜 (fun (e₁ e₂ : 𝒜) ↦ e₁.val ⊆ e₂.val) :=
-  ⟨fun _ _ _ h₁ h₂ => subset_trans h₁ h₂⟩
-
+/- In a finite chain a non-empty layer is a singleton.-/
 lemma Chain.layer_singleton_of_nonempty [Fintype 𝒞] (chain𝒞 : IsChain (· ⊂ ·) 𝒞) (j : Finset.range (n + 1)) (layer_nonempty : (𝒞.toFinset # j) ≠ ∅):
     ∃! e : Finset α, 𝒞.toFinset # j = {e} := by
   have : # (𝒞.toFinset # j) = 1 := by
@@ -112,6 +189,7 @@ lemma Chain.layer_singleton_of_nonempty [Fintype 𝒞] (chain𝒞 : IsChain (· 
 
   exact ⟨e, he, unique⟩
 
+/- A strong inequality of the cardinality of two chain elements implies a proper subset relation.-/
 lemma IsChain.ssubset_of_lt_cardinality (chain𝒞 : IsChain (· ⊂ ·) 𝒞) {e₁ e₂ : Finset α} (e₁mem : e₁ ∈ 𝒞) (e₂mem : e₂ ∈ 𝒞)
     (hcard : #e₁ < #e₂) : e₁ ⊂ e₂ := by
   have e₁nee₂ : e₁ ≠ e₂ := by
@@ -124,6 +202,7 @@ lemma IsChain.ssubset_of_lt_cardinality (chain𝒞 : IsChain (· ⊂ ·) 𝒞) {
     have : #e₂ < #e₁ := Finset.card_strictMono h
     linarith
 
+/- A weak inequality of the cardinality of two chain elements implies a subset relation.-/
 lemma IsChain.subset_of_le_cardinality (chain𝒞 : IsChain (· ⊂ ·) 𝒞) {e₁ e₂ : Finset α} (e₁mem : e₁ ∈ 𝒞) (e₂mem : e₂ ∈ 𝒞)
     (hcard : #e₁ ≤ #e₂) : e₁ ⊆ e₂ := by
   cases Nat.eq_or_lt_of_le hcard with
@@ -137,21 +216,37 @@ end ChainSubset
 
 section ChainExtension
 
+/-!
+# ChainExtension
+
+In this section we consider Lemmata on the extension of chains of sets containing a Fintype.
+
+## Main results
+
+- `extension_candidates_characterisation`: Given two sets 'layer_i' and 'layer_j' in a chain such that there is no set of intermediate cardinality and '#layer_j ≥ #layer_i + 2', the extension candidates for 'layer_i' are given by 'layer_j \ layer_i'.
+-/
+
 variable {α : Type*} [DecidableEq α] [Fintype α] {𝒜 : Set (Finset α)} [DecidablePred (· ∈ 𝒜)]
 instance : Fintype 𝒜 := setFintype 𝒜
 
-def chain_extension_filter_function (ℬ : Set (Finset α)) (e : Finset α) : α → Prop :=
-  fun a : α ↦ IsChain (· ⊂ ·) (insert (insert a e) ℬ) ∧ insert a e ∉ ℬ
+def extends_chain (ℬ : Set (Finset α)) : Finset α → Prop :=
+  fun e ↦ (IsChain (· ⊂ ·) (insert e ℬ)) ∧ e ∉ ℬ
+
+/- In order to count maximal chains through a chain, we are interested in the following way of chain extension-/
+def insert_extends_chain (ℬ : Set (Finset α)) (e : Finset α) : α → Prop :=
+  fun a : α ↦ extends_chain ℬ (insert a e)
+  --fun a : α ↦ IsChain (· ⊂ ·) (insert (insert a e) ℬ) ∧ insert a e ∉ ℬ
 
 instance instDecidableIsChain : Decidable (IsChain (· ⊂ ·) 𝒜) := by
   sorry --apply Finset.decidableDforallFinset
 
 instance instDecidablePredChainExtension (e : Finset α) :
-    DecidablePred (chain_extension_filter_function 𝒜 e) :=
+    DecidablePred (insert_extends_chain 𝒜 e) :=
   fun a : α => by sorry --inferInstanceAs (Decidable (IsChain (· ⊂ ·) (insert (insert a e) 𝒜).toSet ∧ insert a e ∉ 𝒜))
 
-def extension_candidates (ℬ : Set (Finset α)) (e : Finset α) := Finset.filter (chain_extension_filter_function ℬ e) (Finset.univ : Finset α)
+def extension_candidates (ℬ : Set (Finset α)) (e : Finset α) := Finset.filter (insert_extends_chain ℬ e) (Finset.univ : Finset α)
 
+/- Given two sets 'layer_i' and 'layer_j' in a chain such that there is no set of intermediate cardinality and '#layer_j ≥ #layer_i + 2', the extension candidates for 'layer_i' are given by 'layer_j \ layer_i'.-/
 theorem extension_candidates_characterisation {i j : Finset.range (n + 1)} (hn : Fintype.card α = n) (ilej_succ_succ : (i : ℕ) + 2 ≤ (j : ℕ)) (chain𝒜 : IsChain (· ⊂ ·) 𝒜)
     (hi : (𝒜.toFinset # i) = {layer_i}) (hj : (𝒜.toFinset # j) = {layer_j}) (emptylayer : ∀ l ∈ (Finset.range (n + 1)), i < l → l < j → #(𝒜.toFinset # l) = 0):
     extension_candidates 𝒜 layer_i = layer_j \ layer_i := by
@@ -175,7 +270,7 @@ theorem extension_candidates_characterisation {i j : Finset.range (n + 1)} (hn :
 
   constructor
   · intro hx
-    simp only [mem_filter, chain_extension_filter_function, ←he_new] at hx
+    simp only [mem_filter, insert_extends_chain, ←he_new] at hx
     have hx := hx.right
 
     have e_new_neq_layer_j : e_new ≠ layer_j := by
@@ -199,7 +294,7 @@ theorem extension_candidates_characterisation {i j : Finset.range (n + 1)} (hn :
       exact hx.right this
   · intro hx
     simp at hx
-    simp [chain_extension_filter_function]
+    simp [insert_extends_chain]
 
     have case_helper {e₁ e₂ : Finset α} (e₁neqe₂ : e₁ ≠ e₂) (e₂_not_new : e₂ ∈ 𝒜) (e₁_new : e₁ = e_new) : e₁ ⊂ e₂ ∨ e₂ ⊂ e₁ := by
       have := chain𝒜 (mem_toFinset.mp layer_i_mem_card.left) e₂_not_new
@@ -289,6 +384,7 @@ theorem extension_candidates_characterisation {i j : Finset.range (n + 1)} (hn :
       have : #(𝒜.toFinset # #e_new) > 0 := Finset.card_pos.mpr this
       linarith
 
+/- For any finite set 'e' in a chain with nonempty extension candidates, we know that 'e' is not 'univ' and the slice of the chain above 'e' is empty. -/
 lemma extension_candidates_nonempty {e : Finset α} (hn : Fintype.card α = n) (h : extension_candidates 𝒜 e ≠ ∅) : #e < n ∧ (𝒜.toFinset # (#e + 1)) = ∅ := by
   by_contra! ass₀
   apply h
@@ -301,7 +397,7 @@ lemma extension_candidates_nonempty {e : Finset α} (hn : Fintype.card α = n) (
   | inl next_ne_empty =>
     by_contra! ass₁
     obtain ⟨a, ha⟩ := nonempty_of_ne_empty ass₁
-    simp [extension_candidates, chain_extension_filter_function] at ha
+    simp [extension_candidates, insert_extends_chain] at ha
 
     obtain ⟨u, hu⟩ := nonempty_of_ne_empty next_ne_empty
     simp [slice] at hu
@@ -321,12 +417,25 @@ end ChainExtension
 
 section ChainSubsetFintype
 
-/- Here we proof lemmata concerning the poset of the subset relation on sets of finite type-/
+/-!
+# ChainSubsetFintype
+
+Here we proof Lemmata on the poset of the subset relation on sets containing elements of a 'Fintype'.
+
+## Main results
+
+- `Chain.empty_layer_by_card`: Any chain of sets of 'Fintype α' that contains less than 'Fintype.card α' sets, contains an empty slice.
+- `Chain.empty_layer_by_card`: In a maximal chain every slice contains exactly one element.
+- `IsMaxChain.card`: The cardinality of a maximal chain of sets of some 'Fintpype α' is 'Fintype.card α + 1'.
+- `IsChain.card_le`: The cardinality of a chain of sets of some 'Fintpype α' is at most 'Fintype.card α + 1'.
+- `IsMaxChain.iff_card`: A chain of sets of some 'Fintpype α' is maximal if and only if it contains 'Fintype.card α + 1' sets.
+-/
 
 variable {α : Type*} [Fintype α] {𝒜 : Set (Finset α)} [DecidablePred (· ∈ 𝒜)]
 
 instance : Fintype 𝒜 := setFintype 𝒜
 
+/- Any chain of sets of 'Fintype α' that contains less than 'Fintype.card α' sets, contains an empty slice.-/
 lemma Chain.empty_layer_by_card (hn : Fintype.card α = n) (chain𝒜 : IsChain (· ⊂ ·) 𝒜) (card𝒜 : #𝒜.toFinset < n+1) : ∃ i : Fin (n + 1), #(𝒜.toFinset # i) = 0 := by
   by_contra! ass
   have : ∀ (i : Fin (n + 1)), #(𝒜.toFinset # i) = 1 := by
@@ -345,6 +454,7 @@ lemma Chain.empty_layer_by_card (hn : Fintype.card α = n) (chain𝒜 : IsChain 
     _ = n + 1 := by rw [←(Finset.card_eq_sum_ones (Iic (Fintype.card α)))]; simp [hn]
   linarith
 
+/- In a maximal chain every slice contains exactly one element.-/
 lemma IsMaxChain.one_elt_max_chain_layer [DecidableEq α] (hn : Fintype.card α = n) (maxchain𝒜 : IsMaxChain (· ⊂ ·) 𝒜)
     (j : Finset.range (n + 1)) : #(𝒜.toFinset # j) = 1 := by
   by_contra! ass
@@ -486,10 +596,11 @@ lemma IsMaxChain.one_elt_max_chain_layer [DecidableEq α] (hn : Fintype.card α 
       linarith
     simp at extension_candidates_ne_empty
     obtain ⟨a, ha⟩ := extension_candidates_ne_empty
-    simp [extension_candidates, chain_extension_filter_function] at ha
+    simp [extension_candidates, insert_extends_chain] at ha
     have := Set.insert_eq_self.mp (maxchain𝒜.right ha.left (by simp)).symm
     exact ha.right this
 
+/- The cardinality of a maximal chain of sets of some 'Fintpype α' is 'Fintype.card α + 1'.-/
 lemma IsMaxChain.card [DecidableEq α] (hn : Fintype.card α = n)
     (maxChain𝒜 : IsMaxChain (· ⊂ ·) 𝒜) : #𝒜.toFinset = n + 1 := by
   rw [←sum_card_slice 𝒜.toFinset]
@@ -501,6 +612,7 @@ lemma IsMaxChain.card [DecidableEq α] (hn : Fintype.card α = n)
       exact IsMaxChain.one_elt_max_chain_layer hn maxChain𝒜 ⟨j, by simp [Nat.lt_succ_of_le jmem]⟩
     _ = n + 1 := by rw [←(Finset.card_eq_sum_ones (Iic (Fintype.card α)))]; simp [hn]
 
+/- The cardinality of a chain of sets of some 'Fintpype α' is at most 'Fintype.card α + 1'.-/
 lemma IsChain.card_le (hn : Fintype.card α = n) (chain𝒜 : IsChain (· ⊂ ·) 𝒜) : #𝒜.toFinset ≤ n + 1 := by
   rw [←sum_card_slice 𝒜.toFinset]
   calc
@@ -510,6 +622,7 @@ lemma IsChain.card_le (hn : Fintype.card α = n) (chain𝒜 : IsChain (· ⊂ ·
       exact IsChain.max_one_elt_chain_layer chain𝒜 j
     _ = n + 1 := by rw [←(Finset.card_eq_sum_ones (Iic (Fintype.card α)))]; simp [hn]
 
+/- A chain of sets of some 'Fintpype α' is maximal if and only if it contains 'Fintype.card α + 1' sets.-/
 lemma IsMaxChain.iff_card [DecidableEq α] (hn : Fintype.card α = n)
     (chain𝒜 : IsChain (· ⊂ ·) 𝒜) : IsMaxChain (· ⊂ ·) 𝒜 ↔ #𝒜.toFinset = n + 1 := by
   constructor
@@ -530,9 +643,15 @@ end ChainSubsetFintype
 
 section ChainCardinalityOrder
 
-/-
-  Given a finite chain of finite sets with respect to the subset relation, we consider the list of chain elements.
-  Here we proof that if this list is sorted with respect to the cardinalities it is actually sorted in a strictly monotone manner.
+/-!
+# ChainCardinalityOrder
+
+In this chapter we consider the list of the elements of a finite chain of finite sets with respect to the subset relation.
+Further we introduce the total order of the cardinalities of the sets in a chain.
+
+## Main results
+
+- `Chain.card_strict_mono`: Given a chain of sets of some 'Fintype α' there exists a permutation of the list of its elements, such that its elements cardinalities are sorted by strict inequalities.
 -/
 
 variable {α : Type*} {𝒜 : Set (Finset α)} [DecidablePred (· ∈ 𝒜)] [Fintype α]
@@ -573,6 +692,7 @@ lemma card_strict_mono' (chain𝒜 : IsChain (· ⊂ ·) 𝒜) : ((Finset.univ :
 
   exact elt_x_neq_elt_y elt_x_eq_elt_y
 
+/- Given a chain of sets of some 'Fintype α' there exists a permutation of the list of its elements, such that its elements cardinalities are sorted by strict inequalities.-/
 theorem Chain.card_strict_mono [DecidableEq α] (chain𝒜 : IsChain (· ⊂ ·) 𝒜) : ∃ l : List (Finset α), l ~ 𝒜.toFinset.toList ∧ l.Sorted (#· < #·) := by
   let l' := ((Finset.univ : Finset 𝒜).toList.insertionSort (fun (e₁ e₂ : 𝒜) ↦ #e₁.val ≤ #e₂.val))
   have l'_sorted : l'.Sorted (fun (e₁ e₂ : 𝒜) ↦ #e₁.val < #e₂.val) := card_strict_mono' chain𝒜

@@ -17,17 +17,23 @@ section MaxChainThrough
 -/
 
 structure MaxChainThrough (ℬ : Set (Finset α)) where
+  /- The set of elements in the chain.-/
   𝒜 : Set (Finset α)
+  /- '𝒜' is a maximal chain.-/
   isMaxChain : IsMaxChain (· ⊂ ·) 𝒜
+  /- '𝒜' is a subset of 'ℬ'.-/
   subChain : ℬ ⊆ 𝒜
 
+/- Projection of 'MaxChainThrough' on the set of elements.-/
 def emb_MaxChainThrough (ℬ : Set (Finset α)) (X : MaxChainThrough ℬ) : Set (Finset α) := X.𝒜
 
+/- Definition of equality of two variables of type 'MaxChainThrough'-/
 @[ext] lemma MaxChainThrough_eq (𝒞₁ 𝒞₂ : MaxChainThrough ℬ) (hA : 𝒞₁.𝒜 = 𝒞₂.𝒜) : 𝒞₁ = 𝒞₂ := by
   cases 𝒞₁
   cases 𝒞₂
   congr
 
+/- 'emb_MaxChainThrough' is injective.-/
 lemma inj_emb_MaxChainThrough : Injective (emb_MaxChainThrough ℬ) := by
   intro 𝒞₁ 𝒞₂ h
   unfold emb_MaxChainThrough at h
@@ -46,6 +52,7 @@ instance {C : MaxChainThrough ℬ} : Fintype C.𝒜 := setFintype C.𝒜
 
 instance : Fintype ℬ := setFintype ℬ
 instance : Fintype 𝒜 := setFintype 𝒜
+
 
 lemma card_maxChainThrough (hn : Fintype.card α = n) (chain : MaxChainThrough ℬ) : #chain.𝒜.toFinset = n + 1 := by
   rw [←sum_card_slice chain.𝒜.toFinset]
@@ -159,7 +166,7 @@ lemma chain_through_extension_candidates_pairwiseDisjoint {e : Finset α} (e_mem
   intro 𝒜 h𝒜
   simp
 
-  simp [extension_candidates,chain_extension_filter_function] at hx hy
+  simp [extension_candidates,insert_extends_chain] at hx hy
 
   have a_extension_e_x := hA_x h𝒜
   have a_extension_e_y := hA_y h𝒜
@@ -207,7 +214,7 @@ lemma central_identity (e : Finset α) (e_mem : e ∈ ℬ) (h : extension_candid
   · intro 𝒜_mem_image
     simp at 𝒜_mem_image
 
-    simp [extension_candidates, chain_extension_filter_function, extensions_wrt]
+    simp [extension_candidates, insert_extends_chain, extensions_wrt]
 
     have e_card_lt := (extension_candidates_nonempty rfl h).left
 
@@ -322,7 +329,7 @@ lemma count_maxChainsThrough (h_mn : m ≤ n + 1) (hn : Fintype.card α = n)
       let ℬ' := (Insert.insert e_new ℬ)
 
       have a_property₁ := a.prop
-      simp only [extension_candidates, Finset.extension_candidates, mem_filter, chain_extension_filter_function] at a_property₁
+      simp only [extension_candidates, Finset.extension_candidates, mem_filter, insert_extends_chain] at a_property₁
 
       have a_property₂ := a.prop
       simp [extension_candidates_eq] at a_property₂

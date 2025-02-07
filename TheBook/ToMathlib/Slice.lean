@@ -9,6 +9,7 @@ open Finset
 
 variable {α : Type*} {𝒜 : Finset (Finset α)} {A A₁ A₂ : Finset α} {r r₁ r₂ : ℕ}
 
+/- Equivalence for a slice to be a singleton.-/
 lemma singleton_explicit : (𝒜 # s) = {layer_s} ↔ layer_s ∈ 𝒜 ∧ #layer_s = s ∧ #(𝒜 # s) = 1  := by
   constructor
   · intro h
