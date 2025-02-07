@@ -6,20 +6,21 @@ open Function Finset Nat Set BigOperators List
 /-!
 # List
 
-In this file we proof some simple facts about list duplicates and insertion sort.
+In this file we introduce `foo` and `bar`,
+two main concepts in the theory of xyzzyology.
 
 ## Main results
 
 - `List.Nodup.orderedInsert`: Inserting a nonpresent element into a list by 'orderedInsert' does not create a list duplicate.
 - `List.Nodup.insertionSort`: 'insertionSort' does not create duplicates in lists.
-- `Finset.subtype_toList`: /- Mapping with 'Subtype.val' and the operation 'toList' commute.
+- `Finset.subtype_toList`: Mapping with 'Subtype.val' and the operation 'toList' commute.
 -/
 
 section Nodup
 
 variable {α : Type*} (r : α → α → Prop) [LE α] [DecidableRel (fun (x₁ x₂ : α) ↦ x₁ ≤ x₂)]
 
-/- Inserting a nonpresent element into a list by 'orderedInsert' does not create a list duplicate.-/
+/-- Inserting a nonpresent element into a list by 'orderedInsert' does not create a list duplicate. -/
 lemma List.Nodup.orderedInsert
   {l : List α} {a : α} (l_nodup : l.Nodup) (a_not_mem : a ∉ l) :
   (orderedInsert (· ≤ ·) a l).Nodup := by
@@ -52,7 +53,7 @@ lemma List.Nodup.orderedInsert
         · exact l_nodup.left
       · exact ih l_nodup.right a_not_mem.right
 
-/- 'insertionSort' does not create duplicates in lists.-/
+/-- 'insertionSort' does not create duplicates in lists. -/
 theorem List.Nodup.insertionSort {l : List α} (h : l.Nodup) : (l.insertionSort (fun (x₁ x₂ : α) ↦ x₁ ≤ x₂)).Nodup := by
   induction l with
   | nil =>
@@ -75,7 +76,7 @@ variable {α : Type*} {𝒜 : Set (Finset α)} [DecidablePred (· ∈ 𝒜)] [Fi
 
 instance : Fintype 𝒜 := setFintype 𝒜
 
-/- Mapping with 'Subtype.val' and the operation 'toList' commute.-/
+/-- Mapping with 'Subtype.val' and the operation 'toList' commute. -/
 lemma Finset.subtype_toList : List.map Subtype.val (Finset.univ : Finset 𝒜).toList ~ 𝒜.toFinset.toList := by
   refine' perm_iff_count.mpr _
   intro a
@@ -97,4 +98,5 @@ lemma Finset.subtype_toList : List.map Subtype.val (Finset.univ : Finset 𝒜).t
       exact h (mem_toFinset.mpr this)
 
     rw [count_rhs, count_lhs]
+
 end Perm

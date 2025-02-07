@@ -7,7 +7,7 @@ instance : Fintype 𝒜 := setFintype 𝒜
 
 namespace Finset
 
-/- The maximal chains through different elements of an antichain are pairwise disjoint.-/
+/- The maximal chains through different elements of an antichain are pairwise disjoint. -/
 lemma AntiChain.disj_union_chain_through (anti_chain : IsAntichain (· ⊂ ·) 𝒜) :
     𝒜.PairwiseDisjoint (fun e ↦ ((Finset.univ : Finset (MaxChainThrough {e})).image (emb_MaxChainThrough {e}))) := by
   intro e₁ e₁_mem_𝒜 e₂ e₂_mem_𝒜 e₁neqe₂

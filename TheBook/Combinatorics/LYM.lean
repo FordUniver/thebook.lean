@@ -12,6 +12,16 @@ import TheBook.ToMathlib.Antichain
 import TheBook.ToMathlib.List
 import TheBook.Combinatorics.SpernerHelpingDataStructures
 
+/-!
+# LYM
+
+In this file we give the proof of the **Lubell-Yamamoto-Meshalkin inequality** as it is given in the book of the proofs.
+Sperner's Theorem follows from this as a corollary (compare with Mathlib.Combinatorics.SetFamily.LYM).
+
+## Main results
+- `lym_inequality`: The sum of the proportional cardinalities of all slices of an antichain is at most '1'.
+-/
+
 open Function Finset Nat Set BigOperators List
 
 variable {α : Type*} {n m : ℕ} [DecidableEq α] [Fintype α] {𝒜 : Set (Finset α)} [DecidablePred (· ∈ 𝒜)] [DecidableEq (Set (Finset α))]
@@ -19,7 +29,7 @@ instance : Fintype 𝒜 := setFintype 𝒜
 
 namespace Finset
 
-/-- The **Lubell-Yamamoto-Meshalkin inequality**. Sperner's Theorem follows as in Mathlib.Combinatorics.SetFamily.LYM as a corollary -/
+/-- The sum of the proportional cardinalities of all slices of an antichain is at most '1'. -/
 theorem lym_inequality (antichain𝒜 : IsAntichain (· ⊂ ·) 𝒜) (hn : Fintype.card α = n):
     ∑ k ∈ Iic n, #(𝒜.toFinset # k) / (n.choose k : ℚ) ≤ (1 : ℚ) := by
   have : ∑ k ∈ Iic n, #(𝒜.toFinset # k) / (n.choose k : ℚ) ≤ (∑ k ∈ Iic n, #(𝒜.toFinset # k) * (k)! * (n - k)!) * (1 / (n)! : ℚ) := by
@@ -82,5 +92,7 @@ theorem lym_inequality (antichain𝒜 : IsAntichain (· ⊂ ·) 𝒜) (hn : Fint
       apply Finset.sum_congr (by simp)
       intro e e_mem
       rw [Finset.card_image_of_injective (Finset.univ : Finset (MaxChainThrough {e})) inj_emb_MaxChainThrough, Finset.card_univ]
-    _ = #(𝒜.toFinset.disjiUnion (fun e : Finset α ↦ (Finset.univ : Finset (MaxChainThrough {e})).image (emb_MaxChainThrough {e})) (by simp [AntiChain.disj_union_chain_through antichain𝒜])) := by sorry
+    _ = #(𝒜.toFinset.disjiUnion (fun e : Finset α ↦ (Finset.univ : Finset (MaxChainThrough {e})).image (emb_MaxChainThrough {e})) (by simp [AntiChain.disj_union_chain_through antichain𝒜])) := by
+
+      sorry
     _ ≤ (n)! := by sorry

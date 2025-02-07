@@ -11,20 +11,31 @@ namespace Finset
 
 section MaxChainThrough
 
-/-
-  In this section we define the maximal chains with respect to the subset relation that extend a given chain.
-  Further in the finite case we give an explicit formula for the number of such maximal extensions.
+/-!
+# Sperner Helping Data Structures
+
+## Main results
+- `incident_indices_monotone_cards`: Two sets in a chain with no intermediate sets are incident in the list of chain elements that is sorted by cardinality.
+- `chain_through_extension_candidates_pairwiseDisjoint`: The maximal chains through 'Insert x e' and 'ℬ' for extension candidates of 'e' in 'ℬ' are pairwise disjoint.
+- `central_identity`: The set of maximal chains through 'ℬ' equals the disjoint union all chains through 'ℬ' and 'Insert x e' for all extension candidates 'x' of 'e' in 'ℬ' in case that these extension candidates are nonempty.
+- `count_maxChainsThrough`: An exact formula for the number of maximal chains through any given chain.
+- `count_maxChains_through_singleton_insert_empty`: Inserting the empty set into a chain does not change the maximal chains running through.
+- `count_maxChains_through_singleton_insert_univ`: Inserting the universal set into a chain does not change the maximal chains running through.
+- `count_maxChains_through_empty`: The count of maximal chains through the empty set is 'n!'.
+- `count_maxChains_through_univ`: The count of maximal chains through the universal set is 'n!'.
+- `count_maxChains_through_singleton`: The count of maximal chains through a set 'e' is '(n - #e)! * (#e)!'.
 -/
 
+
 structure MaxChainThrough (ℬ : Set (Finset α)) where
-  /- The set of elements in the chain.-/
+  /- The set of elements in the chain. -/
   𝒜 : Set (Finset α)
-  /- '𝒜' is a maximal chain.-/
+  /- '𝒜' is a maximal chain. -/
   isMaxChain : IsMaxChain (· ⊂ ·) 𝒜
-  /- '𝒜' is a subset of 'ℬ'.-/
+  /- '𝒜' is a subset of 'ℬ'. -/
   subChain : ℬ ⊆ 𝒜
 
-/- Projection of 'MaxChainThrough' on the set of elements.-/
+/- Projection of 'MaxChainThrough' on the set of elements. -/
 def emb_MaxChainThrough (ℬ : Set (Finset α)) (X : MaxChainThrough ℬ) : Set (Finset α) := X.𝒜
 
 /- Definition of equality of two variables of type 'MaxChainThrough'-/
@@ -33,7 +44,7 @@ def emb_MaxChainThrough (ℬ : Set (Finset α)) (X : MaxChainThrough ℬ) : Set 
   cases 𝒞₂
   congr
 
-/- 'emb_MaxChainThrough' is injective.-/
+/- 'emb_MaxChainThrough' is injective. -/
 lemma inj_emb_MaxChainThrough : Injective (emb_MaxChainThrough ℬ) := by
   intro 𝒞₁ 𝒞₂ h
   unfold emb_MaxChainThrough at h
@@ -53,30 +64,22 @@ instance {C : MaxChainThrough ℬ} : Fintype C.𝒜 := setFintype C.𝒜
 instance : Fintype ℬ := setFintype ℬ
 instance : Fintype 𝒜 := setFintype 𝒜
 
-
-lemma card_maxChainThrough (hn : Fintype.card α = n) (chain : MaxChainThrough ℬ) : #chain.𝒜.toFinset = n + 1 := by
-  rw [←sum_card_slice chain.𝒜.toFinset]
-  calc
-    ∑ r ∈ Iic (Fintype.card α), #(chain.𝒜.toFinset # r) = ∑ r ∈ Iic (Fintype.card α), 1 := by
-      apply sum_congr (by rfl)
-      intro j jmem
-      simp [hn] at jmem
-      exact IsMaxChain.one_elt_max_chain_layer hn chain.isMaxChain ⟨j, by simp [Nat.lt_succ_of_le jmem]⟩
-    _ = n + 1 := by rw [←(card_eq_sum_ones (Iic (Fintype.card α)))]; simp [hn]
-
+/- The first entry in a list of Finsets containing the empty set that is ordered by cardinality is the empty set. -/
 lemma first_entry (list : List (Finset α))
     (monotone_cards: List.Sorted (fun (e₁ e₂) ↦ #e₁ < #e₂) list) (h_list: ℬ.toFinset.toList ~ list)
     (empty_in_chain : ∅ ∈ ℬ) : list[0]'(by rw [←Perm.length_eq h_list]; exact length_pos_of_mem (mem_toList.mpr (mem_toFinset.mpr empty_in_chain))) = ∅ := by sorry
 
+/- The first entry in a list of Finsets containing the universal set that is ordered by cardinality is the universal set. -/
 lemma last_entry {list : List (Finset α)}
     (monotone_cards: List.Sorted (fun (e₁ e₂) ↦ #e₁ < #e₂) list) (h_list: ℬ.toFinset.toList ~ list)
     (univ_in_chain : univ ∈ ℬ) : list[list.length - 1]'(by sorry) = univ := by sorry
 
-lemma incident_indices_monotone_cards {s t : Fin (n + 1)} {ℬ : Finset (Finset α)} (ilej_succ_succ : s.val + 2 ≤ t.val) (list : List (Finset α))
+/- Two sets in a chain with no intermediate sets are incident in the list of chain elements that is sorted by cardinality. -/
+lemma incident_indices_monotone_cards {s t : Fin (n + 1)} {ℬ : Finset (Finset α)} (s_lt_t : s < t) (list : List (Finset α))
     (monotone_cards: List.Sorted (fun (e₁ e₂) ↦ #e₁ < #e₂) list) (h_list: ℬ.toList ~ list)
     (hs : (ℬ # s) = {layer_s}) (ht : (ℬ # t) = {layer_t})
     (empty_layer : ∀ j : Fin (n + 1), s < j → j < t → #(ℬ # ↑j) = 0) :
-    ∃ i_s : Fin (list.length - 1), list[i_s.val]  = layer_s ∧ list[i_s.val + 1] = layer_t := by
+    ∃ i_s : Fin (list.length - 1), list[i_s.val] = layer_s ∧ list[i_s.val + 1] = layer_t := by
 
   let i_s := list.indexOf layer_s
   have i_s_in_range : i_s < list.length := List.indexOf_lt_length.mpr (h_list.subset (mem_toList.mpr (Slice.singleton_explicit.mp hs).left))
@@ -108,7 +111,8 @@ lemma incident_indices_monotone_cards {s t : Fin (n + 1)} {ℬ : Finset (Finset 
       have : t.val ≤ s.val := by
         simp [←(Slice.singleton_explicit.mp hs).right.left, ←(Slice.singleton_explicit.mp ht).right.left]
         exact this
-      linarith
+      simp at this
+      omega
     have i_s_succ_lt : i_s + 1 < i_t := Nat.lt_of_le_of_ne this fun a => ass₁ (id (Eq.symm a))
 
     let e := list[i_s + 1]
@@ -151,13 +155,14 @@ lemma incident_indices_monotone_cards {s t : Fin (n + 1)} {ℬ : Finset (Finset 
   simp only [i_s_eq_i_t_succ] at h_i_t
   exact ⟨h_i_s, h_i_t⟩
 
+/- The projections of all maximal chains through '(Insert.insert x e)' and 'ℬ'. -/
 def extensions_wrt [DecidableEq (Set (Finset α))] [DecidableEq (Finset α)] (ℬ : Set (Finset α)) (e : Finset α) (x : α) : Finset (Set (Finset α)) := by
   let ℬ' := Insert.insert (Insert.insert x e) ℬ
-  let e := (emb_MaxChainThrough ℬ')
   exact (univ : Finset (MaxChainThrough ℬ')).image (emb_MaxChainThrough ℬ')
 
 variable [DecidableEq (Set (Finset α))] [DecidableEq (Finset α)]
 
+/- The maximal chains through 'Insert x e' and 'ℬ' for extension candidates 'e' are pairwise disjoint. -/
 lemma chain_through_extension_candidates_pairwiseDisjoint {e : Finset α} (e_mem : e ∈ ℬ) : PairwiseDisjoint (extension_candidates ℬ e) (extensions_wrt ℬ e) := by
   intro x hx y hy xneqy
   simp [_root_.Disjoint]
@@ -206,6 +211,7 @@ lemma chain_through_extension_candidates_pairwiseDisjoint {e : Finset α} (e_mem
   | inl h => exact xneqy h.symm
   | inr h => exact y_nmem h
 
+/- The set of maximal chains through 'ℬ' equals the disjoint union all chains through 'ℬ' and 'Insert x e' for all extension candidates 'x' of 'e' in 'ℬ' in case that these extension candidates are nonempty. -/
 lemma central_identity (e : Finset α) (e_mem : e ∈ ℬ) (h : extension_candidates ℬ e ≠ ∅):
     (univ : Finset (MaxChainThrough ℬ)).image (emb_MaxChainThrough ℬ) = (extension_candidates ℬ e).disjiUnion (extensions_wrt ℬ e)
     (chain_through_extension_candidates_pairwiseDisjoint e_mem) := by
@@ -241,10 +247,12 @@ lemma central_identity (e : Finset α) (e_mem : e ∈ ℬ) (h : extension_candid
     · sorry
   · sorry
 
+/- In a non-maximal chain containing the empty and universal set there are two non-neighbouring slices with no intermediate chain elements. -/
 lemma range_empty_layer (hn : Fintype.card α = n) (chain𝒜 : IsChain (· ⊂ ·) 𝒜) (empty_layer : ∃ i : Fin (n + 1), #(𝒜.toFinset # i) = 0) (empty_elt : ∅ ∈ 𝒜) (univ_elt : univ ∈ 𝒜) :
     ∃ s : Fin (n + 1), ∃ t : Fin (n + 1), s.val + 2 ≤ t.val ∧ #(𝒜.toFinset # s) = 1 ∧ #(𝒜.toFinset # t) = 1 ∧ ∀ j : Fin (n + 1), s < j ∧ j < t → #(𝒜.toFinset # j) = 0 := by sorry
 
-lemma count_maxChainsThrough (h_mn : m ≤ n + 1) (hn : Fintype.card α = n)
+/- An exact formula for the number of maximal chains through any given chain. -/
+theorem count_maxChainsThrough (h_mn : m ≤ n + 1) (hn : Fintype.card α = n)
     (cardℬ : #ℬ.toFinset = m) (chainℬ : IsChain (· ⊂ ·) ℬ) (empty_in_chain : ∅ ∈ ℬ) (univ_in_chain : univ ∈ ℬ)
     (list : List (Finset α)) (list_per : ℬ.toFinset.toList ~ list) (list_sorted : list.Sorted (#· < #·)):
     Fintype.card (MaxChainThrough ℬ) = ∏ j : Fin (list.length - 1), (#list[j.val + 1] - #list[j.val])! := by
@@ -296,7 +304,7 @@ lemma count_maxChainsThrough (h_mn : m ≤ n + 1) (hn : Fintype.card α = n)
 
     have := list_per
 
-    obtain ⟨i_s, ⟨entry_i_s, entry_i_s_succ⟩⟩ := incident_indices_monotone_cards ilej_succ_succ list list_sorted list_per hs ht empty_layer
+    obtain ⟨i_s, ⟨entry_i_s, entry_i_s_succ⟩⟩ := incident_indices_monotone_cards (by sorry) list list_sorted list_per hs ht empty_layer
 
     have i_s_in_range : i_s < list.length := Nat.lt_of_lt_of_le i_s.is_lt (Nat.pred_le list.length)
     have i_s_succ_in_range : i_s.val + 1 < list.length := add_lt_of_lt_sub i_s.is_lt
@@ -494,14 +502,19 @@ lemma count_maxChainsThrough (h_mn : m ≤ n + 1) (hn : Fintype.card α = n)
     rcases X with ⟨X.𝒜, b, c⟩
     simpa
 
+/- Inserting the empty set into a chain does not change the maximal chains running through. -/
 lemma count_maxChains_through_singleton_insert_empty : Fintype.card (MaxChainThrough ℬ) = Fintype.card (MaxChainThrough (insert ∅ ℬ)) := by sorry
 
+/- Inserting the universal set into a chain does not change the maximal chains running through. -/
 lemma count_maxChains_through_singleton_insert_univ : Fintype.card (MaxChainThrough ℬ) = Fintype.card (MaxChainThrough (insert univ ℬ)) := by sorry
 
+/- The count of maximal chains through the empty set is 'n!'. -/
 lemma count_maxChains_through_empty (hn : Fintype.card α = n): Fintype.card (MaxChainThrough {(∅ : Finset α)}) = n! := by sorry
 
+/- The count of maximal chains through the universal set is 'n!'. -/
 lemma count_maxChains_through_univ (hn : Fintype.card α = n): Fintype.card (MaxChainThrough {(Finset.univ : Finset α)}) = n! := by sorry
 
+/- The count of maximal chains through a set 'e' is '(n - #e)! * (#e)!'. -/
 lemma count_maxChains_through_singleton (e : Finset α) (hn : Fintype.card α = n): Fintype.card (MaxChainThrough {e}) = (#e)! * (n - #e)! := by
   by_cases e_empty : ∅ ≠ e
   · by_cases e_univ : univ ≠ e
@@ -531,9 +544,5 @@ lemma count_maxChains_through_singleton (e : Finset α) (hn : Fintype.card α = 
       sorry
     · sorry
   · sorry
-
-
-
-
 
 end MaxChainThrough
