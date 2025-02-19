@@ -37,19 +37,23 @@ def ramseyProp (N m n : ℕ) :=
       (C : SimpleGraph V) [DecidableRel C.Adj],
     ∃ (s : Finset V), (C.IsNIndepSet m s) ∨ (C.IsNClique n s)
 
+instance {V : Type*} (C : SimpleGraph V) (G : SimpleGraph.Subgraph C) [DecidableRel G.Adj] (s : Set V) [∀ a : V, Decidable (a ∈ s)] :
+    DecidableRel (G.induce s).Adj := by
+  rw [Subgraph.induce]
+  simp
+  exact fun a b ↦ instDecidableAnd
 
 -- "It is clear that if `K_N` has property `(m, n)`, then so does every `K_s` with `s ≥ N`."
-lemma ramseyProp_mono {m n : ℕ} (N s : ℕ) (h : N ≤ s) (ramseyProp_N : ramseyProp N m n) : ramseyProp s m n := by
-  intros W _ _ Wcard C _
+lemma ramseyProp_mono {m n N s : ℕ} (h : N ≤ s) (ramseyProp_N : ramseyProp N m n) : ramseyProp s m n := by
+  intros W _ Wdec Wcard C Cdec
   rw [← Wcard, ← Fintype.card_fin N] at h
 
   -- We consider the subgraph induced by embedding `K_N` into `K_s`.
   obtain ⟨A, A_subset, A_card⟩ := exists_subset_card_eq h
-  let C' := C[A]
+  let C' := SimpleGraph.Subgraph.induce (⊤ : Subgraph C) (Finset.toSet A)
 
   -- Since `K_N` has the Ramsey property, we can find a monochromatic vertex subset `A'` in the induced subgraph.
-  have := ramseyProp_N A (by simp [A_card])
-  obtain ⟨A', red_or_blue⟩ := @this C'.coe (Classical.decRel C'.coe.Adj)
+  obtain ⟨A', red_or_blue⟩ := ramseyProp_N A (by simp [A_card]) C'.coe
 
   -- consider `A'` as a Finset of `W` (the vertices of `C`)
   use map ⟨Subtype.val, Subtype.val_injective⟩ A'
@@ -130,7 +134,7 @@ lemma R_pos (m n : ℕ) (_ : 0 < m) (_ : 0 < n) (h : ∃ N, ramseyProp N m n) : 
 
 
 ----------------------------------------------------------------------------------------------------
--- the thing
+-- the recursive bound
 
 --     "Now, suppose R(m −1, n) and R(m, n −1) exist.
 --     We then prove that R(m, n) exists and that
@@ -165,7 +169,7 @@ theorem R_bounded_recursive (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
   · -- The case `|B| ≥ R m (n - 1)` is indeed analogous, but this is a bit involved to prove.
     let B := C.neighborFinset v
     have R_le_cardB : R(n, m + 1) ≤ #B := by
-      have := Nat.eq_add_of_sub_eq (le_sub_one_of_lt (degree_lt_card_verts C v)) (degree_compl C v).symm
+      have : Fintype.card V - 1 = Cᶜ.degree v + C.degree v := by simp [degree_compl, degree_lt_card_verts, le_sub_one_of_lt]
       have := calc (R(m, n + 1) + R(n, m + 1)) - 1
               _ = #A + #B := by rw [@R_symm n, ← Neq, ← cardV, card_neighborFinset_eq_degree]; exact this
               _ < R(m, n + 1) + #B := by simp [lt_of_not_le R_le_cardA]
@@ -190,89 +194,87 @@ theorem R_bounded_recursive (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
     simp_rw [isNIndepSet_compl, ← isNIndepSet_compl Cᶜ, compl_compl] at rs
     exact ⟨s, rs.symm⟩
 
-  · --"Suppose `|A| ≥ R(m − 1, n)`." (shifted by 1)
-    have A_all_red : ∀ {u}, u ∈ A → ¬ C.Adj v u := by
-      intro u a
-      simp_all only [mem_neighborFinset, compl_adj, not_false_eq_true, A, v]
-
-    --    "Then by the definition of `R(m − 1, n)`, there either exists in `A` a
+  · --    "Suppose `|A| ≥ R(m − 1, n)`.
+    --     Then by the definition of `R(m − 1, n)`, there either exists in `A` a
     --     subset `A_R` of size `m − 1` all of whose edges are colored red which together
     --     with `v` yields a red `K_m`, or there is a subset `A_B` of size n with all edges
     --     colored blue."
 
     -- `|A| ≥ R m (n + 1)`, so the coloring it induces also has the Ramsey property according to
-    -- the induction hypothesis.
-    let ramsey_inducedA := ramseyProp_mono (R(m, n + 1)) #A R_le_cardA (sInf_mem rₙ) A (card_coe A)
-
-    -- Hence, there exists a monochromatic subset of `A`. We call it `Aₘ`.
-    let ⟨Aₘ, monochrom⟩ := @ramsey_inducedA C[A].coe (Classical.decRel C[A].coe.Adj)
+    -- monotonicity of the Ramsey numbers. Hence, there exists a monochromatic subset of `A`. We
+    -- call it `Aₘ`.
+    let ⟨Aₘ, monochrom⟩ := ramseyProp_mono R_le_cardA (sInf_mem rₙ) _ (card_coe A) C[A].coe
 
     -- `Aₘ` is a subset of the induced graph's vertices `A`, so it's a Finset `{ x // x ∈ A }`.
     -- We need to embed it into `V` to talk about corresponding vertices in the big graph `C`
-    let embedFinset : A ↪ V := ⟨Subtype.val, Subtype.val_injective⟩
-    set AₘV : Finset V := (Finset.map embedFinset Aₘ) with AVe
+    set AₘV : Finset V := (Finset.map ⟨Subtype.val, Subtype.val_injective⟩ Aₘ) with AVe
 
     have AₘV_subset_A : AₘV ⊆ A := by
       intro _ memAV
-      simp_all [AₘV, A, embedFinset]
+      simp_all
       exact memAV.1
 
     -- We consider the two cases:
     -- `AₘV` has size `m` with all edges colored red, which together with `v` yields a red `K_(m+1)`
     -- `AₘV` has size `n + 1` with all edges colored blue
     cases' monochrom with all_red all_blue
-    · rw [isNIndepSet_iff] at all_red
-      -- case one: `Aₘ` is all red and of size `m`.
+    · -- case one: `Aₘ` is all red and of size `m`.
       -- the candidate set: `AₘV` together with `v`
       let Aᵥ := insert v AₘV
 
-      have elem_A {x : V} (xnv : v ≠ x) (x_elem_Aᵥ : x ∈ Aᵥ) : x ∈ A := by
-        cases' mem_insert.mp x_elem_Aᵥ with xeqv x_elem_AV
-        · exact (xnv xeqv.symm).elim
-        · exact AₘV_subset_A x_elem_AV
-
       -- It indeed describes an all-red subgraph of `C`:
       have C_red : C.IsIndepSet Aᵥ := by
-        rw [isIndepSet_iff, Set.Pairwise]
         -- We show pairwise redness of some `u, w ∈ Aᵥ`.
         intro u u_elem_Aᵥ w w_elem_Aᵥ unw
 
         -- We need to handle the case that `u` or `w` happen to be `v`.
         by_cases uvw : (u = v) ∨ (w = v)
         · -- if one of the vertices is `v`, the edge is red by the definition of `A`.
-          cases' uvw with eq eq
-          all_goals subst eq
-          · exact A_all_red (elem_A (ne_of_eq_of_ne rfl unw) w_elem_Aᵥ)
-          · exact fun a => (A_all_red (elem_A (ne_of_eq_of_ne rfl unw.symm) u_elem_Aᵥ)) a.symm
-        · -- the interesting case: two members of `Aᵥ` that are not `v` have a red edge
-          -- we project them to `A`
-          push_neg at uvw
-          obtain ⟨wₐ, ⟨wₐelem_Aₘ, cw⟩⟩ := mem_map.mp (Finset.mem_of_mem_insert_of_ne w_elem_Aᵥ uvw.right)
-          obtain ⟨uₐ, ⟨uₐelem_Aₘ, cu⟩⟩ := mem_map.mp (Finset.mem_of_mem_insert_of_ne u_elem_Aᵥ uvw.left)
-          rw [← cw, ← cu] at unw ⊢
 
-          -- the projections of the vertices are red in the induced coloring
-          have : ¬(C[A]).coe.Adj wₐ uₐ :=
-            all_red.1 wₐelem_Aₘ uₐelem_Aₘ (by intro a; subst a cu; exact unw rfl)
+          have elem_A {x : V} (xnv : v ≠ x) (x_elem_Aᵥ : x ∈ Aᵥ) : x ∈ A := by
+            cases' mem_insert.mp x_elem_Aᵥ with xeqv x_elem_AV
+            · simp_all only [ne_eq, not_true_eq_false]
+            · exact AₘV_subset_A x_elem_AV
 
-          simp only [Subgraph.coe_adj, Subgraph.induce_adj, Subtype.coe_prop, true_and] at this
-          exact fun a => this (C.adj_symm a)
+          cases uvw
+          all_goals simp_all [A]
+          intro a
+          exact (elem_A (Ne.symm unw) u_elem_Aᵥ) (C.adj_symm a)
+
+        -- the interesting case: two members of `Aᵥ` that are not `v` have a red edge
+        -- we project them to `A`
+        push_neg at uvw
+        obtain ⟨wₐ, ⟨wₐelem_Aₘ, cw⟩⟩ := mem_map.mp (mem_of_mem_insert_of_ne w_elem_Aᵥ uvw.right)
+        obtain ⟨uₐ, ⟨uₐelem_Aₘ, cu⟩⟩ := mem_map.mp (mem_of_mem_insert_of_ne u_elem_Aᵥ uvw.left)
+        rw [← cw, ← cu]
+        
+        -- the projections of the vertices are red in the induced coloring
+        have : uₐ ≠ wₐ := by intro a; simp_all only [ne_eq]
+        have := all_red.1 uₐelem_Aₘ wₐelem_Aₘ this
+        simp [Subgraph.coe_adj, Subgraph.induce_adj] at this
+        assumption
 
       -- It remains to show the size of `Aᵥ` is `m+1`.
       refine ⟨Aᵥ, (Or.inl ⟨C_red, ?_⟩)⟩
 
       have : v ∉ AₘV := fun a => (not_mem_neighborFinset_self Cᶜ v) (AₘV_subset_A a)
-      simp_all only [not_false_eq_true, card_insert_of_not_mem, card_map, Aᵥ, AₘV]
-
+      simp_all [isNIndepSet_iff, Aᵥ, AₘV]
 
     · -- if `Aₘ` is all blue and of size `n + 1`, we're done.
-      rw [isNClique_iff, (card_map embedFinset).symm] at all_blue
+      exists AₘV
 
-      have : C.IsClique AₘV := by
-        simp [AVe, coe_map]
-        exact C.induce_isClique all_blue.1
+      have : C.IsNClique (n + 1) AₘV :=
+        have isClique : C.IsClique AₘV := by
+          simp [AVe, coe_map]
+          exact C.induce_isClique all_blue.1
+        
+        have card_eq : #AₘV = n + 1 := by
+          rw [card_map]
+          exact all_blue.2
 
-      refine ⟨AₘV, Or.inr ⟨this, all_blue.2⟩⟩
+        {isClique, card_eq}
+
+      exact Or.inr this
 
 
 
