@@ -4,6 +4,7 @@ import Mathlib.Data.Nat.Choose.Sum
 
 import TheBook.ToMathlib.InducedClique
 import TheBook.ToMathlib.ChooseBound
+import TheBook.ToMathlib.InduceDec
 
 open SimpleGraph Finset Fintype Nat
 
@@ -37,20 +38,15 @@ def ramseyProp (N m n : ℕ) :=
       (C : SimpleGraph V) [DecidableRel C.Adj],
     ∃ (s : Finset V), (C.IsNIndepSet m s) ∨ (C.IsNClique n s)
 
-instance {V : Type*} (C : SimpleGraph V) (G : SimpleGraph.Subgraph C) [DecidableRel G.Adj] (s : Set V) [∀ a : V, Decidable (a ∈ s)] :
-    DecidableRel (G.induce s).Adj := by
-  rw [Subgraph.induce]
-  simp
-  exact fun a b ↦ instDecidableAnd
 
 -- "It is clear that if `K_N` has property `(m, n)`, then so does every `K_s` with `s ≥ N`."
 lemma ramseyProp_mono {m n N s : ℕ} (h : N ≤ s) (ramseyProp_N : ramseyProp N m n) : ramseyProp s m n := by
-  intros W _ Wdec Wcard C Cdec
+  intros W _ _ Wcard C _
   rw [← Wcard, ← Fintype.card_fin N] at h
 
   -- We consider the subgraph induced by embedding `K_N` into `K_s`.
   obtain ⟨A, A_subset, A_card⟩ := exists_subset_card_eq h
-  let C' := SimpleGraph.Subgraph.induce (⊤ : Subgraph C) (Finset.toSet A)
+  let C' := C[A]
 
   -- Since `K_N` has the Ramsey property, we can find a monochromatic vertex subset `A'` in the induced subgraph.
   obtain ⟨A', red_or_blue⟩ := ramseyProp_N A (by simp [A_card]) C'.coe
@@ -95,8 +91,6 @@ lemma ind_start_R_two {m : ℕ} : R(m, 2) = m := by
     exact (card_finset_fin_le s)
   have r2 : ramseyProp m m 2 := ramseyProp_two
   exact le_antisymm (Nat.sInf_le r2) (le_csInf ⟨m, r2⟩ m_le_N)
-
-
 
 -- The Ramsey property is symmetric in `m` and `n`.
 lemma ramseyProp_symm (m n N : ℕ) (h : ramseyProp N m n) : (ramseyProp N n m) := by
@@ -247,7 +241,7 @@ theorem R_bounded_recursive (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
         obtain ⟨wₐ, ⟨wₐelem_Aₘ, cw⟩⟩ := mem_map.mp (mem_of_mem_insert_of_ne w_elem_Aᵥ uvw.right)
         obtain ⟨uₐ, ⟨uₐelem_Aₘ, cu⟩⟩ := mem_map.mp (mem_of_mem_insert_of_ne u_elem_Aᵥ uvw.left)
         rw [← cw, ← cu]
-        
+
         -- the projections of the vertices are red in the induced coloring
         have : uₐ ≠ wₐ := by intro a; simp_all only [ne_eq]
         have := all_red.1 uₐelem_Aₘ wₐelem_Aₘ this
@@ -267,7 +261,7 @@ theorem R_bounded_recursive (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
         have isClique : C.IsClique AₘV := by
           simp [AVe, coe_map]
           exact C.induce_isClique all_blue.1
-        
+
         have card_eq : #AₘV = n + 1 := by
           rw [card_map]
           exact all_blue.2
