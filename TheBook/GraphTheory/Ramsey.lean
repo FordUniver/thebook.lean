@@ -126,7 +126,6 @@ lemma R_pos (m n : ℕ) (_ : 0 < m) (_ : 0 < n) (h : ∃ N, ramseyProp N m n) : 
   simp_rw [isNIndepSet_iff, isNClique_iff, eq_zero_of_le_zero (card_finset_fin_le s)] at p
   cases p <;> simp_all
 
-
 ----------------------------------------------------------------------------------------------------
 -- the recursive bound
 
@@ -270,9 +269,6 @@ theorem R_bounded_recursive (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
 
       exact Or.inr this
 
-
-
-
 ----------------------------------------------------------------------------------------------------
 -- my induction principle
 -- we recurse on a binary predicate `P : (m n : ℕ) → 2 ≤ m → 2 ≤ n → Prop`
@@ -297,44 +293,19 @@ lemma two_le_orth_induction {P : ∀ m n, 2 ≤ m → 2 ≤ n → Prop}
             have Pₙ := two_le_orth_induction baseₙ baseₘ succ m (n + 1) leₘ (le_succ_of_le leₙ)
             exact (succ m n _ _ Pₘ Pₙ)
 
--- induction principle with symmetry.
-lemma two_le_symm_orth_induction {P : ∀ m n, 2 ≤ m → 2 ≤ n → Prop}
-    (base : ∀ m leₘ,       P m 2 leₘ (AtLeastTwo.prop))
-    (symm : ∀ {m n leₘ leₙ}, P m n leₘ leₙ → P n m leₙ leₘ)
-    (succ  : ∀ m n leₘ leₙ, P (m + 1) n (le_succ_of_le leₘ) leₙ →
-                            P m (n + 1) leₘ (le_succ_of_le leₙ) →
-                            P (m + 1) (n + 1) (le_succ_of_le leₘ) (le_succ_of_le leₙ))
-    :
-    ∀ m n leₘ leₙ, P m n leₘ leₙ
-    | 0, _, le₀, _                   => (two_ne_zero (eq_zero_of_le_zero le₀)).elim
-    | _, 0, _, le₀                   => (two_ne_zero (eq_zero_of_le_zero le₀)).elim
-    | m + 1, n + 1, le_sucₘ, le_sucₙ => by
-        cases' le_sucₘ with _ leₘ
-        · exact (symm (base _ _))
-        · cases' le_sucₙ with _ leₙ
-          · exact (base _ _)
-          · have Pₘ := two_le_symm_orth_induction base symm succ  (m + 1) n (le_succ_of_le leₘ) leₙ
-            have Pₙ := two_le_symm_orth_induction base symm succ  m (n + 1) leₘ (le_succ_of_le leₙ)
-            exact (succ m n _ _ Pₘ Pₙ)
-
-
 ----------------------------------------------------------------------------------------------------
 -- The binomial bounds
 
--- TODO: maybe use this to do induction symmetric after all?
--- example (a b : ℕ) : (a + b).choose b = (a + b).choose a := by exact Eq.symm choose_symm_add
-
 -- That suffices as a base case for the existence proof.
 theorem exists_N_ramseyProp {m n : ℕ} (leₘ : 2 ≤ m) (leₙ : 2 ≤ n) : (∃ N, ramseyProp N m n) := by
-  induction' m, n, leₘ, leₙ using two_le_symm_orth_induction with m _ n _ _ _ rₛ m n leₘ leₙ rₘ rₙ
+  induction' m, n, leₘ, leₙ using two_le_orth_induction with m _ n _ m n leₘ leₙ ind_assump_rₘ ind_assump_rₙ
   · exact ⟨m, ramseyProp_two⟩
-  · exact Exists.imp (ramseyProp_symm _ _) rₛ
-  · have := R_bounded_recursive m n (zero_lt_of_lt leₘ) (zero_lt_of_lt leₙ) rₘ rₙ
+  · exact ⟨n, ramseyProp_symm _ _ _ ramseyProp_two⟩
+  · have := R_bounded_recursive m n (zero_lt_of_lt leₘ) (zero_lt_of_lt leₙ) ind_assump_rₘ ind_assump_rₙ
     exact ⟨R(m, n + 1) + R(m + 1, n), this⟩
 
 -- Combining (1) with the starting values `R(m, 2) = m` and `R(2, n) = n`, we obtain from the
 -- familiar recursion for binomial coefficients `R(m, n) ≤ (m + n - 2).choose (m - 1)`.
-
 theorem R_le_choose {m n : ℕ} (m1 : 2 ≤ m) (n1 : 2 ≤ n) : R(m, n) ≤ (m + n - 2).choose (m - 1) := by
   -- we use the same induction principle as before.
   induction' m, n, m1, n1 using two_le_orth_induction with m rₘ n _ m n leₘ leₙ ind_assump_rₘ ind_assump_rₙ
@@ -344,21 +315,21 @@ theorem R_le_choose {m n : ℕ} (m1 : 2 ≤ m) (n1 : 2 ≤ n) : R(m, n) ≤ (m +
   · -- The actual bound from the book.
     have Rm_ex : ∃ N, ramseyProp N m (n + 1) := exists_N_ramseyProp leₘ (le_add_right_of_le leₙ)
     have Rn_ex : ∃ N, ramseyProp N (m + 1) n := exists_N_ramseyProp (le_add_right_of_le leₘ) leₙ
-    have N_has_ramseyProp := R_bounded_recursive _ _ (zero_lt_of_lt leₘ) (zero_lt_of_lt leₙ) Rn_ex Rm_ex
+    have N_has_ramseyProp : ramseyProp (R(m,n + 1) + R(m + 1,n)) (m + 1) (n + 1) :=
+      R_bounded_recursive _ _ (zero_lt_of_lt leₘ) (zero_lt_of_lt leₙ) Rn_ex Rm_ex
 
     calc R(m + 1, n + 1)
       _ ≤ R(m, n + 1) + R(m + 1, n)                                     := Nat.sInf_le N_has_ramseyProp
-      _ ≤ R(m, n + 1)  + (m + 1 + n - 2).choose (m + 1 - 1)             := by simp_all [R_symm, ind_assump_rₘ] -- move to its own step?
+      _ ≤ R(m, n + 1)  + (m + 1 + n - 2).choose (m + 1 - 1)             := by simp_all [R_symm, ind_assump_rₘ]
       _ ≤ (m + (n + 1) - 2).choose (m - 1) + (m + 1 + n - 2).choose m   := by simp [ind_assump_rₙ]
-      _ = (m + (n + 1) - 2).choose (m - 1) + (m + (n + 1) - 2).choose m := by simp [add_assoc, add_comm n 1] -- simplify?
-      _ = (m + (n + 1) - 2 + 1).choose m                                := (choose_succ_left (m+(n+1)-2) m (zero_lt_of_lt leₘ)).symm  -- simplify?
-      _ = (m + 1 + (n + 1) - 2).choose m                                := by rw [add_comm, add_comm m 1, add_assoc, ← Nat.add_sub_assoc (le_add_right_of_le leₘ)]  -- simplify?
+      _ = (m + (n + 1) - 2).choose (m - 1) + (m + (n + 1) - 2).choose m := by simp [add_assoc, add_comm n 1]
+      _ = (m + (n + 1) - 2 + 1).choose m                                := (choose_succ_left (m+(n+1)-2) m (zero_lt_of_lt leₘ)).symm
+      _ = (m + 1 + (n + 1) - 2).choose m                                := by rw [add_comm, add_comm m 1, add_assoc, ← Nat.add_sub_assoc (le_add_right_of_le leₘ)]
 
 
 -- ... and, in particular, `R(k, k) ≤ .. ≤ 2^(2k-3)`.
-
 lemma R_le_two_pow {k : ℕ} (h : 2 ≤ k) : R(k) ≤ 2 ^ (2 * k - 3) := by
   calc R(k)
     _ ≤ (2*k - 2).choose (k - 1)               := by simp [R_le_choose, h, Nat.two_mul]
-    _ = ((2 * k - 2 - 1) + 1).choose (k - 1)   := congrFun (congrArg Nat.choose ((Nat.sub_eq_iff_eq_add (le_sub_of_add_le (le_of_succ_le (Nat.mul_le_mul_left 2 h)))).mp rfl)) (k - 1) -- simplify?
+    _ = ((2 * k - 2 - 1) + 1).choose (k - 1)   := congrFun (congrArg Nat.choose ((Nat.sub_eq_iff_eq_add (le_sub_of_add_le (le_of_succ_le (Nat.mul_le_mul_left 2 h)))).mp rfl)) (k - 1)
     _ ≤ 2 ^ (2 * k - 3)                        := choose_succ_le_two_pow
