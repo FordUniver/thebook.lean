@@ -2,6 +2,8 @@ import Mathlib.Topology.Basic
 import Mathlib.Data.Nat.Prime.Basic
 import Mathlib.Data.Set.Basic
 import Mathlib.Data.ZMod.Basic
+import Mathlib.Tactic.Ring.RingNF
+import Mathlib.Tactic.Linarith.Frontend
 
 namespace FurstenbergInfinitudePrimes
 
@@ -19,7 +21,7 @@ lemma N_sub (a b m: ℤ) : N a (b * m) ⊆ N a b := by
   intro n h
   rw [el_N_of_dvd] at *
   exact Int.dvd_trans (Exists.intro m rfl) h
-  
+
 instance int_topology : TopologicalSpace ℤ where
   IsOpen O := O = ∅ ∨ (∀ a : O, ∃ b, b ≠ 0 ∧ N a b ⊆ O)
 
@@ -52,7 +54,7 @@ instance int_topology : TopologicalSpace ℤ where
       rw [mul_comm] at Nab1b2_su_Nab2
       exact ⟨mul_ne_zero b₁_ne_zero b₂_ne_zero, fun _ a => N₁_contained (Nab1b2_su_Nab1 a), fun _ a => N₂_contained (Nab1b2_su_Nab2 a)⟩
 
-lemma N_open (a b : ℤ) (h : b ≠ 0): IsOpen (N a b) := by 
+lemma N_open (a b : ℤ) (h : b ≠ 0): IsOpen (N a b) := by
   simp [IsOpen, TopologicalSpace.IsOpen, N]
   apply Or.inr
   exact fun a' => (by use b; exact ⟨h, fun a'' => by use a' + a''; ring_nf⟩)
@@ -118,7 +120,7 @@ theorem infinitude_primes : { p : ℕ | Nat.Prime p }.Infinite := by
       all_goals {by_contra c; rw [c, ←Nat.cast_one] at p_dvd_n ; simp [Int.dvd_neg.mpr] at p_dvd_n; exact p_ndvd_one p_dvd_n}
 
   by_contra h
-  
+
   have U_close : IsClosed (⋃ p ∈ {p : ℕ | Nat.Prime p}, N 0 p) := by
     have (p : ℕ) (p_prime : p ∈ {p : ℕ | Nat.Prime p}) : IsClosed (N 0 p) := by simp at p_prime; exact B 0 p (Nat.Prime.pos p_prime)
     exact Set.Finite.isClosed_biUnion (Set.not_infinite.mp h) this
@@ -126,5 +128,5 @@ theorem infinitude_primes : { p : ℕ | Nat.Prime p }.Infinite := by
   have one_infinite := A {1, -1} one_open (Set.Nonempty.ne_empty (Set.insert_nonempty 1 {-1}))
 
   exact one_infinite (Set.toFinite {1, -1})
-  
+
 end FurstenbergInfinitudePrimes

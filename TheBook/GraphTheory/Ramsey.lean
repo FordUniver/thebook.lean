@@ -1,9 +1,8 @@
 import Mathlib.Combinatorics.SimpleGraph.Clique
 import Mathlib.Tactic.Linarith
 import Mathlib.Data.Nat.Choose.Sum
+import Mathlib.Data.Nat.Choose.Bounds
 
-import TheBook.ToMathlib.InducedClique
-import TheBook.ToMathlib.ChooseBound
 import TheBook.ToMathlib.InduceDec
 
 open SimpleGraph Finset Fintype Nat
@@ -55,7 +54,7 @@ lemma ramseyProp_mono {m n N s : ℕ} (h : N ≤ s) (ramseyProp_N : ramseyProp N
   use map ⟨Subtype.val, Subtype.val_injective⟩ A'
 
   -- cliques and independent in the induced subgraph are also such in the supergraph.
-  exact Or.imp (induce_isNIndepSet C).mp (induce_isNClique C) red_or_blue
+  exact Or.imp (isNIndepSet_induce C).mp (IsNClique.of_induce) red_or_blue
 
 
 -- Straight from the book:
@@ -259,7 +258,7 @@ theorem R_bounded_recursive (m n : ℕ) (posₘ : 0 < m) (posₙ : 0 < n)
       have : C.IsNClique (n + 1) AₘV :=
         have isClique : C.IsClique AₘV := by
           simp [AVe, coe_map]
-          exact C.induce_isClique all_blue.1
+          exact all_blue.1.of_induce
 
         have card_eq : #AₘV = n + 1 := by
           rw [card_map]
@@ -332,4 +331,4 @@ lemma R_le_two_pow {k : ℕ} (h : 2 ≤ k) : R(k) ≤ 2 ^ (2 * k - 3) := by
   calc R(k)
     _ ≤ (2*k - 2).choose (k - 1)               := by simp [R_le_choose, h, Nat.two_mul]
     _ = ((2 * k - 2 - 1) + 1).choose (k - 1)   := congrFun (congrArg Nat.choose ((Nat.sub_eq_iff_eq_add (le_sub_of_add_le (le_of_succ_le (Nat.mul_le_mul_left 2 h)))).mp rfl)) (k - 1)
-    _ ≤ 2 ^ (2 * k - 3)                        := choose_succ_le_two_pow
+    _ ≤ 2 ^ (2 * k - 3)                        := Nat.choose_succ_le_two_pow (2 * k - 3) (k - 1)
