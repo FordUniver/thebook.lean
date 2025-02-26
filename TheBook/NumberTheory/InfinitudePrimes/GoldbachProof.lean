@@ -23,12 +23,12 @@ lemma F_ge_two (n : ℕ) : F n ≥ 2 := Nat.le.step (Nat.le_self_pow (NeZero.ne 
 
 
 /-- The recurrence relation satisfied by Fermat numbers -/
-lemma F_prod_form (n : ℕ) : (∏ k in range n, F k) = F n - 2 := by
+lemma F_prod_form (n : ℕ) : (∏ k ∈ range n, F k) = F n - 2 := by
   induction' n with n ih
   · exact rfl
   · calc
-      ∏ k in range (Nat.succ n), F k
-      _ = (∏ k in range n, F k) * F n         := Finset.prod_range_succ F n
+      ∏ k ∈ range (Nat.succ n), F k
+      _ = (∏ k ∈ range n, F k) * F n          := Finset.prod_range_succ F n
       _ = (F n - 2) * F n                     := by rw [ih]
       _ = (2 ^ 2 ^ n - 1) * (2 ^ 2 ^ n + 1)   := by exact rfl
       _ = 2 ^ (2 ^ Nat.succ n) - 1            := by simp [Nat.mul_sub_right_distrib, Nat.mul_add]
