@@ -1,6 +1,5 @@
 import TheBook.ToMathlib.EdgeFinset
-import TheBook.ToMathlib.ChooseBound
-import TheBook.ToMathlib.InducedClique
+import TheBook.ToMathlib.InduceDec
 
 import TheBook.Fundamentals.Induction
 
