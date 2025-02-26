@@ -2,12 +2,15 @@ import TheBook.ToMathlib.EdgeFinset
 import TheBook.ToMathlib.ChooseBound
 import TheBook.ToMathlib.InducedClique
 
+import TheBook.Fundamentals.Induction
+
 import TheBook.NumberTheory.InfinitudePrimes.Statement
 import TheBook.NumberTheory.InfinitudePrimes.EuclidProof
 import TheBook.NumberTheory.InfinitudePrimes.GoldbachProof
 import TheBook.NumberTheory.InfinitudePrimes.FolkloreMersenneProof
 import TheBook.NumberTheory.InfinitudePrimes.FurstenbergProof
 
+import TheBook.GraphTheory.Handshaking
 import TheBook.GraphTheory.Mantel.CauchyInequality
 import TheBook.GraphTheory.Mantel.ArithmeticGeometricMean
 import TheBook.GraphTheory.Ramsey
