@@ -2,9 +2,6 @@ import Mathlib.Combinatorics.Enumerative.DoubleCounting
 import Mathlib.Data.Finset.Pairwise
 import Mathlib.Combinatorics.SimpleGraph.Clique
 import Mathlib.Analysis.MeanInequalities -- has am-gm
-import TheBook.ToMathlib.IndependentSet
-import TheBook.ToMathlib.CliqueNumber
-import TheBook.ToMathlib.Nat_le
 
 namespace AMGMMantelTheorem
 
@@ -24,30 +21,30 @@ open Finset SimpleGraph
 theorem mantel (h: G.CliqueFree 3) : #E ≤ n^2 / 4 := by
 
   --  Let `α` be the size of a largest independent set `A`, ...
-  let α := SimpleGraph.cocliqueNum G
-  let ⟨A, maxA⟩  := G.maximumIndependentSet_exists
-  have hA : #A = α := maximumIndependentSet_card_eq_cocliqueNum _ _ maxA
+  let α := SimpleGraph.indepNum G
+  let ⟨A, maxA⟩  := G.maximumIndepSet_exists
+  have hA : #A = α := maximumIndepSet_card_eq_indepNum _ maxA
 
   -- ... and set `β = n - α`.
   let β := n - α
   have hαβ: α + β = n := Nat.add_sub_of_le (le_of_eq_of_le (hA.symm) (card_le_card (subset_univ _)))
 
   -- The neighbor set of a vertex `i` is an independent set.
-  have nbhd_ind_of_triangle_free : ∀ (i : γ), G.IsIndependentSet N(i) := by
-    simp [Set.coe_toFinset, G.isIndependentSet_neighborSet_if_triangleFree h, neighborFinset]
+  have nbhd_ind_of_triangle_free : ∀ (i : γ), G.IsIndepSet N(i) := by
+    simp [Set.coe_toFinset, G.isIndepSet_neighborSet_of_triangleFree h, neighborFinset]
 
   -- The degree of a vertex `i` is less or equal the cardinality of a maximum independent set.
-  have degree_le_alpha : ∀ (i : γ) , d(i) ≤ α := fun i => 
-    hA ▸ (le_of_le_of_eq (nbhd_ind_of_triangle_free i).card_le_cocliqueNum
-                  (G.maximumIndependentSet_card_eq_cocliqueNum A maxA).symm)
+  have degree_le_alpha : ∀ (i : γ) , d(i) ≤ α := fun i =>
+    hA ▸ (le_of_le_of_eq (nbhd_ind_of_triangle_free i).card_le_indepNum
+                  (G.maximumIndepSet_card_eq_indepNum A maxA).symm)
 
   -- The set `B = V \ A` of size `β` meets every edge of `G`.
   let B := V \ A
-  have hB : #B = β := by have := card_sdiff (subset_univ A); simp_all [hαβ]
+  have hB : #B = β := by have := card_sdiff (subset_univ A); simp_all [B, β]
 
   have one_ge_num_incident_verts : ∀ e ∈ E, 1 ≤ #{ i ∈ B | i ∈ e } := by
     simp only [one_le_card, mem_edgeFinset]
-    exact G.compl_independentSet_meets_every_edge maxA.independentSet
+    exact fun _ => maxA.isIndepSet.nonempty_mem_compl_mem_edge
 
   -- We count the edges of `G` by counting the endvertices in `B`.
   have count_edges_by_B := by calc
@@ -66,11 +63,13 @@ theorem mantel (h: G.CliqueFree 3) : #E ≤ n^2 / 4 := by
      _ ≤ ∑ _ ∈ B, α         := sum_le_sum fun _ _ => degree_le_alpha _
      _ = α * β              := by simp [Nat.mul_comm, hB]
 
-  have four_times_card_E_bd := calc 
+  have four_times_card_E_bd := calc
     4 * #E ≤ 4 * α * β        := by linarith
          _ ≤ (α + β)^2        := four_mul_le_pow_two_add _ _
          _ = n^2              := by simp only [hαβ, Nat.sub_add_cancel]
 
-  exact (Nat.le_div_iff_mul_le_comm Nat.ofNat_pos).mpr four_times_card_E_bd
+  rw [Nat.mul_comm] at four_times_card_E_bd
+
+  exact (Nat.le_div_iff_mul_le (Nat.zero_lt_succ 3)).mpr four_times_card_E_bd
 
 end AMGMMantelTheorem

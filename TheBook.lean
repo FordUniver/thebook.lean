@@ -1,7 +1,5 @@
 import TheBook.ToMathlib.EdgeFinset
-import TheBook.ToMathlib.IndependentSet
-import TheBook.ToMathlib.CliqueNumber
-import TheBook.ToMathlib.Nat_le
+import TheBook.ToMathlib.InduceDec
 
 import TheBook.Fundamentals.Induction
 
@@ -14,3 +12,4 @@ import TheBook.NumberTheory.InfinitudePrimes.FurstenbergProof
 import TheBook.GraphTheory.Handshaking
 import TheBook.GraphTheory.Mantel.CauchyInequality
 import TheBook.GraphTheory.Mantel.ArithmeticGeometricMean
+import TheBook.GraphTheory.Ramsey
